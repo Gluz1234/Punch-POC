@@ -137,7 +137,7 @@ sudo apt install neo4j
 ### 3. Start Neo4j and set password
 ```bash
 # Start
-neo4j start            # or use Neo4j Desktop: click "Start"
+neo4j start            # or use Neo4j Desktop: click "Start" IMPORTANT install the APOC plugin
 
 # Open browser UI
 open http://localhost:7474
