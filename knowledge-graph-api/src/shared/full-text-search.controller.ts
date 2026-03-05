@@ -32,10 +32,14 @@ export class FullTextSearchController {
     if (!query) {
       throw new BadRequestException('Search query (q) is required');
     }
+    const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+      throw new BadRequestException('Limit must be a number between 1 and 1000');
+    }
     return this.searchService.searchPersons(
       query,
       tenantId,
-      limit ? parseInt(limit, 10) : 50,
+      limitNum,
     );
   }
 
@@ -52,9 +56,13 @@ export class FullTextSearchController {
     if (!query) {
       throw new BadRequestException('Search query (q) is required');
     }
+    const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+      throw new BadRequestException('Limit must be a number between 1 and 1000');
+    }
     return this.searchService.searchOrganizations(
       query,
-      limit ? parseInt(limit, 10) : 50,
+      limitNum,
     );
   }
 
@@ -71,9 +79,13 @@ export class FullTextSearchController {
     if (!query) {
       throw new BadRequestException('Search query (q) is required');
     }
+    const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+      throw new BadRequestException('Limit must be a number between 1 and 1000');
+    }
     return this.searchService.searchSkills(
       query,
-      limit ? parseInt(limit, 10) : 50,
+      limitNum,
     );
   }
 
@@ -90,9 +102,13 @@ export class FullTextSearchController {
     if (!query) {
       throw new BadRequestException('Search query (q) is required');
     }
+    const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+      throw new BadRequestException('Limit must be a number between 1 and 1000');
+    }
     return this.searchService.searchCourses(
       query,
-      limit ? parseInt(limit, 10) : 50,
+      limitNum,
     );
   }
 
@@ -118,10 +134,14 @@ export class FullTextSearchController {
     if (!query) {
       throw new BadRequestException('Search query (q) is required');
     }
+    const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+      throw new BadRequestException('Limit must be a number between 1 and 1000');
+    }
     return this.searchService.advancedSearch(
       entity,
       query,
-      limit ? parseInt(limit, 10) : 50,
+      limitNum,
     );
   }
 

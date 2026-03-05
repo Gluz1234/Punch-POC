@@ -19,6 +19,16 @@ exports.ENTITY_CONFIGS = {
             status: 'Status (Active/Inactive)',
             birth_date: 'Birth date',
         },
+        propertyTypes: {
+            strong_id: 'String',
+            first_name: 'String',
+            last_name: 'String',
+            email: 'String',
+            phone: 'String',
+            nationality: 'String',
+            status: 'String',
+            birth_date: 'Date',
+        },
     },
     organization: {
         key: 'organization',
@@ -30,6 +40,12 @@ exports.ENTITY_CONFIGS = {
             name: 'Organization name',
             organization_type: 'Type (University/Company/etc)',
             industry: 'Industry',
+        },
+        propertyTypes: {
+            org_id: 'String',
+            name: 'String',
+            organization_type: 'String',
+            industry: 'String',
         },
     },
     location: {
@@ -46,6 +62,15 @@ exports.ENTITY_CONFIGS = {
             postal_code: 'Postal code',
             population: 'Population',
         },
+        propertyTypes: {
+            location_id: 'String',
+            name: 'String',
+            location_type: 'String',
+            latitude: 'Float',
+            longitude: 'Float',
+            postal_code: 'String',
+            population: 'Integer',
+        },
     },
     skill: {
         key: 'skill',
@@ -56,6 +81,11 @@ exports.ENTITY_CONFIGS = {
         properties: {
             name: 'Skill name',
             category: 'Skill category',
+        },
+        propertyTypes: {
+            skill_id: 'String',
+            name: 'String',
+            category: 'String',
         },
     },
     education: {
@@ -68,6 +98,12 @@ exports.ENTITY_CONFIGS = {
             title: 'Education title',
             education_type: 'Type (Degree/Certificate)',
             field_of_study: 'Field of study',
+        },
+        propertyTypes: {
+            education_id: 'String',
+            title: 'String',
+            education_type: 'String',
+            field_of_study: 'String',
         },
     },
     course: {
@@ -84,6 +120,16 @@ exports.ENTITY_CONFIGS = {
             academic_term: 'Academic term',
             description: 'Description',
             org_id: 'Organization ID',
+        },
+        propertyTypes: {
+            course_id: 'String',
+            name: 'String',
+            code: 'String',
+            credits: 'Integer',
+            level: 'String',
+            academic_term: 'String',
+            description: 'String',
+            org_id: 'String',
         },
         specialQueries: [
             {
@@ -103,6 +149,12 @@ exports.ENTITY_CONFIGS = {
             name: 'Department name',
             code: 'Department code',
             org_id: 'Organization ID',
+        },
+        propertyTypes: {
+            department_id: 'String',
+            name: 'String',
+            code: 'String',
+            org_id: 'String',
         },
         specialQueries: [
             {

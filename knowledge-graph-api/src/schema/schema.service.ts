@@ -43,22 +43,78 @@ export class SchemaService {
 
   async getPropertiesForLabel(label: string) {
     const safeLabel = this.neo4j.sanitizeIdentifier(label);
-    const records   = await this.neo4j.runQuery(
+    
+    // Get distinct property keys
+    const keyRecords = await this.neo4j.runQuery(
       `MATCH (n:\`${safeLabel}\`) WITH n LIMIT 100
        UNWIND keys(n) AS key
        RETURN DISTINCT key ORDER BY key`,
     );
-    return { label, properties: records.map(r => r.get('key')) };
+    const properties = keyRecords.map(r => r.get('key'));
+    
+    // Get property types using APOC
+    const typeRecords = await this.neo4j.runQuery(
+      `CALL apoc.meta.data() YIELD label, property, type
+       WHERE label = $label
+       RETURN property, type ORDER BY property`,
+      { label }
+    );
+    
+    // Create a map of property -> type
+    const typeMap: Record<string, string> = {};
+    typeRecords.forEach(r => {
+      typeMap[r.get('property')] = r.get('type');
+    });
+    
+    // Combine keys with types (use 'Unknown' for properties not found in APOC)
+    const propertiesWithTypes = properties.map(prop => ({
+      name: prop,
+      type: typeMap[prop] || 'Unknown'
+    }));
+    
+    return { 
+      label, 
+      properties: propertiesWithTypes,
+      totalProperties: properties.length
+    };
   }
 
   async getPropertiesForRelType(relType: string) {
     const safeType = this.neo4j.sanitizeIdentifier(relType);
-    const records  = await this.neo4j.runQuery(
+    
+    // Get distinct property keys
+    const keyRecords = await this.neo4j.runQuery(
       `MATCH ()-[r:\`${safeType}\`]->() WITH r LIMIT 100
        UNWIND keys(r) AS key
        RETURN DISTINCT key ORDER BY key`,
     );
-    return { relationshipType: relType, properties: records.map(r => r.get('key')) };
+    const properties = keyRecords.map(r => r.get('key'));
+    
+    // Get property types using APOC (relationships)
+    const typeRecords = await this.neo4j.runQuery(
+      `CALL apoc.meta.data() YIELD label, property, type
+       WHERE label = $relType
+       RETURN property, type ORDER BY property`,
+      { relType }
+    );
+    
+    // Create a map of property -> type
+    const typeMap: Record<string, string> = {};
+    typeRecords.forEach(r => {
+      typeMap[r.get('property')] = r.get('type');
+    });
+    
+    // Combine keys with types
+    const propertiesWithTypes = properties.map(prop => ({
+      name: prop,
+      type: typeMap[prop] || 'Unknown'
+    }));
+    
+    return { 
+      relationshipType: relType, 
+      properties: propertiesWithTypes,
+      totalProperties: properties.length
+    };
   }
 
   async getFullSchema() {

@@ -23,25 +23,41 @@ let FullTextSearchController = class FullTextSearchController {
         if (!query) {
             throw new common_1.BadRequestException('Search query (q) is required');
         }
-        return this.searchService.searchPersons(query, tenantId, limit ? parseInt(limit, 10) : 50);
+        const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+        if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+            throw new common_1.BadRequestException('Limit must be a number between 1 and 1000');
+        }
+        return this.searchService.searchPersons(query, tenantId, limitNum);
     }
     async searchOrganizations(query, limit) {
         if (!query) {
             throw new common_1.BadRequestException('Search query (q) is required');
         }
-        return this.searchService.searchOrganizations(query, limit ? parseInt(limit, 10) : 50);
+        const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+        if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+            throw new common_1.BadRequestException('Limit must be a number between 1 and 1000');
+        }
+        return this.searchService.searchOrganizations(query, limitNum);
     }
     async searchSkills(query, limit) {
         if (!query) {
             throw new common_1.BadRequestException('Search query (q) is required');
         }
-        return this.searchService.searchSkills(query, limit ? parseInt(limit, 10) : 50);
+        const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+        if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+            throw new common_1.BadRequestException('Limit must be a number between 1 and 1000');
+        }
+        return this.searchService.searchSkills(query, limitNum);
     }
     async searchCourses(query, limit) {
         if (!query) {
             throw new common_1.BadRequestException('Search query (q) is required');
         }
-        return this.searchService.searchCourses(query, limit ? parseInt(limit, 10) : 50);
+        const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+        if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+            throw new common_1.BadRequestException('Limit must be a number between 1 and 1000');
+        }
+        return this.searchService.searchCourses(query, limitNum);
     }
     async advancedSearch(entity, query, limit) {
         if (!entity) {
@@ -50,7 +66,11 @@ let FullTextSearchController = class FullTextSearchController {
         if (!query) {
             throw new common_1.BadRequestException('Search query (q) is required');
         }
-        return this.searchService.advancedSearch(entity, query, limit ? parseInt(limit, 10) : 50);
+        const limitNum = limit ? Math.floor(parseInt(limit, 10)) : 50;
+        if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+            throw new common_1.BadRequestException('Limit must be a number between 1 and 1000');
+        }
+        return this.searchService.advancedSearch(entity, query, limitNum);
     }
     async initializeIndexes() {
         await this.searchService.initializeIndexes();

@@ -98,11 +98,12 @@ let FullTextSearchService = class FullTextSearchService {
         if (this.fulltextAvailable === null) {
             await this.checkFulltextAvailability();
         }
+        const limit = Math.floor(config.limit || 50);
         if (this.fulltextAvailable) {
-            return this.searchFulltext(config, entityConfig);
+            return this.searchFulltext({ ...config, limit }, entityConfig);
         }
         else {
-            return this.searchFallback(config, entityConfig);
+            return this.searchFallback({ ...config, limit }, entityConfig);
         }
     }
     async searchFulltext(config, entityConfig) {

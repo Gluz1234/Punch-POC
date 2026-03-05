@@ -5,6 +5,7 @@ export interface EntityConfig {
     displayName: string;
     route: string;
     properties: Record<string, string>;
+    propertyTypes?: Record<string, string>;
     specialQueries?: {
         name: string;
         paramName: string;

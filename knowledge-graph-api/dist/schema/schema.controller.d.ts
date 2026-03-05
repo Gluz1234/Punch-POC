@@ -5,11 +5,19 @@ export declare class SchemaController {
     getFullSchema(): Promise<{
         nodeLabels: {
             label: string;
-            properties: any[];
+            properties: {
+                name: any;
+                type: string;
+            }[];
+            totalProperties: number;
         }[];
         relationshipTypes: {
             relationshipType: string;
-            properties: any[];
+            properties: {
+                name: any;
+                type: string;
+            }[];
+            totalProperties: number;
         }[];
         constraints: {
             name: any;
@@ -22,12 +30,20 @@ export declare class SchemaController {
     getLabels(): Promise<string[]>;
     getLabelProperties(label: string): Promise<{
         label: string;
-        properties: any[];
+        properties: {
+            name: any;
+            type: string;
+        }[];
+        totalProperties: number;
     }>;
     getRelationshipTypes(): Promise<string[]>;
     getRelTypeProperties(type: string): Promise<{
         relationshipType: string;
-        properties: any[];
+        properties: {
+            name: any;
+            type: string;
+        }[];
+        totalProperties: number;
     }>;
     getConstraints(): Promise<{
         name: any;

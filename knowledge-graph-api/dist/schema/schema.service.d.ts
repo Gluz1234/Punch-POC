@@ -20,20 +20,36 @@ export declare class SchemaService {
     }[]>;
     getPropertiesForLabel(label: string): Promise<{
         label: string;
-        properties: any[];
+        properties: {
+            name: any;
+            type: string;
+        }[];
+        totalProperties: number;
     }>;
     getPropertiesForRelType(relType: string): Promise<{
         relationshipType: string;
-        properties: any[];
+        properties: {
+            name: any;
+            type: string;
+        }[];
+        totalProperties: number;
     }>;
     getFullSchema(): Promise<{
         nodeLabels: {
             label: string;
-            properties: any[];
+            properties: {
+                name: any;
+                type: string;
+            }[];
+            totalProperties: number;
         }[];
         relationshipTypes: {
             relationshipType: string;
-            properties: any[];
+            properties: {
+                name: any;
+                type: string;
+            }[];
+            totalProperties: number;
         }[];
         constraints: {
             name: any;

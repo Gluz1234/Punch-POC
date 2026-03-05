@@ -23,6 +23,9 @@ export interface EntityConfig {
   /** Properties for this entity */
   properties: Record<string, string>; // key -> description for now
   
+  /** Property types for type validation and schema info */
+  propertyTypes?: Record<string, string>; // key -> type (String, Integer, etc.)
+  
   /** Special query filters (optional) */
   specialQueries?: {
     name: string;
@@ -51,6 +54,16 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       status: 'Status (Active/Inactive)',
       birth_date: 'Birth date',
     },
+    propertyTypes: {
+      strong_id: 'String',
+      first_name: 'String',
+      last_name: 'String',
+      email: 'String',
+      phone: 'String',
+      nationality: 'String',
+      status: 'String',
+      birth_date: 'Date',
+    },
   },
   
   organization: {
@@ -63,6 +76,12 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       name: 'Organization name',
       organization_type: 'Type (University/Company/etc)',
       industry: 'Industry',
+    },
+    propertyTypes: {
+      org_id: 'String',
+      name: 'String',
+      organization_type: 'String',
+      industry: 'String',
     },
   },
   
@@ -80,6 +99,15 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       postal_code: 'Postal code',
       population: 'Population',
     },
+    propertyTypes: {
+      location_id: 'String',
+      name: 'String',
+      location_type: 'String',
+      latitude: 'Float',
+      longitude: 'Float',
+      postal_code: 'String',
+      population: 'Integer',
+    },
   },
   
   skill: {
@@ -91,6 +119,11 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     properties: {
       name: 'Skill name',
       category: 'Skill category',
+    },
+    propertyTypes: {
+      skill_id: 'String',
+      name: 'String',
+      category: 'String',
     },
   },
   
@@ -104,6 +137,12 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       title: 'Education title',
       education_type: 'Type (Degree/Certificate)',
       field_of_study: 'Field of study',
+    },
+    propertyTypes: {
+      education_id: 'String',
+      title: 'String',
+      education_type: 'String',
+      field_of_study: 'String',
     },
   },
   
@@ -121,6 +160,16 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       academic_term: 'Academic term',
       description: 'Description',
       org_id: 'Organization ID',
+    },
+    propertyTypes: {
+      course_id: 'String',
+      name: 'String',
+      code: 'String',
+      credits: 'Integer',
+      level: 'String',
+      academic_term: 'String',
+      description: 'String',
+      org_id: 'String',
     },
     specialQueries: [
       {
@@ -141,6 +190,12 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       name: 'Department name',
       code: 'Department code',
       org_id: 'Organization ID',
+    },
+    propertyTypes: {
+      department_id: 'String',
+      name: 'String',
+      code: 'String',
+      org_id: 'String',
     },
     specialQueries: [
       {
