@@ -1,5 +1,5 @@
 {
-  "info": { "name": "Knowledge Graph Admin API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "info": { "name": "Knowledge Graph Admin API v2 (Generic)", "description": "Multi-Tenant Knowledge Graph API with dynamically generated endpoints. All standard entities (Person, Organization, Location, Skill, Education, Course, Department) are served by a single generic service with configuration-driven routes.", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
   "variable": [{ "key": "base", "value": "http://localhost:3000/api" }],
   "item": [
     { "name": "Persons", "item": [

@@ -9,13 +9,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const neo4j_module_1 = require("./neo4j/neo4j.module");
-const persons_module_1 = require("./persons/persons.module");
-const organizations_module_1 = require("./organizations/organizations.module");
-const locations_module_1 = require("./locations/locations.module");
-const skills_module_1 = require("./skills/skills.module");
-const education_module_1 = require("./education/education.module");
-const courses_module_1 = require("./courses/courses.module");
-const departments_module_1 = require("./departments/departments.module");
+const generic_entity_module_1 = require("./shared/generic-entity.module");
+const entity_config_1 = require("./shared/entity-config");
 const relationships_module_1 = require("./relationships/relationships.module");
 const promotions_module_1 = require("./promotions/promotions.module");
 const dynamic_module_1 = require("./dynamic/dynamic.module");
@@ -28,13 +23,7 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             neo4j_module_1.Neo4jModule,
-            persons_module_1.PersonsModule,
-            organizations_module_1.OrganizationsModule,
-            locations_module_1.LocationsModule,
-            skills_module_1.SkillsModule,
-            education_module_1.EducationModule,
-            courses_module_1.CoursesModule,
-            departments_module_1.DepartmentsModule,
+            ...generic_entity_module_1.GenericEntityModule.forAllEntities((0, entity_config_1.getAllEntities)()),
             relationships_module_1.RelationshipsModule,
             promotions_module_1.PromotionsModule,
             dynamic_module_1.DynamicModule,

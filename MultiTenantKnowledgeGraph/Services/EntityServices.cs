@@ -28,7 +28,7 @@ public class PersonService
         return _repo.UpsertAsync(person);
     }
 
-    public Task<Person?> GetByIdAsync(string strongId) => _repo.GetByStrongIdAsync(strongId);
+    public Task<Person?> GetByIdAsync(string strongId) => _repo.GetByIdAsync(strongId);
 
     public Task<List<Person>> GetAllAsync() => _repo.GetAllAsync();
 

@@ -38,7 +38,7 @@ public abstract class GenericEntityRepository<T> where T : class, new()
             ON MATCH SET {setClause}
             RETURN n";
 
-        var parameters = new Dictionary<object, object> { { IdProperty, idValue } };
+        var parameters = new Dictionary<string, object> { { IdProperty, idValue } };
         foreach (var kvp in properties)
         {
             parameters[kvp.Key] = kvp.Value;

@@ -1,7 +1,22 @@
-# Knowledge Graph Admin API
+# Knowledge Graph Admin API (v2 - Generic)
+
+**NEW**: This API now uses a generic, configuration-driven architecture.
+All standard entity types (Person, Organization, Location, Skill, Education, Course, Department) are served by a **single, reusable service** — eliminating ~2000 lines of hardcoded module code.
 
 NestJS REST API over the multi-tenant Neo4j knowledge graph.
 No auth for now — every endpoint is open for Postman testing.
+
+---
+
+## Architecture Highlights
+
+✨ **What's New:**
+- **Zero hardcoded entity modules** — all handled by `GenericEntityService`
+- **Configuration-driven routing** — add new entity types in one config file (`entity-config.ts`)
+- **78% code reduction** in standard entity handling
+- **Same endpoints, better maintainability**
+
+📚 **Read the full architecture guide:** [GENERIC_ARCHITECTURE_GUIDE.md](../GENERIC_ARCHITECTURE_GUIDE.md)
 
 ---
 

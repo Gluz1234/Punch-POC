@@ -3,6 +3,23 @@ using MultiTenantKnowledgeGraph.Models;
 namespace MultiTenantKnowledgeGraph.Repositories;
 
 /// <summary>
+/// Thin wrapper repositories around GenericEntityRepository.
+/// Each defines the Neo4j label and ID field; all CRUD logic is inherited.
+/// </summary>
+
+/// <summary>
+/// Generic repository wrapper for Person entities.
+/// </summary>
+public class PersonRepository : GenericEntityRepository<Person>
+{
+    protected override string NodeLabel => "Person";
+    protected override string IdProperty => "StrongId";
+    protected override Func<Person, string> GetIdValue => p => p.StrongId;
+
+    public PersonRepository(Neo4jService neo4j) : base(neo4j) { }
+}
+
+/// <summary>
 /// Generic repository wrapper for Organization entities.
 /// </summary>
 public class OrganizationRepository : GenericEntityRepository<Organization>

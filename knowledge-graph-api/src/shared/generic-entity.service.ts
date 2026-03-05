@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import neo4j, { Integer } from 'neo4j-driver';
 import { Neo4jService } from '../neo4j/neo4j.service';
-import { EntityConfig } from '../shared/entity-config';
+import { EntityConfig } from './entity-config';
 
 /**
  * Generic Entity Service
@@ -55,7 +56,7 @@ export class GenericEntityService {
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const records = await this.neo4j.runQuery(
       `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels ORDER BY n.\`${config.idField}\` LIMIT $limit`,
-      { limit },
+      { limit: neo4j.int(limit) },
     );
     return records.map(r => this.formatResult(r));
   }
