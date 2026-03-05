@@ -1,0 +1,116 @@
+{
+  "info": { "name": "Knowledge Graph Admin API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "variable": [{ "key": "base", "value": "http://localhost:3000/api" }],
+  "item": [
+    { "name": "Persons", "item": [
+      { "name": "Create Person", "request": { "method": "POST", "url": "{{base}}/persons", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"strongId\": \"person-sarah-chen\",\n  \"firstName\": \"Sarah\",\n  \"lastName\": \"Chen\",\n  \"email\": \"sarah.chen@gmail.com\",\n  \"nationality\": \"American\",\n  \"status\": \"Active\"\n}" } } },
+      { "name": "Get All Persons",  "request": { "method": "GET",    "url": "{{base}}/persons" } },
+      { "name": "Get One Person",   "request": { "method": "GET",    "url": "{{base}}/persons/person-sarah-chen" } },
+      { "name": "Update Person",    "request": { "method": "PUT",    "url": "{{base}}/persons/person-sarah-chen", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"firstName\": \"Sarah\",\n  \"lastName\": \"Chen\",\n  \"email\": \"sarah.chen@google.com\",\n  \"status\": \"Active\"\n}" } } },
+      { "name": "Delete Person",    "request": { "method": "DELETE", "url": "{{base}}/persons/person-to-delete" } }
+    ]},
+    { "name": "Organizations", "item": [
+      { "name": "Create Org",    "request": { "method": "POST",   "url": "{{base}}/organizations", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"orgId\": \"org-mit\",\n  \"name\": \"MIT\",\n  \"organizationType\": \"University\",\n  \"industry\": \"Education\"\n}" } } },
+      { "name": "Get All Orgs",  "request": { "method": "GET",    "url": "{{base}}/organizations" } },
+      { "name": "Get One Org",   "request": { "method": "GET",    "url": "{{base}}/organizations/org-mit" } },
+      { "name": "Delete Org",    "request": { "method": "DELETE", "url": "{{base}}/organizations/org-to-delete" } }
+    ]},
+    { "name": "Locations", "item": [
+      { "name": "Create Location","request": { "method": "POST", "url": "{{base}}/locations", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"locationId\": \"loc-amsterdam\",\n  \"name\": \"Amsterdam\",\n  \"locationType\": \"City\",\n  \"latitude\": 52.3676,\n  \"longitude\": 4.9041\n}" } } },
+      { "name": "Get All Locations","request": { "method": "GET", "url": "{{base}}/locations" } },
+      { "name": "Get One Location", "request": { "method": "GET", "url": "{{base}}/locations/loc-amsterdam" } }
+    ]},
+    { "name": "Skills", "item": [
+      { "name": "Create Skill",  "request": { "method": "POST", "url": "{{base}}/skills", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"skillId\": \"skill-python\",\n  \"name\": \"Python\",\n  \"category\": \"Programming Language\"\n}" } } },
+      { "name": "Get All Skills","request": { "method": "GET",  "url": "{{base}}/skills" } },
+      { "name": "Get One Skill", "request": { "method": "GET",  "url": "{{base}}/skills/skill-python" } }
+    ]},
+    { "name": "Education", "item": [
+      { "name": "Create Education","request": { "method": "POST", "url": "{{base}}/education", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"educationId\": \"edu-cs-mit\",\n  \"title\": \"BSc Computer Science\",\n  \"educationType\": \"Degree\",\n  \"fieldOfStudy\": \"Computer Science\"\n}" } } },
+      { "name": "Get All Education","request": { "method": "GET", "url": "{{base}}/education" } }
+    ]},
+    { "name": "Courses", "item": [
+      { "name": "Create Course",    "request": { "method": "POST", "url": "{{base}}/courses", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"courseId\": \"course-6006\",\n  \"orgId\": \"org-mit\",\n  \"name\": \"Introduction to Algorithms\",\n  \"code\": \"6.006\",\n  \"credits\": 12,\n  \"level\": \"Undergraduate\"\n}" } } },
+      { "name": "Get All Courses",  "request": { "method": "GET",  "url": "{{base}}/courses" } },
+      { "name": "Courses by Org",   "request": { "method": "GET",  "url": "{{base}}/courses/by-org/org-mit" } }
+    ]},
+    { "name": "Departments", "item": [
+      { "name": "Create Dept",      "request": { "method": "POST", "url": "{{base}}/departments", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"departmentId\": \"dept-mit-cs\",\n  \"orgId\": \"org-mit\",\n  \"name\": \"Dept. of EECS\",\n  \"code\": \"EECS\"\n}" } } },
+      { "name": "Get All Depts",    "request": { "method": "GET",  "url": "{{base}}/departments" } },
+      { "name": "Depts by Org",     "request": { "method": "GET",  "url": "{{base}}/departments/by-org/org-mit" } }
+    ]},
+    { "name": "Relationships", "item": [
+      { "name": "ENROLLED_IN",      "request": { "method": "POST", "url": "{{base}}/relationships/enrolled-in",     "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"personStrongId\": \"person-sarah-chen\",\n  \"orgId\": \"org-mit\",\n  \"tenantId\": \"tenant_mit\",\n  \"program\": \"BSc Computer Science\"\n}" } } },
+      { "name": "WORKS_AT",         "request": { "method": "POST", "url": "{{base}}/relationships/works-at",        "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"personStrongId\": \"person-sarah-chen\",\n  \"orgId\": \"org-google\",\n  \"tenantId\": \"tenant_google\",\n  \"jobTitle\": \"Software Engineer L4\"\n}" } } },
+      { "name": "LIVES_IN",         "request": { "method": "POST", "url": "{{base}}/relationships/lives-in",        "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"personStrongId\": \"person-sarah-chen\",\n  \"locationId\": \"loc-amsterdam\",\n  \"tenantId\": \"tenant_mit\",\n  \"residenceType\": \"Primary\"\n}" } } },
+      { "name": "HAS_SKILL",        "request": { "method": "POST", "url": "{{base}}/relationships/has-skill",       "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"personStrongId\": \"person-sarah-chen\",\n  \"skillId\": \"skill-python\",\n  \"tenantId\": \"tenant_mit\",\n  \"proficiencyLevel\": \"Expert\"\n}" } } },
+      { "name": "COMPLETED",        "request": { "method": "POST", "url": "{{base}}/relationships/completed",       "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"personStrongId\": \"person-sarah-chen\",\n  \"educationId\": \"edu-cs-mit\",\n  \"tenantId\": \"tenant_mit\"\n}" } } },
+      { "name": "PROVIDED_BY",      "request": { "method": "POST", "url": "{{base}}/relationships/provided-by",     "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"educationId\": \"edu-cs-mit\",\n  \"orgId\": \"org-mit\",\n  \"tenantId\": \"tenant_mit\"\n}" } } },
+      { "name": "REQUIRES_SKILL",   "request": { "method": "POST", "url": "{{base}}/relationships/requires-skill",  "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"orgId\": \"org-google\",\n  \"skillId\": \"skill-python\",\n  \"tenantId\": \"tenant_google\",\n  \"requirementLevel\": \"Expert\"\n}" } } },
+      { "name": "HAS_ADVISOR",      "request": { "method": "POST", "url": "{{base}}/relationships/has-advisor",     "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"studentStrongId\": \"person-sarah-chen\",\n  \"advisorStrongId\": \"person-prof-johnson\",\n  \"tenantId\": \"tenant_mit\",\n  \"advisorRole\": \"Primary\"\n}" } } },
+      { "name": "REGISTERED_FOR",   "request": { "method": "POST", "url": "{{base}}/relationships/registered-for",  "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"studentStrongId\": \"person-sarah-chen\",\n  \"courseId\": \"course-6006\",\n  \"tenantId\": \"tenant_mit\",\n  \"status\": \"Enrolled\"\n}" } } },
+      { "name": "REPORTS_TO",       "request": { "method": "POST", "url": "{{base}}/relationships/reports-to",      "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"employeeStrongId\": \"person-sarah-chen\",\n  \"managerStrongId\": \"person-yuki-tanaka\",\n  \"tenantId\": \"tenant_google\",\n  \"reportingType\": \"Direct\"\n}" } } },
+      { "name": "WORKS_IN",         "request": { "method": "POST", "url": "{{base}}/relationships/works-in",        "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"employeeStrongId\": \"person-sarah-chen\",\n  \"departmentId\": \"dept-google-cloud\",\n  \"tenantId\": \"tenant_google\",\n  \"role\": \"Software Engineer\"\n}" } } },
+      { "name": "REGISTERED_AT",    "request": { "method": "POST", "url": "{{base}}/relationships/registered-at",   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"residentStrongId\": \"person-leon-fischer\",\n  \"locationId\": \"loc-amsterdam\",\n  \"tenantId\": \"tenant_city_nl\",\n  \"addressType\": \"Primary\"\n}" } } },
+      { "name": "AFFILIATED_WITH",  "request": { "method": "POST", "url": "{{base}}/relationships/affiliated-with", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"researcherStrongId\": \"person-sarah-chen\",\n  \"orgId\": \"org-mit\",\n  \"tenantId\": \"tenant_mit\",\n  \"affiliationType\": \"PhD Candidate\"\n}" } } },
+      { "name": "OFFERED_BY",       "request": { "method": "POST", "url": "{{base}}/relationships/offered-by",      "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"courseId\": \"course-6006\",\n  \"orgId\": \"org-mit\",\n  \"tenantId\": \"tenant_mit\"\n}" } } },
+      { "name": "BELONGS_TO",       "request": { "method": "POST", "url": "{{base}}/relationships/belongs-to",      "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"departmentId\": \"dept-mit-cs\",\n  \"orgId\": \"org-mit\",\n  \"tenantId\": \"tenant_mit\"\n}" } } },
+      { "name": "Get Person Rels",         "request": { "method": "GET",    "url": "{{base}}/relationships/person/person-sarah-chen" } },
+      { "name": "Get Person Rels (tenant)","request": { "method": "GET",    "url": "{{base}}/relationships/person/person-sarah-chen/tenant/tenant_mit" } },
+      { "name": "Delete ENROLLED_IN",      "request": { "method": "DELETE", "url": "{{base}}/relationships/enrolled-in/person-sarah-chen/org-mit/tenant_mit" } },
+      { "name": "Delete WORKS_AT",         "request": { "method": "DELETE", "url": "{{base}}/relationships/works-at/person-sarah-chen/org-google/tenant_google" } }
+    ]},
+    { "name": "Promotions", "item": [
+      { "name": "Get Person Labels",     "request": { "method": "GET",  "url": "{{base}}/promotions/person/person-sarah-chen/labels" } },
+      { "name": "Promote to Student",    "request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/student",    "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"studentId\": \"MIT-2019-001\",\n  \"gpa\": 3.9,\n  \"enrollmentYear\": 2019,\n  \"enrollmentStatus\": \"Graduated\",\n  \"studyMode\": \"Full-time\"\n}" } } },
+      { "name": "Promote to Employee",   "request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/employee",   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"employeeNumber\": \"G-44001\",\n  \"contractType\": \"Permanent\",\n  \"salaryBand\": \"L4\",\n  \"department\": \"Cloud\"\n}" } } },
+      { "name": "Promote to Resident",   "request": { "method": "POST", "url": "{{base}}/promotions/person/person-leon-fischer/resident",  "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"residentId\": \"NL-AMS-001234\",\n  \"registrationDate\": \"2022-01-15\",\n  \"residencyType\": \"Expat\"\n}" } } },
+      { "name": "Promote to Researcher", "request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/researcher", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"orcidId\": \"0000-0002-1111-2222\",\n  \"researchField\": \"Machine Learning\",\n  \"hIndex\": 3,\n  \"researcherType\": \"PhD\"\n}" } } },
+      { "name": "Get Students (MIT)",    "request": { "method": "GET",  "url": "{{base}}/promotions/students/tenant_mit" } },
+      { "name": "Get Employees (Google)","request": { "method": "GET",  "url": "{{base}}/promotions/employees/tenant_google" } },
+      { "name": "Get All Researchers",   "request": { "method": "GET",  "url": "{{base}}/promotions/researchers" } },
+      { "name": "Get Residents (City)",  "request": { "method": "GET",  "url": "{{base}}/promotions/residents/tenant_city_nl" } }
+    ]},
+    { "name": "Dynamic (New Types)", "item": [
+      { "name": "Create Volunteer node",       "request": { "method": "POST",   "url": "{{base}}/dynamic/nodes",                                          "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"labels\": [\"Volunteer\"],\n  \"idField\": \"volunteer_id\",\n  \"id\": \"vol-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"name\": \"Community Helper\",\n    \"area\": \"Education\",\n    \"hours_committed\": 40,\n    \"tenant_id\": \"tenant_ngo\"\n  }\n}" } } },
+      { "name": "Create ResearchProject node", "request": { "method": "POST",   "url": "{{base}}/dynamic/nodes",                                          "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"labels\": [\"ResearchProject\"],\n  \"idField\": \"project_id\",\n  \"id\": \"proj-ml-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"title\": \"Graph ML for Urban Planning\",\n    \"status\": \"Active\",\n    \"budget\": 250000\n  }\n}" } } },
+      { "name": "Create multi-label node",     "request": { "method": "POST",   "url": "{{base}}/dynamic/nodes",                                          "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"labels\": [\"Asset\", \"ITEquipment\"],\n  \"idField\": \"asset_id\",\n  \"id\": \"asset-laptop-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"model\": \"MacBook Pro M3\",\n    \"tenant_id\": \"tenant_google\"\n  }\n}" } } },
+      { "name": "Get all Volunteer nodes",     "request": { "method": "GET",    "url": "{{base}}/dynamic/nodes/Volunteer" } },
+      { "name": "Get one Volunteer",           "request": { "method": "GET",    "url": "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001" } },
+      { "name": "Update Volunteer",            "request": { "method": "PUT",    "url": "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001",            "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"properties\": {\n    \"hours_committed\": 80,\n    \"status\": \"Active\"\n  }\n}" } } },
+      { "name": "Add extra label",             "request": { "method": "POST",   "url": "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001/labels",     "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"newLabel\": \"CommunityProgram\"\n}" } } },
+      { "name": "Delete Volunteer node",       "request": { "method": "DELETE", "url": "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001" } },
+      { "name": "Connect Person→Volunteer",    "request": { "method": "POST",   "url": "{{base}}/dynamic/relationships",                                   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"Volunteer\",\n  \"toIdField\": \"volunteer_id\",\n  \"toId\": \"vol-001\",\n  \"type\": \"IS_VOLUNTEER\",\n  \"properties\": {\n    \"tenant_id\": \"tenant_ngo\",\n    \"role\": \"Coordinator\"\n  }\n}" } } },
+      { "name": "Connect Person→Project",      "request": { "method": "POST",   "url": "{{base}}/dynamic/relationships",                                   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"ResearchProject\",\n  \"toIdField\": \"project_id\",\n  \"toId\": \"proj-ml-001\",\n  \"type\": \"WORKS_ON\",\n  \"properties\": {\n    \"tenant_id\": \"tenant_mit\",\n    \"role\": \"Lead Researcher\"\n  }\n}" } } },
+      { "name": "Get node relationships",      "request": { "method": "GET",    "url": "{{base}}/dynamic/relationships/Person/strong_id/person-sarah-chen?direction=out" } },
+      { "name": "Delete dynamic relationship", "request": { "method": "DELETE", "url": "{{base}}/dynamic/relationships",                                   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"Volunteer\",\n  \"toIdField\": \"volunteer_id\",\n  \"toId\": \"vol-001\",\n  \"type\": \"IS_VOLUNTEER\"\n}" } } }
+    ]},
+    { "name": "Queries", "item": [
+      { "name": "Students at MIT",                 "request": { "method": "GET", "url": "{{base}}/query/enrolled-in/org-mit/tenant_mit" } },
+      { "name": "Employees at Google",             "request": { "method": "GET", "url": "{{base}}/query/works-at/org-google/tenant_google" } },
+      { "name": "Employees at Microsoft",          "request": { "method": "GET", "url": "{{base}}/query/works-at/org-microsoft/tenant_microsoft" } },
+      { "name": "People in Amsterdam",             "request": { "method": "GET", "url": "{{base}}/query/lives-in/loc-amsterdam" } },
+      { "name": "Residents in Amsterdam",          "request": { "method": "GET", "url": "{{base}}/query/registered-at/loc-amsterdam/tenant_city_nl" } },
+      { "name": "Cross: MIT students at Google",   "request": { "method": "GET", "url": "{{base}}/query/cross/enrolled-and-working?orgA=org-mit&tenantA=tenant_mit&orgB=org-google&tenantB=tenant_google" } },
+      { "name": "Cross: MIT students at Microsoft","request": { "method": "GET", "url": "{{base}}/query/cross/enrolled-and-working?orgA=org-mit&tenantA=tenant_mit&orgB=org-microsoft&tenantB=tenant_microsoft" } },
+      { "name": "Cross: people at Google+MS",      "request": { "method": "GET", "url": "{{base}}/query/cross/multiple-employers?tenantA=tenant_google&tenantB=tenant_microsoft" } },
+      { "name": "Global: Python skill holders",    "request": { "method": "GET", "url": "{{base}}/query/skill/skill-python" } },
+      { "name": "Tenants for Sarah Chen",          "request": { "method": "GET", "url": "{{base}}/query/tenants-for-person/person-sarah-chen" } },
+      { "name": "Org chart: Google",               "request": { "method": "GET", "url": "{{base}}/query/org-chart/org-google/tenant_google" } },
+      { "name": "Course registrations: Algorithms","request": { "method": "GET", "url": "{{base}}/query/course-registrations/course-6006/tenant_mit" } },
+      { "name": "All :Researcher persons",         "request": { "method": "GET", "url": "{{base}}/query/label/Researcher" } },
+      { "name": "All :Student persons (MIT)",      "request": { "method": "GET", "url": "{{base}}/query/label/Student?tenantId=tenant_mit" } }
+    ]},
+    { "name": "Schema", "item": [
+      { "name": "Full snapshot",               "request": { "method": "GET", "url": "{{base}}/schema" } },
+      { "name": "All labels",                  "request": { "method": "GET", "url": "{{base}}/schema/labels" } },
+      { "name": "Person properties",           "request": { "method": "GET", "url": "{{base}}/schema/labels/Person/properties" } },
+      { "name": "Volunteer properties",        "request": { "method": "GET", "url": "{{base}}/schema/labels/Volunteer/properties" } },
+      { "name": "All relationship types",      "request": { "method": "GET", "url": "{{base}}/schema/relationship-types" } },
+      { "name": "WORKS_AT properties",         "request": { "method": "GET", "url": "{{base}}/schema/relationship-types/WORKS_AT/properties" } },
+      { "name": "All constraints",             "request": { "method": "GET", "url": "{{base}}/schema/constraints" } },
+      { "name": "Node counts",                 "request": { "method": "GET", "url": "{{base}}/schema/counts" } },
+      { "name": "All tenants",                 "request": { "method": "GET", "url": "{{base}}/schema/tenants" } }
+    ]}
+  ]
+}
