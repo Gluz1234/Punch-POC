@@ -10,6 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const neo4j_module_1 = require("./neo4j/neo4j.module");
 const generic_entity_module_1 = require("./shared/generic-entity.module");
+const generic_query_module_1 = require("./shared/generic-query.module");
 const entity_config_1 = require("./shared/entity-config");
 const relationships_module_1 = require("./relationships/relationships.module");
 const promotions_module_1 = require("./promotions/promotions.module");
@@ -24,6 +25,7 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             neo4j_module_1.Neo4jModule,
             ...generic_entity_module_1.GenericEntityModule.forAllEntities((0, entity_config_1.getAllEntities)()),
+            generic_query_module_1.GenericQueryModule,
             relationships_module_1.RelationshipsModule,
             promotions_module_1.PromotionsModule,
             dynamic_module_1.DynamicModule,

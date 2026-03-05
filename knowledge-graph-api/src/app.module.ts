@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { Neo4jModule } from './neo4j/neo4j.module';
 import { GenericEntityModule } from './shared/generic-entity.module';
+import { GenericQueryModule } from './shared/generic-query.module';
 import { getAllEntities } from './shared/entity-config';
 import { RelationshipsModule } from './relationships/relationships.module';
 import { PromotionsModule } from './promotions/promotions.module';
@@ -14,6 +15,9 @@ import { QueryModule } from './query/query.module';
     
     // Dynamically register all standard entity modules from config
     ...GenericEntityModule.forAllEntities(getAllEntities()),
+    
+    // Generic query builder (makes complex queries easy without hardcoding)
+    GenericQueryModule,
     
     // Specialized modules (relationships, promotions, schema queries)
     RelationshipsModule,

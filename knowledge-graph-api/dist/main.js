@@ -2,10 +2,18 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
+const full_text_search_service_1 = require("./shared/full-text-search.service");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.setGlobalPrefix('api');
     app.enableCors();
+    const fullTextSearch = app.get(full_text_search_service_1.FullTextSearchService);
+    try {
+        await fullTextSearch.initializeIndexes();
+    }
+    catch (err) {
+        console.warn('⚠ Full-text search index initialization failed (will retry on first search):', err);
+    }
     const port = process.env.PORT ?? 3000;
     await app.listen(port);
     console.log(`
@@ -79,6 +87,13 @@ async function bootstrap() {
     GET  /api/query/org-chart/:orgId/:tenantId
     GET  /api/query/course-registrations/:courseId/:tenantId
     GET  /api/query/label/:label?tenantId=
+
+  SEARCH  (full-text search with Lucene syntax)
+    GET  /api/search/persons?q=john
+    GET  /api/search/organizations?q=microsoft
+    GET  /api/search/skills?q=java
+    GET  /api/search/courses?q=python
+    GET  /api/search/advanced?entity=person&q=john*&limit=50
 
   SCHEMA  (live graph introspection)
     GET  /api/schema

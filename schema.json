@@ -1,0 +1,417 @@
+{
+    "nodeLabels": [
+        {
+            "label": "Course",
+            "properties": [
+                "academic_term",
+                "code",
+                "course_id",
+                "credits",
+                "level",
+                "name",
+                "org_id"
+            ]
+        },
+        {
+            "label": "Department",
+            "properties": [
+                "code",
+                "department_id",
+                "head_name",
+                "name",
+                "org_id"
+            ]
+        },
+        {
+            "label": "Education",
+            "properties": [
+                "education_id",
+                "education_type",
+                "end_date",
+                "field_of_study",
+                "grade",
+                "start_date",
+                "title"
+            ]
+        },
+        {
+            "label": "Employee",
+            "properties": [
+                "contract_type",
+                "department",
+                "email",
+                "employee_number",
+                "enrollment_status",
+                "enrollment_year",
+                "first_name",
+                "gpa",
+                "h_index",
+                "hire_date",
+                "last_name",
+                "marital_status",
+                "nationality",
+                "orcid_id",
+                "registration_date",
+                "research_field",
+                "researcher_type",
+                "residency_type",
+                "resident_id",
+                "salary_band",
+                "status",
+                "strong_id",
+                "student_id",
+                "study_mode"
+            ]
+        },
+        {
+            "label": "Location",
+            "properties": [
+                "latitude",
+                "location_id",
+                "location_type",
+                "longitude",
+                "name",
+                "population"
+            ]
+        },
+        {
+            "label": "Organization",
+            "properties": [
+                "industry",
+                "name",
+                "org_id",
+                "organization_type",
+                "website"
+            ]
+        },
+        {
+            "label": "Person",
+            "properties": [
+                "contract_type",
+                "department",
+                "email",
+                "employee_number",
+                "enrollment_status",
+                "enrollment_year",
+                "first_name",
+                "gpa",
+                "h_index",
+                "hire_date",
+                "last_name",
+                "marital_status",
+                "nationality",
+                "orcid_id",
+                "registration_date",
+                "research_field",
+                "researcher_type",
+                "residency_type",
+                "resident_id",
+                "salary_band",
+                "status",
+                "strong_id",
+                "student_id",
+                "study_mode"
+            ]
+        },
+        {
+            "label": "Researcher",
+            "properties": [
+                "contract_type",
+                "department",
+                "email",
+                "employee_number",
+                "enrollment_status",
+                "enrollment_year",
+                "first_name",
+                "gpa",
+                "h_index",
+                "hire_date",
+                "last_name",
+                "nationality",
+                "orcid_id",
+                "research_field",
+                "researcher_type",
+                "salary_band",
+                "status",
+                "strong_id",
+                "student_id",
+                "study_mode"
+            ]
+        },
+        {
+            "label": "Resident",
+            "properties": [
+                "contract_type",
+                "department",
+                "email",
+                "employee_number",
+                "enrollment_status",
+                "enrollment_year",
+                "first_name",
+                "gpa",
+                "hire_date",
+                "last_name",
+                "marital_status",
+                "nationality",
+                "registration_date",
+                "residency_type",
+                "resident_id",
+                "salary_band",
+                "status",
+                "strong_id",
+                "student_id",
+                "study_mode"
+            ]
+        },
+        {
+            "label": "Skill",
+            "properties": [
+                "category",
+                "name",
+                "skill_id"
+            ]
+        },
+        {
+            "label": "Student",
+            "properties": [
+                "contract_type",
+                "department",
+                "email",
+                "employee_number",
+                "enrollment_status",
+                "enrollment_year",
+                "first_name",
+                "gpa",
+                "h_index",
+                "hire_date",
+                "last_name",
+                "marital_status",
+                "nationality",
+                "orcid_id",
+                "registration_date",
+                "research_field",
+                "researcher_type",
+                "residency_type",
+                "resident_id",
+                "salary_band",
+                "status",
+                "strong_id",
+                "student_id",
+                "study_mode"
+            ]
+        }
+    ],
+    "relationshipTypes": [
+        {
+            "relationshipType": "AFFILIATED_WITH",
+            "properties": [
+                "affiliation_type",
+                "created_at",
+                "org_id",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "BELONGS_TO",
+            "properties": [
+                "created_at",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "COMPLETED",
+            "properties": [
+                "created_at",
+                "education_id",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "ENROLLED_IN",
+            "properties": [
+                "created_at",
+                "org_id",
+                "program",
+                "start_date",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "HAS_ADVISOR",
+            "properties": [
+                "advisor_id",
+                "advisor_role",
+                "created_at",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "HAS_SKILL",
+            "properties": [
+                "created_at",
+                "proficiency_level",
+                "skill_id",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "LIVES_IN",
+            "properties": [
+                "created_at",
+                "location_id",
+                "residence_type",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "OFFERED_BY",
+            "properties": [
+                "created_at",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "PROVIDED_BY",
+            "properties": [
+                "created_at",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "REGISTERED_AT",
+            "properties": [
+                "address_type",
+                "created_at",
+                "location_id",
+                "since",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "REGISTERED_FOR",
+            "properties": [
+                "academic_term",
+                "course_id",
+                "created_at",
+                "grade",
+                "status",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "REPORTS_TO",
+            "properties": [
+                "created_at",
+                "reporting_type",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "REQUIRES_SKILL",
+            "properties": [
+                "created_at",
+                "requirement_level",
+                "skill_id",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "WORKS_AT",
+            "properties": [
+                "created_at",
+                "job_title",
+                "org_id",
+                "start_date",
+                "tenant_id"
+            ]
+        },
+        {
+            "relationshipType": "WORKS_IN",
+            "properties": [
+                "created_at",
+                "department_id",
+                "role",
+                "tenant_id"
+            ]
+        }
+    ],
+    "constraints": [
+        {
+            "name": "course_id",
+            "type": "UNIQUENESS",
+            "entityType": "NODE",
+            "labelsOrTypes": [
+                "Course"
+            ],
+            "properties": [
+                "course_id"
+            ]
+        },
+        {
+            "name": "department_id",
+            "type": "UNIQUENESS",
+            "entityType": "NODE",
+            "labelsOrTypes": [
+                "Department"
+            ],
+            "properties": [
+                "department_id"
+            ]
+        },
+        {
+            "name": "education_id",
+            "type": "UNIQUENESS",
+            "entityType": "NODE",
+            "labelsOrTypes": [
+                "Education"
+            ],
+            "properties": [
+                "education_id"
+            ]
+        },
+        {
+            "name": "location_id",
+            "type": "UNIQUENESS",
+            "entityType": "NODE",
+            "labelsOrTypes": [
+                "Location"
+            ],
+            "properties": [
+                "location_id"
+            ]
+        },
+        {
+            "name": "org_id",
+            "type": "UNIQUENESS",
+            "entityType": "NODE",
+            "labelsOrTypes": [
+                "Organization"
+            ],
+            "properties": [
+                "org_id"
+            ]
+        },
+        {
+            "name": "person_strong_id",
+            "type": "UNIQUENESS",
+            "entityType": "NODE",
+            "labelsOrTypes": [
+                "Person"
+            ],
+            "properties": [
+                "strong_id"
+            ]
+        },
+        {
+            "name": "skill_id",
+            "type": "UNIQUENESS",
+            "entityType": "NODE",
+            "labelsOrTypes": [
+                "Skill"
+            ],
+            "properties": [
+                "skill_id"
+            ]
+        }
+    ]
+}

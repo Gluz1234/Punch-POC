@@ -1,0 +1,324 @@
+{
+  "info": {
+    "name": "Knowledge Graph - New Generic Features",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. FULL-TEXT SEARCH",
+      "item": [
+        {
+          "name": "Search: Simple Person Search",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/persons?q=john",
+            "description": "Simple full-text search for persons named 'john' across all text fields (first_name, last_name, email, phone)"
+          }
+        },
+        {
+          "name": "Search: Simple Person Search with Limit",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/persons?q=john&limit=20",
+            "description": "Search with result limit"
+          }
+        },
+        {
+          "name": "Search: Search Organizations",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/organizations?q=microsoft",
+            "description": "Search organizations by name, type, industry"
+          }
+        },
+        {
+          "name": "Search: Search Skills",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/skills?q=java",
+            "description": "Search skills by name or category"
+          }
+        },
+        {
+          "name": "Search: Search Courses",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/courses?q=python",
+            "description": "Search courses by name, code, or description"
+          }
+        },
+        {
+          "name": "Search: Advanced - Prefix Search",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/advanced?entity=person&q=john*",
+            "description": "Lucene prefix search: matches john, johnny, johns, etc."
+          }
+        },
+        {
+          "name": "Search: Advanced - Phrase Search",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/advanced?entity=person&q=%22john%20smith%22",
+            "description": "Lucene phrase search: matches exact phrase 'john smith' only (URL encoded: \"john smith\")"
+          }
+        },
+        {
+          "name": "Search: Advanced - AND Query",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/advanced?entity=person&q=john%20AND%20smith",
+            "description": "Lucene AND search: both 'john' and 'smith' must be present (URL encoded)"
+          }
+        },
+        {
+          "name": "Search: Advanced - OR Query",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/advanced?entity=person&q=john%20OR%20jane",
+            "description": "Lucene OR search: either 'john' or 'jane' (or both) (URL encoded)"
+          }
+        },
+        {
+          "name": "Search: Advanced - Fuzzy Search",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/advanced?entity=person&q=john~",
+            "description": "Lucene fuzzy search: matches 'john' with typo tolerance (jahn, jon, etc.)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. SIMPLIFIED QUERY (Tier 2)",
+      "item": [
+        {
+          "name": "Query: Get All Persons",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity\": \"person\",\n  \"limit\": 50\n}"
+            },
+            "description": "Get all persons (simplified query)"
+          }
+        },
+        {
+          "name": "Query: Get Persons at Organization",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity\": \"person\",\n  \"relationships\": [\n    {\n      \"type\": \"WORKS_AT\",\n      \"target\": \"organization\",\n      \"filters\": { \"org_id\": \"ORG_001\" }\n    }\n  ],\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 100\n}"
+            },
+            "description": "Get all persons working at a specific organization"
+          }
+        },
+        {
+          "name": "Query: Get Persons with Multiple Relationships",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity\": \"person\",\n  \"relationships\": [\n    {\n      \"type\": \"WORKS_AT\",\n      \"target\": \"organization\",\n      \"filters\": { \"org_id\": \"ORG_001\" }\n    },\n    {\n      \"type\": \"HAS_SKILL\",\n      \"target\": \"skill\",\n      \"filters\": { \"skill_id\": \"JAVA\" }\n    }\n  ],\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 50\n}"
+            },
+            "description": "Get persons working at organization AND who have Java skill"
+          }
+        },
+        {
+          "name": "Query: Get Persons Enrolled at Organization",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity\": \"person\",\n  \"relationships\": [\n    {\n      \"type\": \"ENROLLED_IN\",\n      \"target\": \"organization\",\n      \"filters\": { \"org_id\": \"ORG_MIT\" }\n    }\n  ],\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 100\n}"
+            },
+            "description": "Get all persons enrolled in a specific organization"
+          }
+        },
+        {
+          "name": "Query: Get Persons Living in Location",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity\": \"person\",\n  \"relationships\": [\n    {\n      \"type\": \"LIVES_IN\",\n      \"target\": \"location\",\n      \"filters\": { \"location_id\": \"CITY_NYC\" }\n    }\n  ],\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 50\n}"
+            },
+            "description": "Get all persons living in a specific location"
+          }
+        },
+        {
+          "name": "Convenience: Get All Persons (Simple)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search/persons",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 50\n}"
+            },
+            "description": "Pre-built endpoint: Get all persons"
+          }
+        },
+        {
+          "name": "Convenience: Get Persons at Org",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search/persons-at-org",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orgId\": \"ORG_001\",\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 100\n}"
+            },
+            "description": "Pre-built endpoint: Get persons working at organization"
+          }
+        },
+        {
+          "name": "Convenience: Get Persons Enrolled At",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search/persons-enrolled-at",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orgId\": \"ORG_MIT\",\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 100\n}"
+            },
+            "description": "Pre-built endpoint: Get persons enrolled in organization"
+          }
+        },
+        {
+          "name": "Convenience: Get Persons with Skill",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search/persons-with-skill",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skillId\": \"JAVA\",\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 50\n}"
+            },
+            "description": "Pre-built endpoint: Get persons with a specific skill"
+          }
+        },
+        {
+          "name": "Convenience: Get Person Profile",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/search/person-profile",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"personId\": \"P_001\",\n  \"tenantId\": \"TENANT_1\"\n}"
+            },
+            "description": "Pre-built endpoint: Get all relationships for a person"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. GENERIC QUERY BUILDER (Tier 3 - Advanced)",
+      "item": [
+        {
+          "name": "Advanced: Dynamic Query - Complex",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/query/execute",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mainEntity\": {\n    \"config\": { \"label\": \"Person\", \"idField\": \"strong_id\" },\n    \"alias\": \"p\"\n  },\n  \"relationships\": [\n    {\n      \"type\": \"WORKS_AT\",\n      \"direction\": \"->\",\n      \"targetEntity\": {\n        \"config\": { \"label\": \"Organization\", \"idField\": \"org_id\" },\n        \"alias\": \"o\",\n        \"filterFields\": { \"org_id\": \"ORG_001\" }\n      }\n    },\n    {\n      \"type\": \"HAS_SKILL\",\n      \"direction\": \"->\",\n      \"targetEntity\": {\n        \"config\": { \"label\": \"Skill\", \"idField\": \"skill_id\" },\n        \"alias\": \"s\"\n      }\n    }\n  ],\n  \"returns\": [\"p\", \"labels(p) AS labels\", \"o.name AS orgName\", \"s.name AS skillName\"],\n  \"tenantId\": \"TENANT_1\",\n  \"orderBy\": \"p.last_name\",\n  \"limit\": 50,\n  \"distinct\": true\n}"
+            },
+            "description": "Full generic query builder - persons working at org who have skills"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. BASIC CRUD (for context)",
+      "item": [
+        {
+          "name": "CRUD: Create Person",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/persons",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"strong_id\": \"P_001\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Smith\",\n  \"email\": \"john.smith@example.com\",\n  \"phone\": \"+1-555-0100\",\n  \"nationality\": \"USA\",\n  \"status\": \"Active\",\n  \"birth_date\": \"1990-05-15\"\n}"
+            },
+            "description": "Create or upsert a person entity"
+          }
+        },
+        {
+          "name": "CRUD: Get All Persons (basic)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/persons?limit=50",
+            "description": "Get all persons with pagination"
+          }
+        },
+        {
+          "name": "CRUD: Get Single Person",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/persons/P_001",
+            "description": "Get a person by ID"
+          }
+        },
+        {
+          "name": "CRUD: Update Person",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/persons/P_001",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@newcompany.com\",\n  \"phone\": \"+1-555-0200\",\n  \"status\": \"Inactive\"\n}"
+            },
+            "description": "Update specific fields of a person"
+          }
+        },
+        {
+          "name": "CRUD: Delete Person",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/persons/P_001",
+            "description": "Delete a person and all their relationships"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. RELATIONSHIPS (for context)",
+      "item": [
+        {
+          "name": "Relationship: Create WORKS_AT",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/relationships/works-at",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"personStrongId\": \"P_001\",\n  \"orgId\": \"ORG_001\",\n  \"tenantId\": \"TENANT_1\",\n  \"jobTitle\": \"Software Engineer\",\n  \"startDate\": \"2023-01-15\"\n}"
+            },
+            "description": "Create a WORKS_AT relationship between person and organization"
+          }
+        },
+        {
+          "name": "Relationship: Create HAS_SKILL",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/relationships/has-skill",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"personStrongId\": \"P_001\",\n  \"skillId\": \"JAVA\",\n  \"tenantId\": \"TENANT_1\",\n  \"proficiency\": \"Expert\",\n  \"yearsOfExperience\": 5\n}"
+            },
+            "description": "Create a HAS_SKILL relationship"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
+  ]
+}
