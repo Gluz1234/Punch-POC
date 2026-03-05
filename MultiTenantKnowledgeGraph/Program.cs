@@ -35,26 +35,28 @@ var config = new Neo4jConfig
 // ── Dependency Wiring (manual DI — no framework required) ─────────────────
 var neo4jService = new Neo4jService(config);
 
-// Repositories
+// All standard entity repositories now use the generic base class
 var personRepo       = new PersonRepository(neo4jService);
 var orgRepo          = new OrganizationRepository(neo4jService);
 var locationRepo     = new LocationRepository(neo4jService);
 var skillRepo        = new SkillRepository(neo4jService);
 var educationRepo    = new EducationRepository(neo4jService);
+var courseRepo       = new CourseRepository(neo4jService);
+var departmentRepo   = new DepartmentRepository(neo4jService);
 var relationshipRepo = new RelationshipRepository(neo4jService);
 
 // Services
-var personService    = new PersonService(personRepo);
-var orgService       = new OrganizationService(orgRepo);
-var locationService  = new LocationService(locationRepo);
-var skillService     = new SkillService(skillRepo);
-var educationService = new EducationService(educationRepo);
-var relService       = new RelationshipService(relationshipRepo);
-var queryService     = new TenantQueryService(neo4jService);
+var personService       = new PersonService(personRepo);
+var orgService          = new OrganizationService(orgRepo);
+var locationService     = new LocationService(locationRepo);
+var skillService        = new SkillService(skillRepo);
+var educationService    = new EducationService(educationRepo);
+var relService          = new RelationshipService(relationshipRepo);
+var queryService        = new TenantQueryService(neo4jService);
 
 // Subtype promotion services
-var promotionRepo    = new PromotionRepository(neo4jService);
-var promotionService = new PromotionService(promotionRepo);
+var promotionRepo       = new PromotionRepository(neo4jService);
+var promotionService    = new PromotionService(promotionRepo);
 
 try
 {
