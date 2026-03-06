@@ -27,9 +27,9 @@ Console.WriteLine("=================================================");
 // Edit Neo4jConfig defaults, or override here:
 var config = new Neo4jConfig
 {
-    Uri      = "bolt://localhost:7687",
+    Uri      = "neo4j://127.0.0.1:7687",
     Username = "neo4j",
-    Password = "password"   // ← Change to your Neo4j Community Edition password
+    Password = "password" 
 };
 
 // ── Dependency Wiring (manual DI — no framework required) ─────────────────

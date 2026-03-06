@@ -140,6 +140,34 @@ public class PromotionRepository
     }
 
     /// <summary>
+    /// Generic promotion to any subtype with dynamic properties.
+    /// </summary>
+    public async Task PromoteToSubtypeAsync(string strongId, string subtype, Dictionary<string, object> properties)
+    {
+        var safeSubtype = _neo4j.SanitizeIdentifier(subtype);
+        
+        // Build SET clauses dynamically
+        var setParts = properties.Select(kvp => $"p.`{kvp.Key}` = $prop_{kvp.Key}").ToList();
+        var setClause = setParts.Any() ? $"SET {string.Join(", ", setParts)}" : "";
+        
+        var cypher = $@"
+            MATCH (p:Person {{strong_id: $strongId}})
+            SET p:{safeSubtype}
+            {setClause}
+            RETURN p";
+
+        var parameters = new Dictionary<string, object> { ["strongId"] = strongId };
+        foreach (var kvp in properties)
+        {
+            parameters[$"prop_{kvp.Key}"] = kvp.Value;
+        }
+
+        await using var session = _neo4j.OpenSession();
+        var result = await session.RunAsync(cypher, parameters);
+        await result.ConsumeAsync();
+    }
+
+    /// <summary>
     /// Returns all labels currently on a Person node.
     /// E.g. ["Person", "Student", "Employee"]
     /// </summary>

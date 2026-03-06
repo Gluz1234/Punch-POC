@@ -35,6 +35,16 @@ export class PromotionsController {
     return this.promotionsService.promoteToResearcher(strongId, dto);
   }
 
+  // POST /api/promotions/person/:strongId/subtype/:subtype
+  @Post('person/:strongId/subtype/:subtype')
+  promoteToSubtype(
+    @Param('strongId') strongId: string,
+    @Param('subtype') subtype: string,
+    @Body() properties: Record<string, any>
+  ) {
+    return this.promotionsService.promoteToSubtype(strongId, subtype, properties);
+  }
+
   // GET /api/promotions/students/:tenantId
   @Get('students/:tenantId')
   getStudents(@Param('tenantId') tenantId: string) {
@@ -57,5 +67,11 @@ export class PromotionsController {
   @Get('residents/:tenantId')
   getResidents(@Param('tenantId') tenantId: string) {
     return this.promotionsService.getResidents(tenantId);
+  }
+
+  // GET /api/promotions/artists
+  @Get('artists')
+  getArtists() {
+    return this.promotionsService.getArtists();
   }
 }

@@ -56,6 +56,15 @@ public class PromotionService
         return _repo.PromoteToResearcherAsync(profile);
     }
 
+    public Task PromoteToSubtypeAsync(string strongId, string subtype, Dictionary<string, object> properties)
+    {
+        if (string.IsNullOrWhiteSpace(strongId))
+            throw new ArgumentException("StrongId required for promotion.");
+        if (string.IsNullOrWhiteSpace(subtype))
+            throw new ArgumentException("Subtype required.");
+        return _repo.PromoteToSubtypeAsync(strongId, subtype, properties);
+    }
+
     /// <summary>Returns the current labels on a person — e.g. ["Person","Student","Researcher"]</summary>
     public Task<List<string>> GetPersonLabelsAsync(string strongId) =>
         _repo.GetLabelsAsync(strongId);

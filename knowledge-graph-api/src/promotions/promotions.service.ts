@@ -116,6 +116,48 @@ export class PromotionsService {
     };
   }
 
+  // ── Generic Subtype Promotion ───────────────────────────────────────────
+
+  async promoteToSubtype(strongId: string, subtype: string, properties: Record<string, any>) {
+    const safeSubtype = this.neo4j.sanitizeIdentifier(subtype);
+    const safeProps = this.sanitizePropertyKeys(properties);
+
+    // Build SET clauses dynamically
+    const setParts = Object.keys(safeProps).map(k => `p.\`${k}\` = $prop_${k}`).join(', ');
+    const setClause = setParts ? `SET ${setParts}` : '';
+
+    const params: Record<string, any> = { strongId };
+    for (const [k, v] of Object.entries(safeProps)) {
+      params[`prop_${k}`] = v;
+    }
+
+    const records = await this.neo4j.runQuery(`
+      MATCH (p:Person {strong_id: $strongId})
+      SET p:\`${safeSubtype}\`
+      ${setClause}
+      RETURN p, labels(p) AS labels`,
+      params
+    );
+
+    if (!records.length) throw new NotFoundException(`Person ${strongId} not found`);
+    return {
+      ...this.neo4j.toPlainObject(records[0].get('p').properties),
+      labels: records[0].get('labels'),
+    };
+  }
+
+  // Helper to sanitize property keys (similar to generic entity service)
+  private sanitizePropertyKeys(dto: any): Record<string, any> {
+    const result: Record<string, any> = {};
+    for (const [k, v] of Object.entries(dto || {})) {
+      if (v !== undefined && v !== null) {
+        const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        result[snakeKey] = v;
+      }
+    }
+    return result;
+  }
+
   // ── Subtype listing queries ───────────────────────────────────────────────
 
   async getStudents(tenantId: string) {
@@ -164,6 +206,16 @@ export class PromotionsService {
       ...this.neo4j.toPlainObject(r.get('p').properties),
       labels:   r.get('labels'),
       location: r.get('locationName'),
+    }));
+  }
+
+  async getArtists() {
+    const records = await this.neo4j.runQuery(
+      'MATCH (p:Person:Artist) RETURN p, labels(p) AS labels ORDER BY p.last_name',
+    );
+    return records.map(r => ({
+      ...this.neo4j.toPlainObject(r.get('p').properties),
+      labels: r.get('labels'),
     }));
   }
 }

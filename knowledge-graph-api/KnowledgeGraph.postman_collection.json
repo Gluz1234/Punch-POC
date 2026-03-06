@@ -66,9 +66,11 @@
       { "name": "Promote to Employee",   "request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/employee",   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"employeeNumber\": \"G-44001\",\n  \"contractType\": \"Permanent\",\n  \"salaryBand\": \"L4\",\n  \"department\": \"Cloud\"\n}" } } },
       { "name": "Promote to Resident",   "request": { "method": "POST", "url": "{{base}}/promotions/person/person-leon-fischer/resident",  "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"residentId\": \"NL-AMS-001234\",\n  \"registrationDate\": \"2022-01-15\",\n  \"residencyType\": \"Expat\"\n}" } } },
       { "name": "Promote to Researcher", "request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/researcher", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"orcidId\": \"0000-0002-1111-2222\",\n  \"researchField\": \"Machine Learning\",\n  \"hIndex\": 3,\n  \"researcherType\": \"PhD\"\n}" } } },
+      { "name": "Generic Promotion (Artist)", "request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/subtype/Artist", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"artistId\": \"ART-001\",\n  \"artStyle\": \"Digital Art\",\n  \"portfolioUrl\": \"https://sarahchen.art\",\n  \"yearsOfExperience\": 8,\n  \"exhibitionHistory\": \"SF Museum of Modern Art (2023)\"\n}" } } },
       { "name": "Get Students (MIT)",    "request": { "method": "GET",  "url": "{{base}}/promotions/students/tenant_mit" } },
       { "name": "Get Employees (Google)","request": { "method": "GET",  "url": "{{base}}/promotions/employees/tenant_google" } },
       { "name": "Get All Researchers",   "request": { "method": "GET",  "url": "{{base}}/promotions/researchers" } },
+      { "name": "Get All Artists",        "request": { "method": "GET",  "url": "{{base}}/promotions/artists" } },
       { "name": "Get Residents (City)",  "request": { "method": "GET",  "url": "{{base}}/promotions/residents/tenant_city_nl" } }
     ]},
     { "name": "Dynamic (New Types)", "item": [
