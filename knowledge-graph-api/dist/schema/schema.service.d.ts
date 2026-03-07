@@ -1,7 +1,11 @@
 import { Neo4jService } from '../neo4j/neo4j.service';
+import { SchemaRegistrationService } from './schema-registration.service';
+import { PromotionSchemaService } from '../promotions/promotion-schema.service';
 export declare class SchemaService {
     private readonly neo4j;
-    constructor(neo4j: Neo4jService);
+    private readonly schemaRegistration;
+    private readonly promotionSchema;
+    constructor(neo4j: Neo4jService, schemaRegistration: SchemaRegistrationService, promotionSchema: PromotionSchemaService);
     getLabels(): Promise<string[]>;
     getRelationshipTypes(): Promise<string[]>;
     getConstraints(): Promise<{

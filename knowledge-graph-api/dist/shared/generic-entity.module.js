@@ -10,6 +10,7 @@ exports.GenericEntityModule = void 0;
 const common_1 = require("@nestjs/common");
 const generic_entity_service_1 = require("./generic-entity.service");
 const generic_entity_controller_1 = require("./generic-entity.controller");
+const schema_module_1 = require("../schema/schema.module");
 class GenericEntityModule {
     static forEntity(config) {
         const controller = (0, generic_entity_controller_1.createGenericEntityController)(config);
@@ -17,6 +18,7 @@ class GenericEntityModule {
         };
         DynamicEntityModule = __decorate([
             (0, common_1.Module)({
+                imports: [schema_module_1.SchemaModule],
                 controllers: [controller],
                 providers: [generic_entity_service_1.GenericEntityService],
                 exports: [generic_entity_service_1.GenericEntityService],

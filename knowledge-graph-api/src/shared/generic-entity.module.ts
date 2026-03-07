@@ -2,11 +2,12 @@ import { Module, DynamicModule } from '@nestjs/common';
 import { GenericEntityService } from './generic-entity.service';
 import { createGenericEntityController } from './generic-entity.controller';
 import { EntityConfig } from './entity-config';
+import { SchemaModule } from '../schema/schema.module';
 
 /**
  * Dynamic Module Factory
  * Creates a NestJS module for any entity config on-the-fly.
- * 
+ *
  * Instead of creating PersonModule, CourseModule, etc. manually,
  * this factory generates them from the entity config.
  */
@@ -15,6 +16,7 @@ export class GenericEntityModule {
     const controller = createGenericEntityController(config);
 
     @Module({
+      imports: [SchemaModule], // For SchemaRegistrationService
       controllers: [controller],
       providers: [GenericEntityService],
       exports: [GenericEntityService],

@@ -10,13 +10,17 @@ exports.SchemaModule = void 0;
 const common_1 = require("@nestjs/common");
 const schema_controller_1 = require("./schema.controller");
 const schema_service_1 = require("./schema.service");
+const schema_registration_service_1 = require("./schema-registration.service");
+const promotions_module_1 = require("../promotions/promotions.module");
 let SchemaModule = class SchemaModule {
 };
 exports.SchemaModule = SchemaModule;
 exports.SchemaModule = SchemaModule = __decorate([
     (0, common_1.Module)({
+        imports: [promotions_module_1.PromotionsModule],
         controllers: [schema_controller_1.SchemaController],
-        providers: [schema_service_1.SchemaService],
+        providers: [schema_service_1.SchemaService, schema_registration_service_1.SchemaRegistrationService],
+        exports: [schema_registration_service_1.SchemaRegistrationService],
     })
 ], SchemaModule);
 //# sourceMappingURL=schema.module.js.map

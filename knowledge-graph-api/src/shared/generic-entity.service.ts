@@ -2,17 +2,21 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import neo4j, { Integer } from 'neo4j-driver';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { EntityConfig } from './entity-config';
+import { SchemaRegistrationService } from '../schema/schema-registration.service';
 
 /**
  * Generic Entity Service
  * Replaces all hardcoded services (PersonsService, CoursesService, etc.)
- * 
+ *
  * This is the single source of CRUD logic for all standard entities.
  * Add special cases as optional overrides, but most entities work out-of-the-box.
  */
 @Injectable()
 export class GenericEntityService {
-  constructor(private readonly neo4j: Neo4jService) {}
+  constructor(
+    private readonly neo4j: Neo4jService,
+    private readonly schemaRegistration: SchemaRegistrationService,
+  ) {}
 
   /**
    * Create or update (upsert) an entity.
@@ -22,6 +26,9 @@ export class GenericEntityService {
     if (!dto[config.idField]) {
       throw new BadRequestException(`${config.idField} is required`);
     }
+
+    // Ensure entity schema is registered (fallback if app startup failed)
+    await this.schemaRegistration.ensureEntitySchema(config.key);
 
     const idValue = dto[config.idField];
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
@@ -104,6 +111,9 @@ export class GenericEntityService {
    * Update an entity's properties.
    */
   async update(config: EntityConfig, id: string, dto: any) {
+    // Ensure entity schema is registered (fallback if app startup failed)
+    await this.schemaRegistration.ensureEntitySchema(config.key);
+
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
     const safeProps = this.sanitizePropertyKeys(dto);

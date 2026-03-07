@@ -144,15 +144,13 @@ public class PromotionRepository
     /// </summary>
     public async Task PromoteToSubtypeAsync(string strongId, string subtype, Dictionary<string, object> properties)
     {
-        var safeSubtype = _neo4j.SanitizeIdentifier(subtype);
-        
         // Build SET clauses dynamically
         var setParts = properties.Select(kvp => $"p.`{kvp.Key}` = $prop_{kvp.Key}").ToList();
         var setClause = setParts.Any() ? $"SET {string.Join(", ", setParts)}" : "";
         
         var cypher = $@"
             MATCH (p:Person {{strong_id: $strongId}})
-            SET p:{safeSubtype}
+            SET p:`{subtype}`
             {setClause}
             RETURN p";
 

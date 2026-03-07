@@ -1,14 +1,52 @@
 import { Controller, Get, Post, Param, Body } from '@nestjs/common';
-import { PromotionsService } from './promotions.service';
+import { PromotionsService, PromotionProjectionService } from './promotions.service';
+import {
+  PromotionSchemaService,
+  PromotionSubtypeDefinitionDto,
+} from './promotion-schema.service';
 
 @Controller('promotions')
 export class PromotionsController {
-  constructor(private readonly promotionsService: PromotionsService) {}
+  constructor(
+    private readonly promotionsService: PromotionsService,
+    private readonly promotionProjection: PromotionProjectionService,
+    private readonly promotionSchema: PromotionSchemaService,
+  ) {}
 
   // GET /api/promotions/person/:strongId/labels
   @Get('person/:strongId/labels')
   getLabels(@Param('strongId') strongId: string) {
     return this.promotionsService.getLabels(strongId);
+  }
+
+  // GET /api/promotions/person/:strongId/typed-properties
+  // Returns base Person vs subtype (Student/Employee/...) properties separately.
+  @Get('person/:strongId/typed-properties')
+  getTypedProperties(@Param('strongId') strongId: string) {
+    return this.promotionProjection.getPersonTypedProperties(strongId);
+  }
+
+  // ── Promotion schema (dynamic subtype definitions) ──────────────────────────
+
+  // POST /api/promotions/schema/subtypes
+  // Define or update a promotion subtype and its fields at runtime.
+  @Post('schema/subtypes')
+  upsertSubtypeDefinition(@Body() dto: PromotionSubtypeDefinitionDto) {
+    return this.promotionSchema.upsertSubtypeDefinition(dto);
+  }
+
+  // GET /api/promotions/schema/subtypes/:baseLabel
+  // List all subtype definitions that extend a given base label (e.g. "Person").
+  @Get('schema/subtypes/:baseLabel')
+  getSubtypesForBase(@Param('baseLabel') baseLabel: string) {
+    return this.promotionSchema.getSubtypeDefinitionsForBase(baseLabel);
+  }
+
+  // GET /api/promotions/schema/subtypes
+  // List all subtype definitions across all base labels.
+  @Get('schema/subtypes')
+  getAllSubtypes() {
+    return this.promotionSchema.getAllSubtypeDefinitions();
   }
 
   // POST /api/promotions/person/:strongId/student
@@ -33,6 +71,12 @@ export class PromotionsController {
   @Post('person/:strongId/researcher')
   promoteToResearcher(@Param('strongId') strongId: string, @Body() dto: any) {
     return this.promotionsService.promoteToResearcher(strongId, dto);
+  }
+
+  // POST /api/promotions/person/:strongId/artist
+  @Post('person/:strongId/artist')
+  promoteToArtist(@Param('strongId') strongId: string, @Body() dto: any) {
+    return this.promotionsService.promoteToArtist(strongId, dto);
   }
 
   // POST /api/promotions/person/:strongId/subtype/:subtype

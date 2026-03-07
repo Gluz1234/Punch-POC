@@ -12,9 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchemaService = void 0;
 const common_1 = require("@nestjs/common");
 const neo4j_service_1 = require("../neo4j/neo4j.service");
+const entity_config_1 = require("../shared/entity-config");
+const schema_registration_service_1 = require("./schema-registration.service");
+const promotion_schema_service_1 = require("../promotions/promotion-schema.service");
 let SchemaService = class SchemaService {
-    constructor(neo4j) {
+    constructor(neo4j, schemaRegistration, promotionSchema) {
         this.neo4j = neo4j;
+        this.schemaRegistration = schemaRegistration;
+        this.promotionSchema = promotionSchema;
     }
     async getLabels() {
         const records = await this.neo4j.runQuery('CALL db.labels() YIELD label RETURN label ORDER BY label');
@@ -45,6 +50,61 @@ let SchemaService = class SchemaService {
         }));
     }
     async getPropertiesForLabel(label) {
+        const registeredSchema = await this.schemaRegistration.getEntitySchema(label);
+        if (registeredSchema) {
+            return {
+                label,
+                properties: registeredSchema.properties,
+                totalProperties: registeredSchema.properties.length,
+            };
+        }
+        const entityConfig = (0, entity_config_1.getAllEntities)().find(e => e.label === label);
+        if (entityConfig) {
+            const typeMap = entityConfig.propertyTypes ?? {};
+            const props = [];
+            if (entityConfig.idField) {
+                const idType = typeMap[entityConfig.idField] || 'Unknown';
+                props.push({ name: entityConfig.idField, type: idType });
+            }
+            const sortedKeys = Object.keys(entityConfig.properties).sort();
+            for (const key of sortedKeys) {
+                const propType = typeMap[key] || 'Unknown';
+                props.push({ name: key, type: propType });
+            }
+            try {
+                await this.schemaRegistration.upsertEntitySchema({
+                    key: entityConfig.key,
+                    label: entityConfig.label,
+                    properties: props,
+                });
+            }
+            catch (err) {
+                console.warn(`⚠ Failed to auto-register entity schema for ${label}:`, err);
+            }
+            return {
+                label,
+                properties: props,
+                totalProperties: props.length,
+            };
+        }
+        try {
+            const subtypeDefs = await this.promotionSchema.getSubtypeDefinitionsForBase('Person');
+            const subtypeDef = subtypeDefs.find(st => st.label === label);
+            if (subtypeDef) {
+                const subtypeProps = subtypeDef.properties.map(prop => ({
+                    name: prop,
+                    type: 'String'
+                }));
+                return {
+                    label,
+                    properties: subtypeProps,
+                    totalProperties: subtypeProps.length,
+                };
+            }
+        }
+        catch (err) {
+            console.warn(`⚠ Failed to check promotion subtypes for ${label}:`, err);
+        }
         const safeLabel = this.neo4j.sanitizeIdentifier(label);
         const keyRecords = await this.neo4j.runQuery(`MATCH (n:\`${safeLabel}\`) WITH n LIMIT 100
        UNWIND keys(n) AS key
@@ -91,6 +151,8 @@ let SchemaService = class SchemaService {
         };
     }
     async getFullSchema() {
+        await this.schemaRegistration.registerAllBaseEntities();
+        await this.schemaRegistration.registerAllBuiltinSubtypes();
         const [labels, relTypes, constraints] = await Promise.all([
             this.getLabels(),
             this.getRelationshipTypes(),
@@ -121,6 +183,8 @@ let SchemaService = class SchemaService {
 exports.SchemaService = SchemaService;
 exports.SchemaService = SchemaService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [neo4j_service_1.Neo4jService])
+    __metadata("design:paramtypes", [neo4j_service_1.Neo4jService,
+        schema_registration_service_1.SchemaRegistrationService,
+        promotion_schema_service_1.PromotionSchemaService])
 ], SchemaService);
 //# sourceMappingURL=schema.service.js.map

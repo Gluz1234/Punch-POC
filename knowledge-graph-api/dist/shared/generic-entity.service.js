@@ -13,14 +13,17 @@ exports.GenericEntityService = void 0;
 const common_1 = require("@nestjs/common");
 const neo4j_driver_1 = require("neo4j-driver");
 const neo4j_service_1 = require("../neo4j/neo4j.service");
+const schema_registration_service_1 = require("../schema/schema-registration.service");
 let GenericEntityService = class GenericEntityService {
-    constructor(neo4j) {
+    constructor(neo4j, schemaRegistration) {
         this.neo4j = neo4j;
+        this.schemaRegistration = schemaRegistration;
     }
     async upsert(config, dto) {
         if (!dto[config.idField]) {
             throw new common_1.BadRequestException(`${config.idField} is required`);
         }
+        await this.schemaRegistration.ensureEntitySchema(config.key);
         const idValue = dto[config.idField];
         const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
         const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
@@ -60,6 +63,7 @@ let GenericEntityService = class GenericEntityService {
         return records.map(r => this.formatResult(r));
     }
     async update(config, id, dto) {
+        await this.schemaRegistration.ensureEntitySchema(config.key);
         const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
         const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
         const safeProps = this.sanitizePropertyKeys(dto);
@@ -122,6 +126,7 @@ let GenericEntityService = class GenericEntityService {
 exports.GenericEntityService = GenericEntityService;
 exports.GenericEntityService = GenericEntityService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [neo4j_service_1.Neo4jService])
+    __metadata("design:paramtypes", [neo4j_service_1.Neo4jService,
+        schema_registration_service_1.SchemaRegistrationService])
 ], GenericEntityService);
 //# sourceMappingURL=generic-entity.service.js.map

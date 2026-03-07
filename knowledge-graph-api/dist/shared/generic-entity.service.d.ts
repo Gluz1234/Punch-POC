@@ -1,8 +1,10 @@
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { EntityConfig } from './entity-config';
+import { SchemaRegistrationService } from '../schema/schema-registration.service';
 export declare class GenericEntityService {
     private readonly neo4j;
-    constructor(neo4j: Neo4jService);
+    private readonly schemaRegistration;
+    constructor(neo4j: Neo4jService, schemaRegistration: SchemaRegistrationService);
     upsert(config: EntityConfig, dto: any): Promise<{
         labels: any;
     }>;

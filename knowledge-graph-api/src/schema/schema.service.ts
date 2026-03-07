@@ -1,9 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { Neo4jService } from '../neo4j/neo4j.service';
+import { getAllEntities } from '../shared/entity-config';
+import { SchemaRegistrationService } from './schema-registration.service';
+import { PromotionSchemaService } from '../promotions/promotion-schema.service';
 
 @Injectable()
 export class SchemaService {
-  constructor(private readonly neo4j: Neo4jService) {}
+  constructor(
+    private readonly neo4j: Neo4jService,
+    private readonly schemaRegistration: SchemaRegistrationService,
+    private readonly promotionSchema: PromotionSchemaService,
+  ) {}
 
   async getLabels(): Promise<string[]> {
     const records = await this.neo4j.runQuery(
@@ -42,8 +49,79 @@ export class SchemaService {
   }
 
   async getPropertiesForLabel(label: string) {
+    // First try to get from registered entity schemas
+    const registeredSchema = await this.schemaRegistration.getEntitySchema(label);
+    if (registeredSchema) {
+      return {
+        label,
+        properties: registeredSchema.properties,
+        totalProperties: registeredSchema.properties.length,
+      };
+    }
+
+    // If this label corresponds to a configured entity, return the
+    // *logical* schema from configuration instead of raw Neo4j keys.
+    const entityConfig = getAllEntities().find(e => e.label === label);
+    if (entityConfig) {
+      const typeMap = entityConfig.propertyTypes ?? {};
+
+      const props: { name: string; type: string }[] = [];
+
+      // Include the ID field first if it is typed
+      if (entityConfig.idField) {
+        const idType = typeMap[entityConfig.idField] || 'Unknown';
+        props.push({ name: entityConfig.idField, type: idType });
+      }
+
+      // Then include configured properties in alphabetical order for stability
+      const sortedKeys = Object.keys(entityConfig.properties).sort();
+      for (const key of sortedKeys) {
+        const propType = typeMap[key] || 'Unknown';
+        props.push({ name: key, type: propType });
+      }
+
+      // Auto-register this entity schema for future use
+      try {
+        await this.schemaRegistration.upsertEntitySchema({
+          key: entityConfig.key,
+          label: entityConfig.label,
+          properties: props,
+        });
+      } catch (err) {
+        console.warn(`⚠ Failed to auto-register entity schema for ${label}:`, err);
+      }
+
+      return {
+        label,
+        properties: props,
+        totalProperties: props.length,
+      };
+    }
+
+    // Check if this is a promotion subtype
+    try {
+      const subtypeDefs = await this.promotionSchema.getSubtypeDefinitionsForBase('Person');
+      const subtypeDef = subtypeDefs.find(st => st.label === label);
+      if (subtypeDef) {
+        // For subtypes, return only the subtype-specific properties
+        const subtypeProps = subtypeDef.properties.map(prop => ({
+          name: prop,
+          type: 'String' // Default type for now
+        }));
+
+        return {
+          label,
+          properties: subtypeProps,
+          totalProperties: subtypeProps.length,
+        };
+      }
+    } catch (err) {
+      console.warn(`⚠ Failed to check promotion subtypes for ${label}:`, err);
+    }
+
+    // Fallback: derive from existing nodes in Neo4j
     const safeLabel = this.neo4j.sanitizeIdentifier(label);
-    
+
     // Get distinct property keys
     const keyRecords = await this.neo4j.runQuery(
       `MATCH (n:\`${safeLabel}\`) WITH n LIMIT 100
@@ -51,7 +129,7 @@ export class SchemaService {
        RETURN DISTINCT key ORDER BY key`,
     );
     const properties = keyRecords.map(r => r.get('key'));
-    
+
     // Get property types using APOC
     const typeRecords = await this.neo4j.runQuery(
       `CALL apoc.meta.data() YIELD label, property, type
@@ -59,21 +137,21 @@ export class SchemaService {
        RETURN property, type ORDER BY property`,
       { label }
     );
-    
+
     // Create a map of property -> type
     const typeMap: Record<string, string> = {};
     typeRecords.forEach(r => {
       typeMap[r.get('property')] = r.get('type');
     });
-    
+
     // Combine keys with types (use 'Unknown' for properties not found in APOC)
     const propertiesWithTypes = properties.map(prop => ({
       name: prop,
       type: typeMap[prop] || 'Unknown'
     }));
-    
-    return { 
-      label, 
+
+    return {
+      label,
       properties: propertiesWithTypes,
       totalProperties: properties.length
     };
@@ -118,15 +196,21 @@ export class SchemaService {
   }
 
   async getFullSchema() {
+    // Ensure all schemas are registered
+    await this.schemaRegistration.registerAllBaseEntities();
+    await this.schemaRegistration.registerAllBuiltinSubtypes();
+
     const [labels, relTypes, constraints] = await Promise.all([
       this.getLabels(),
       this.getRelationshipTypes(),
       this.getConstraints(),
     ]);
+
     const [labelDetails, relDetails] = await Promise.all([
       Promise.all(labels.map(l => this.getPropertiesForLabel(l))),
       Promise.all(relTypes.map(t => this.getPropertiesForRelType(t))),
     ]);
+
     return { nodeLabels: labelDetails, relationshipTypes: relDetails, constraints };
   }
 
