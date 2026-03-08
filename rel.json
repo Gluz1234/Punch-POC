@@ -1,0 +1,176 @@
+[
+    {
+        "type": "WORKS_AT",
+        "tenantId": "tenant_google",
+        "targetLabels": [
+            "Organization"
+        ],
+        "targetId": "org-google",
+        "properties": {
+            "tenant_id": "tenant_google",
+            "org_id": "org-google",
+            "created_at": "2026-03-07T16:46:21.0055122Z",
+            "job_title": "Software Engineer L4",
+            "start_date": "2023-08-01T00:00:00.0000000"
+        }
+    },
+    {
+        "type": "WORKS_IN",
+        "tenantId": "tenant_google",
+        "targetLabels": [
+            "Department"
+        ],
+        "targetId": "org-google",
+        "properties": {
+            "tenant_id": "tenant_google",
+            "role": "Software Engineer",
+            "department_id": "dept-google-cloud",
+            "created_at": "2026-03-07T16:46:21.0613205Z"
+        }
+    },
+    {
+        "type": "AFFILIATED_WITH",
+        "tenantId": "tenant_mit",
+        "targetLabels": [
+            "Organization"
+        ],
+        "targetId": "org-mit",
+        "properties": {
+            "tenant_id": "tenant_mit",
+            "affiliation_type": "PhD Candidate",
+            "org_id": "org-mit",
+            "created_at": "2026-03-07T16:46:20.9208706Z"
+        }
+    },
+    {
+        "type": "ENROLLED_IN",
+        "tenantId": "tenant_mit",
+        "targetLabels": [
+            "Organization"
+        ],
+        "targetId": "org-mit",
+        "properties": {
+            "tenant_id": "tenant_mit",
+            "org_id": "org-mit",
+            "created_at": "2026-03-07T16:46:20.6677351Z",
+            "program": "BSc Computer Science",
+            "start_date": "2019-09-01T00:00:00.0000000"
+        }
+    },
+    {
+        "type": "HAS_ADVISOR",
+        "tenantId": "tenant_mit",
+        "targetLabels": [
+            "Person",
+            "Researcher",
+            "Employee"
+        ],
+        "targetId": "person-prof-johnson",
+        "properties": {
+            "tenant_id": "tenant_mit",
+            "advisor_role": "Primary",
+            "created_at": "2026-03-07T16:46:20.7717415Z",
+            "advisor_id": "person-prof-johnson"
+        }
+    },
+    {
+        "type": "REGISTERED_FOR",
+        "tenantId": "tenant_mit",
+        "targetLabels": [
+            "Course"
+        ],
+        "targetId": "org-mit",
+        "properties": {
+            "tenant_id": "tenant_mit",
+            "course_id": "course-6006",
+            "grade": "A",
+            "created_at": "2026-03-07T16:46:20.8274372Z",
+            "academic_term": "Fall 2023",
+            "status": "Completed"
+        }
+    },
+    {
+        "type": "REGISTERED_FOR",
+        "tenantId": "tenant_mit",
+        "targetLabels": [
+            "Course"
+        ],
+        "targetId": "org-mit",
+        "properties": {
+            "tenant_id": "tenant_mit",
+            "course_id": "course-6034",
+            "grade": "A+",
+            "created_at": "2026-03-07T16:46:20.8841169Z",
+            "academic_term": "Fall 2023",
+            "status": "Completed"
+        }
+    },
+    {
+        "type": "COMPLETED",
+        "tenantId": "tenant_mit",
+        "targetLabels": [
+            "Education"
+        ],
+        "targetId": "edu-cs-mit",
+        "properties": {
+            "tenant_id": "tenant_mit",
+            "education_id": "edu-cs-mit",
+            "created_at": "2026-03-07T16:46:20.9568243Z"
+        }
+    },
+    {
+        "type": "LIVES_IN",
+        "tenantId": "tenant_mit",
+        "targetLabels": [
+            "Location"
+        ],
+        "targetId": "loc-cambridge-us",
+        "properties": {
+            "tenant_id": "tenant_mit",
+            "created_at": "2026-03-07T16:46:21.0958760Z",
+            "location_id": "loc-cambridge-us"
+        }
+    },
+    {
+        "type": "HAS_SKILL",
+        "tenantId": "tenant_mit",
+        "targetLabels": [
+            "Skill"
+        ],
+        "targetId": "skill-python",
+        "properties": {
+            "tenant_id": "tenant_mit",
+            "proficiency_level": "Expert",
+            "created_at": "2026-03-07T16:46:21.1464649Z",
+            "skill_id": "skill-python"
+        }
+    },
+    {
+        "type": "HAS_SKILL",
+        "tenantId": "tenant_google",
+        "targetLabels": [
+            "Skill"
+        ],
+        "targetId": "skill-ml",
+        "properties": {
+            "tenant_id": "tenant_google",
+            "proficiency_level": "Intermediate",
+            "created_at": "2026-03-07T16:46:21.1938767Z",
+            "skill_id": "skill-ml"
+        }
+    },
+    {
+        "type": "REPORTS_TO",
+        "tenantId": "tenant_google",
+        "targetLabels": [
+            "Person",
+            "Employee"
+        ],
+        "targetId": "person-yuki-tanaka",
+        "properties": {
+            "tenant_id": "tenant_google",
+            "reporting_type": "Direct",
+            "created_at": "2026-03-07T16:46:22.4062806Z"
+        }
+    }
+]
