@@ -5,15 +5,17 @@ import { FullTextSearchService } from './full-text-search.service';
 /**
  * Full-Text Search Controller
  * 
- * Leverages Neo4j's Lucene full-text search engine.
- * Supports advanced Lucene syntax:
- * - "john*" = prefix search
- * - "john AND smith" = AND search
- * - "john OR jane" = OR search
- * - "\"john smith\"" = phrase search (exact match)
- * - "john~" = fuzzy search (typo tolerance)
+ * Community Edition search engine with full query syntax:
+ *   "john"       → contains (substring match across all text fields)
+ *   "john*"      → prefix   (starts-with, scored higher than substring)
+ *   "john~"      → fuzzy    (typo tolerance via APOC levenshtein)
+ *   "john~0.8"   → fuzzy    (custom similarity threshold 0-1)
+ *   "john AND s" → AND      (all terms must match)
+ *   "john OR j"  → OR       (any term matches)
+ *   "\"john s\"" → phrase   (exact phrase, scored highest)
+ *   "john smith" → implicit AND (space-separated = AND)
  * 
- * Results are ranked by relevance score.
+ * All results are ranked by relevance score.
  */
 @ApiTags('Search')
 @Controller('search')
@@ -24,7 +26,7 @@ export class FullTextSearchController {
   @HttpCode(200)
   @ApiOperation({ 
     summary: 'Search any entity type', 
-    description: 'Full-text search for any entity type (person, organization, skill, course, etc.) using Lucene syntax. Supports wildcards (*), fuzzy (~), AND/OR operators, and phrase search.' 
+    description: 'Search any entity with rich query syntax. Supports: contains, prefix (*), fuzzy (~), AND/OR operators, phrase ("..."), and implicit AND for multi-word queries. Results ranked by relevance.' 
   })
   @ApiParam({ name: 'entityType', description: 'Entity type key', example: 'person' })
   @ApiQuery({ name: 'q', description: 'Search query (Lucene syntax)', example: 'john*', required: true })

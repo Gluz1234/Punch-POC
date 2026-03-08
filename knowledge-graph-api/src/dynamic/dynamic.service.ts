@@ -1,9 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { int } from 'neo4j-driver';
 import { Neo4jService } from '../neo4j/neo4j.service';
+import { SchemaRegistrationService } from '../schema/schema-registration.service';
 
 @Injectable()
 export class DynamicService {
-  constructor(private readonly neo4j: Neo4jService) {}
+  constructor(
+    private readonly neo4j: Neo4jService,
+    private readonly schemaRegistration: SchemaRegistrationService,
+  ) {}
 
   // ── CREATE or UPSERT a node of any label(s) ───────────────────────────────
   // This is the core method for brand-new entity types that don't exist yet.
@@ -49,7 +54,7 @@ export class DynamicService {
     const safeLabel = this.neo4j.sanitizeIdentifier(label);
     const records   = await this.neo4j.runQuery(
       `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels LIMIT $limit`,
-      { limit },
+      { limit: int(limit) },
     );
     return records.map(r => ({
       ...this.neo4j.toPlainObject(r.get('n').properties),
@@ -228,6 +233,73 @@ export class DynamicService {
       { fromId: String(dto.fromId), toId: String(dto.toId) },
     );
     return { deleted: true, type: dto.type, fromId: dto.fromId, toId: dto.toId };
+  }
+
+  // ── SMART CREATE: auto-detect or register type, then create node ────────
+
+  async smartCreate(dto: { label: string; properties?: Record<string, any> }) {
+    if (!dto.label) throw new BadRequestException('label is required');
+
+    const safeLabel = this.neo4j.sanitizeIdentifier(dto.label);
+    const safeProps = this.sanitizePropertyKeys(dto.properties ?? {});
+
+    // Check if this type already has a registered schema
+    const existingSchema = await this.schemaRegistration.getEntitySchema(safeLabel);
+    const idField = `${safeLabel.toLowerCase()}_id`;
+    const safeIdField = this.neo4j.sanitizeIdentifier(idField);
+
+    if (!existingSchema) {
+      // Register a new schema type based on the incoming data
+      const schemaProps: Array<{ name: string; type: string }> = [
+        { name: idField, type: 'String' },
+      ];
+      for (const [key, value] of Object.entries(safeProps)) {
+        schemaProps.push({ name: key, type: this.inferType(value) });
+      }
+
+      await this.schemaRegistration.upsertEntitySchema({
+        key: safeLabel.toLowerCase(),
+        label: safeLabel,
+        properties: schemaProps,
+      });
+
+      // Create a unique constraint on the auto-generated id field
+      await this.neo4j.createConstraintForLabel(safeLabel, safeIdField);
+    }
+
+    // Generate a unique id for the node
+    const nodeId = `${safeLabel.toLowerCase()}_${Date.now()}`;
+
+    // Build SET clause from properties
+    const setParts = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`);
+    const setClause = setParts.length ? `, ${setParts.join(', ')}` : '';
+
+    const params: Record<string, any> = { nodeId };
+    for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
+
+    const records = await this.neo4j.runQuery(
+      `MERGE (n:\`${safeLabel}\` {\`${safeIdField}\`: $nodeId})
+       ON CREATE SET n.\`${safeIdField}\` = $nodeId${setClause}
+       ON MATCH  SET n.\`${safeIdField}\` = $nodeId${setClause}
+       RETURN n, labels(n) AS labels`,
+      params,
+    );
+
+    return {
+      ...this.neo4j.toPlainObject(records[0].get('n').properties),
+      labels: records[0].get('labels'),
+      schemaExisted: !!existingSchema,
+    };
+  }
+
+  private inferType(value: any): string {
+    if (typeof value === 'number') return Number.isInteger(value) ? 'Integer' : 'Float';
+    if (typeof value === 'boolean') return 'Boolean';
+    if (typeof value === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return 'Date';
+      return 'String';
+    }
+    return 'String';
   }
 
   // ── Sanitize property key names ───────────────────────────────────────────

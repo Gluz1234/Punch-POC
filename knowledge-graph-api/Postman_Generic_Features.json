@@ -135,7 +135,7 @@
             },
             "description": "Get all persons living in a specific location"
           }
-        },
+        }
 
       ]
     },

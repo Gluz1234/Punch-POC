@@ -15,58 +15,40 @@ export class DataService {
    * Returns nodes grouped by label with their properties and types.
    */
   async getAllNodesByTenant(tenantId: string, limit = 10000) {
-    // Get all labels in the database
-    const labels = await this.schemaService.getLabels();
+    // Collect all unique nodes from tenant relationships (same pattern as getRelationshipsByTenant)
+    const records = await this.neo4j.runQuery(`
+      MATCH (a)-[r {tenant_id: $tenantId}]->(b)
+      WITH collect(DISTINCT a) + collect(DISTINCT b) AS allNodes
+      UNWIND allNodes AS n
+      WITH DISTINCT n
+      RETURN n, labels(n) AS labels
+      LIMIT $limit
+    `, { tenantId, limit: neo4j.int(limit) });
 
     const nodesByLabel: Record<string, any[]> = {};
-    const labelSchemas: Record<string, any> = {};
 
-    // For each label, fetch nodes and their schema
-    for (const label of labels) {
-      try {
-        const safeLabel = this.neo4j.sanitizeIdentifier(label);
+    for (const record of records) {
+      const nodeLabels: string[] = record.get('labels');
+      const node = {
+        _id: record.get('n').identity.toNumber(),
+        ...this.neo4j.toPlainObject(record.get('n').properties),
+        labels: nodeLabels,
+      };
 
-        // Get schema for this label first
-        const schema = await this.schemaService.getPropertiesForLabel(label);
-        labelSchemas[label] = schema;
-        
-        // Fetch nodes that have relationships with tenant_id
-        const records = await this.neo4j.runQuery(`
-          MATCH (n:\`${safeLabel}\`)
-          WHERE EXISTS((n)-[r]->() WHERE r.tenant_id = $tenantId)
-             OR EXISTS(()-[r]->(n) WHERE r.tenant_id = $tenantId)
-          RETURN n, labels(n) AS labels
-          LIMIT $limit
-        `, { tenantId, limit: neo4j.int(limit) });
-
-        if (records.length > 0) {
-          nodesByLabel[label] = records.map(r => {
-            const allProps = this.neo4j.toPlainObject(r.get('n').properties);
-            const nodeLabels = r.get('labels');
-            
-            // Filter properties based on schema for this specific label
-            const filteredProps = this._filterPropertiesBySchema(allProps, schema);
-            
-            return {
-              ...filteredProps,
-              labels: nodeLabels,
-            };
-          });
+      for (const label of nodeLabels) {
+        if (!nodesByLabel[label]) {
+          nodesByLabel[label] = [];
         }
-      } catch (error) {
-        // Skip labels that don't exist or cause errors
-        console.warn(`⚠ Failed to fetch nodes for label ${label}:`, error.message);
+        nodesByLabel[label].push(node);
       }
     }
 
     return {
       tenantId,
       nodesByLabel,
-      labelSchemas,
       statistics: {
-        totalLabels: labels.length,
         labelsWithData: Object.keys(nodesByLabel).length,
-        totalNodes: Object.values(nodesByLabel).reduce((sum, nodes) => sum + nodes.length, 0),
+        totalNodes: records.length,
       },
     };
   }
