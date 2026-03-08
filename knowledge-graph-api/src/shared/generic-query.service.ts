@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import neo4j from 'neo4j-driver';
 import { Neo4jService } from '../neo4j/neo4j.service';
-import { ENTITY_CONFIGS } from './entity-config';
 
 /**
  * Generic Query Builder Service
@@ -235,87 +234,4 @@ export class GenericQueryService {
     return result;
   }
 
-  /**
-   * Convenience: Query persons working at a specific org (now uses generic builder).
-   */
-  async getPersonsWorkingAtOrg(orgId: string, tenantId: string) {
-    const personConfig = ENTITY_CONFIGS.person;
-    const orgConfig = ENTITY_CONFIGS.organization;
-
-    return this.execute({
-      mainEntity: { config: personConfig, alias: 'p' },
-      relationships: [
-        {
-          type: 'WORKS_AT',
-          direction: '->',
-          targetEntity: { config: orgConfig, alias: 'o', filterFields: { org_id: orgId } },
-        },
-      ],
-      returns: [
-        'p',
-        'labels(p) AS labels',
-        'o.name AS orgName',
-      ],
-      tenantId,
-      orderBy: 'p.last_name',
-    });
-  }
-
-  /**
-   * Convenience: Query persons enrolled in a specific org.
-   */
-  async getPersonsEnrolledInOrg(orgId: string, tenantId: string) {
-    const personConfig = ENTITY_CONFIGS.person;
-    const orgConfig = ENTITY_CONFIGS.organization;
-
-    return this.execute({
-      mainEntity: { config: personConfig, alias: 'p' },
-      relationships: [
-        {
-          type: 'ENROLLED_IN',
-          direction: '->',
-          targetEntity: { config: orgConfig, alias: 'o', filterFields: { org_id: orgId } },
-        },
-      ],
-      returns: [
-        'p',
-        'labels(p) AS labels',
-        'o.name AS orgName',
-      ],
-      tenantId,
-      orderBy: 'p.last_name',
-    });
-  }
-
-  /**
-   * Convenience: Query persons with multiple relationships (e.g., working and enrolled).
-   */
-  async getPersonsWithMultipleRoles(personId: string, tenantId: string) {
-    const personConfig = ENTITY_CONFIGS.person;
-    const orgConfig = ENTITY_CONFIGS.organization;
-
-    return this.execute({
-      mainEntity: { config: personConfig, alias: 'p', filterFields: { strong_id: personId } },
-      relationships: [
-        {
-          type: 'WORKS_AT',
-          direction: '->',
-          targetEntity: { config: orgConfig, alias: 'o_work' },
-        },
-        {
-          type: 'ENROLLED_IN',
-          direction: '->',
-          targetEntity: { config: orgConfig, alias: 'o_enroll' },
-        },
-      ],
-      returns: [
-        'p',
-        'labels(p) AS labels',
-        'o_work.name AS worksAt',
-        'o_enroll.name AS enrolledAt',
-      ],
-      tenantId,
-      distinct: true,
-    });
-  }
 }

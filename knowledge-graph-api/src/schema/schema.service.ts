@@ -98,10 +98,10 @@ export class SchemaService {
       };
     }
 
-    // Check if this is a promotion subtype
+    // Check if this is a promotion subtype for any base label
     try {
-      const subtypeDefs = await this.promotionSchema.getSubtypeDefinitionsForBase('Person');
-      const subtypeDef = subtypeDefs.find(st => st.label === label);
+      const allDefs = await this.promotionSchema.getAllSubtypeDefinitions();
+      const subtypeDef = allDefs.find(st => st.label === label);
       if (subtypeDef) {
         // For subtypes, return only the subtype-specific properties
         const subtypeProps = subtypeDef.properties.map(prop => ({

@@ -1,270 +1,153 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { Neo4jService } from '../neo4j/neo4j.service';
+import { ENTITY_CONFIGS, getAllEntities } from '../shared/entity-config';
 
 @Injectable()
 export class RelationshipsService {
   constructor(private readonly neo4j: Neo4jService) {}
 
-  // ── List all relationships for a person (optionally scoped to a tenant) ──
+  // ── Generic: list all relationships for any entity ──────────────────────────
 
-  async getPersonRelationships(strongId: string, tenantId?: string) {
+  async getEntityRelationships(entityType: string, entityId: string, tenantId?: string) {
+    const config = this.resolveEntityConfig(entityType);
+    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
+    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
     const filter = tenantId ? 'WHERE r.tenant_id = $tenantId' : '';
     const records = await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $strongId})-[r]->(n)
+      MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId})-[r]->(t)
       ${filter}
       RETURN type(r)       AS relType,
              r.tenant_id   AS tenant,
-             labels(n)     AS targetLabels,
+             labels(t)     AS targetLabels,
              properties(r) AS relProps,
-             COALESCE(n.name, n.org_id, n.skill_id, n.location_id,
-                      n.education_id, n.course_id, n.department_id,
-                      n.strong_id, n.id) AS targetId`,
-      { strongId, tenantId: tenantId ?? null },
+             properties(t) AS targetProps`,
+      { entityId, tenantId: tenantId ?? null },
     );
-    return records.map(r => ({
-      type:         r.get('relType'),
-      tenantId:     r.get('tenant'),
-      targetLabels: r.get('targetLabels'),
-      targetId:     r.get('targetId'),
-      properties:   this.neo4j.toPlainObject(r.get('relProps')),
-    }));
+    return records.map(r => {
+      const targetProps = this.neo4j.toPlainObject(r.get('targetProps'));
+      return {
+        type:         r.get('relType'),
+        tenantId:     r.get('tenant'),
+        targetLabels: r.get('targetLabels'),
+        targetId:     this.extractId(targetProps),
+        properties:   this.neo4j.toPlainObject(r.get('relProps')),
+      };
+    });
   }
 
-  // ── ENROLLED_IN ──────────────────────────────────────────────────────────
+  // ── Generic: create any relationship between any two entities ───────────
 
-  async createEnrolledIn(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person       {strong_id: $personId})
-      MATCH (o:Organization {org_id:    $orgId})
-      MERGE (p)-[r:ENROLLED_IN {tenant_id: $tenantId, org_id: $orgId}]->(o)
-      ON CREATE SET r.created_at = $now, r.start_date = $startDate, r.program = $program`,
-      { personId: dto.personStrongId, orgId: dto.orgId, tenantId: dto.tenantId,
-        now: new Date().toISOString(), startDate: dto.startDate ?? null, program: dto.program ?? null });
-    return { created: true, type: 'ENROLLED_IN', ...dto };
+  async createRelationship(dto: {
+    sourceType: string;
+    sourceId: string;
+    targetType: string;
+    targetId: string;
+    relationshipType: string;
+    tenantId: string;
+    properties?: Record<string, any>;
+  }) {
+    const srcCfg = this.resolveEntityConfig(dto.sourceType);
+    const tgtCfg = this.resolveEntityConfig(dto.targetType);
+
+    const safeRelType = this.neo4j.sanitizeIdentifier(dto.relationshipType.toUpperCase());
+    const safeSrcLabel = this.neo4j.sanitizeIdentifier(srcCfg.label);
+    const safeTgtLabel = this.neo4j.sanitizeIdentifier(tgtCfg.label);
+    const safeSrcId = this.neo4j.sanitizeIdentifier(srcCfg.idField);
+    const safeTgtId = this.neo4j.sanitizeIdentifier(tgtCfg.idField);
+
+    // Build dynamic property SET clause from dto.properties
+    const extraProps = dto.properties ?? {};
+    const propKeys = Object.keys(extraProps);
+    const propSetClause = propKeys.length
+      ? ', ' + propKeys.map(k => `r.\`${this.neo4j.sanitizeIdentifier(k)}\` = $prop_${k}`).join(', ')
+      : '';
+    const propParams: Record<string, any> = {};
+    for (const k of propKeys) {
+      propParams[`prop_${k}`] = extraProps[k] ?? null;
+    }
+
+    await this.neo4j.runQuery(
+      `MATCH (src:\`${safeSrcLabel}\` {\`${safeSrcId}\`: $sourceId})
+       MATCH (tgt:\`${safeTgtLabel}\` {\`${safeTgtId}\`: $targetId})
+       MERGE (src)-[r:\`${safeRelType}\` {tenant_id: $tenantId}]->(tgt)
+       ON CREATE SET r.created_at = $now${propSetClause}`,
+      {
+        sourceId: dto.sourceId,
+        targetId: dto.targetId,
+        tenantId: dto.tenantId,
+        now: new Date().toISOString(),
+        ...propParams,
+      },
+    );
+
+    return {
+      created: true,
+      type: safeRelType,
+      source: { type: srcCfg.label, id: dto.sourceId },
+      target: { type: tgtCfg.label, id: dto.targetId },
+      tenantId: dto.tenantId,
+      properties: extraProps,
+    };
   }
 
-  async deleteEnrolledIn(personId: string, orgId: string, tenantId: string) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $personId})
-            -[r:ENROLLED_IN {tenant_id: $tenantId, org_id: $orgId}]->()
-      DELETE r`,
-      { personId, orgId, tenantId });
-    return { deleted: true };
+  // ── Generic: delete any relationship ────────────────────────────────────
+
+  async deleteRelationship(dto: {
+    sourceType: string;
+    sourceId: string;
+    relationshipType: string;
+    tenantId: string;
+    targetType?: string;
+    targetId?: string;
+  }) {
+    const srcCfg = this.resolveEntityConfig(dto.sourceType);
+    const safeRelType = this.neo4j.sanitizeIdentifier(dto.relationshipType.toUpperCase());
+    const safeSrcLabel = this.neo4j.sanitizeIdentifier(srcCfg.label);
+    const safeSrcId = this.neo4j.sanitizeIdentifier(srcCfg.idField);
+
+    let targetMatch = '()';
+    const params: Record<string, any> = {
+      sourceId: dto.sourceId,
+      tenantId: dto.tenantId,
+    };
+
+    if (dto.targetType && dto.targetId) {
+      const tgtCfg = this.resolveEntityConfig(dto.targetType);
+      const safeTgtLabel = this.neo4j.sanitizeIdentifier(tgtCfg.label);
+      const safeTgtId = this.neo4j.sanitizeIdentifier(tgtCfg.idField);
+      targetMatch = `(tgt:\`${safeTgtLabel}\` {\`${safeTgtId}\`: $targetId})`;
+      params.targetId = dto.targetId;
+    }
+
+    await this.neo4j.runQuery(
+      `MATCH (src:\`${safeSrcLabel}\` {\`${safeSrcId}\`: $sourceId})
+             -[r:\`${safeRelType}\` {tenant_id: $tenantId}]->${targetMatch}
+       DELETE r`,
+      params,
+    );
+
+    return { deleted: true, type: safeRelType, sourceId: dto.sourceId, tenantId: dto.tenantId };
   }
 
-  // ── WORKS_AT ─────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────
 
-  async createWorksAt(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person       {strong_id: $personId})
-      MATCH (o:Organization {org_id:    $orgId})
-      MERGE (p)-[r:WORKS_AT {tenant_id: $tenantId, org_id: $orgId}]->(o)
-      ON CREATE SET r.created_at = $now, r.job_title = $jobTitle, r.start_date = $startDate`,
-      { personId: dto.personStrongId, orgId: dto.orgId, tenantId: dto.tenantId,
-        now: new Date().toISOString(), jobTitle: dto.jobTitle ?? null, startDate: dto.startDate ?? null });
-    return { created: true, type: 'WORKS_AT', ...dto };
+  private resolveEntityConfig(entityType: string) {
+    const byKey = ENTITY_CONFIGS[entityType.toLowerCase()];
+    if (byKey) return byKey;
+    const byLabel = getAllEntities().find(
+      e => e.label.toLowerCase() === entityType.toLowerCase(),
+    );
+    if (byLabel) return byLabel;
+    throw new Error(
+      `Unknown entity type: "${entityType}". Available: ${getAllEntities().map(e => e.key).join(', ')}`,
+    );
   }
 
-  async deleteWorksAt(personId: string, orgId: string, tenantId: string) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $personId})
-            -[r:WORKS_AT {tenant_id: $tenantId, org_id: $orgId}]->()
-      DELETE r`,
-      { personId, orgId, tenantId });
-    return { deleted: true };
-  }
-
-  // ── LIVES_IN ─────────────────────────────────────────────────────────────
-
-  async createLivesIn(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person   {strong_id:   $personId})
-      MATCH (l:Location {location_id: $locationId})
-      MERGE (p)-[r:LIVES_IN {tenant_id: $tenantId, location_id: $locationId}]->(l)
-      ON CREATE SET r.created_at = $now, r.residence_type = $residenceType`,
-      { personId: dto.personStrongId, locationId: dto.locationId, tenantId: dto.tenantId,
-        now: new Date().toISOString(), residenceType: dto.residenceType ?? null });
-    return { created: true, type: 'LIVES_IN', ...dto };
-  }
-
-  async deleteLivesIn(personId: string, locationId: string, tenantId: string) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $personId})
-            -[r:LIVES_IN {tenant_id: $tenantId, location_id: $locationId}]->()
-      DELETE r`,
-      { personId, locationId, tenantId });
-    return { deleted: true };
-  }
-
-  // ── HAS_SKILL ────────────────────────────────────────────────────────────
-
-  async createHasSkill(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $personId})
-      MATCH (s:Skill  {skill_id:  $skillId})
-      MERGE (p)-[r:HAS_SKILL {tenant_id: $tenantId, skill_id: $skillId}]->(s)
-      ON CREATE SET r.created_at = $now, r.proficiency_level = $level`,
-      { personId: dto.personStrongId, skillId: dto.skillId, tenantId: dto.tenantId,
-        now: new Date().toISOString(), level: dto.proficiencyLevel ?? null });
-    return { created: true, type: 'HAS_SKILL', ...dto };
-  }
-
-  async deleteHasSkill(personId: string, skillId: string, tenantId: string) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $personId})
-            -[r:HAS_SKILL {tenant_id: $tenantId, skill_id: $skillId}]->()
-      DELETE r`,
-      { personId, skillId, tenantId });
-    return { deleted: true };
-  }
-
-  // ── COMPLETED ────────────────────────────────────────────────────────────
-
-  async createCompleted(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (p:Person    {strong_id:    $personId})
-      MATCH (e:Education {education_id: $educationId})
-      MERGE (p)-[r:COMPLETED {tenant_id: $tenantId, education_id: $educationId}]->(e)
-      ON CREATE SET r.created_at = $now`,
-      { personId: dto.personStrongId, educationId: dto.educationId,
-        tenantId: dto.tenantId, now: new Date().toISOString() });
-    return { created: true, type: 'COMPLETED', ...dto };
-  }
-
-  // ── PROVIDED_BY ──────────────────────────────────────────────────────────
-
-  async createProvidedBy(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (e:Education    {education_id: $educationId})
-      MATCH (o:Organization {org_id:       $orgId})
-      MERGE (e)-[r:PROVIDED_BY {tenant_id: $tenantId}]->(o)
-      ON CREATE SET r.created_at = $now`,
-      { educationId: dto.educationId, orgId: dto.orgId,
-        tenantId: dto.tenantId, now: new Date().toISOString() });
-    return { created: true, type: 'PROVIDED_BY', ...dto };
-  }
-
-  // ── REQUIRES_SKILL ───────────────────────────────────────────────────────
-
-  async createRequiresSkill(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (o:Organization {org_id:   $orgId})
-      MATCH (s:Skill        {skill_id: $skillId})
-      MERGE (o)-[r:REQUIRES_SKILL {tenant_id: $tenantId, skill_id: $skillId}]->(s)
-      ON CREATE SET r.created_at = $now, r.requirement_level = $reqLevel`,
-      { orgId: dto.orgId, skillId: dto.skillId, tenantId: dto.tenantId,
-        now: new Date().toISOString(), reqLevel: dto.requirementLevel ?? null });
-    return { created: true, type: 'REQUIRES_SKILL', ...dto };
-  }
-
-  // ── HAS_ADVISOR ──────────────────────────────────────────────────────────
-
-  async createHasAdvisor(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (s:Person {strong_id: $studentId})
-      MATCH (a:Person {strong_id: $advisorId})
-      MERGE (s)-[r:HAS_ADVISOR {tenant_id: $tenantId, advisor_id: $advisorId}]->(a)
-      ON CREATE SET r.created_at = $now, r.advisor_role = $advisorRole`,
-      { studentId: dto.studentStrongId, advisorId: dto.advisorStrongId,
-        tenantId: dto.tenantId, now: new Date().toISOString(),
-        advisorRole: dto.advisorRole ?? null });
-    return { created: true, type: 'HAS_ADVISOR', ...dto };
-  }
-
-  // ── REGISTERED_FOR ───────────────────────────────────────────────────────
-
-  async createRegisteredFor(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (s:Person {strong_id: $studentId})
-      MATCH (c:Course {course_id:  $courseId})
-      MERGE (s)-[r:REGISTERED_FOR {tenant_id: $tenantId, course_id: $courseId}]->(c)
-      ON CREATE SET r.created_at = $now, r.grade = $grade,
-                    r.status = $status, r.academic_term = $term`,
-      { studentId: dto.studentStrongId, courseId: dto.courseId,
-        tenantId: dto.tenantId, now: new Date().toISOString(),
-        grade: dto.grade ?? null, status: dto.status ?? null, term: dto.academicTerm ?? null });
-    return { created: true, type: 'REGISTERED_FOR', ...dto };
-  }
-
-  // ── REPORTS_TO ───────────────────────────────────────────────────────────
-
-  async createReportsTo(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (e:Person {strong_id: $employeeId})
-      MATCH (m:Person {strong_id: $managerId})
-      MERGE (e)-[r:REPORTS_TO {tenant_id: $tenantId}]->(m)
-      ON CREATE SET r.created_at = $now, r.reporting_type = $reportingType`,
-      { employeeId: dto.employeeStrongId, managerId: dto.managerStrongId,
-        tenantId: dto.tenantId, now: new Date().toISOString(),
-        reportingType: dto.reportingType ?? null });
-    return { created: true, type: 'REPORTS_TO', ...dto };
-  }
-
-  // ── WORKS_IN (department) ────────────────────────────────────────────────
-
-  async createWorksIn(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (e:Person     {strong_id:     $employeeId})
-      MATCH (d:Department {department_id: $deptId})
-      MERGE (e)-[r:WORKS_IN {tenant_id: $tenantId, department_id: $deptId}]->(d)
-      ON CREATE SET r.created_at = $now, r.role = $role, r.start_date = $startDate`,
-      { employeeId: dto.employeeStrongId, deptId: dto.departmentId,
-        tenantId: dto.tenantId, now: new Date().toISOString(),
-        role: dto.role ?? null, startDate: dto.startDate ?? null });
-    return { created: true, type: 'WORKS_IN', ...dto };
-  }
-
-  // ── REGISTERED_AT (resident → location) ─────────────────────────────────
-
-  async createRegisteredAt(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (r:Person   {strong_id:   $residentId})
-      MATCH (l:Location {location_id: $locationId})
-      MERGE (r)-[rel:REGISTERED_AT {tenant_id: $tenantId, location_id: $locationId}]->(l)
-      ON CREATE SET rel.created_at = $now, rel.since = $since, rel.address_type = $addressType`,
-      { residentId: dto.residentStrongId, locationId: dto.locationId,
-        tenantId: dto.tenantId, now: new Date().toISOString(),
-        since: dto.since ?? null, addressType: dto.addressType ?? null });
-    return { created: true, type: 'REGISTERED_AT', ...dto };
-  }
-
-  // ── AFFILIATED_WITH (researcher → org) ──────────────────────────────────
-
-  async createAffiliatedWith(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (r:Person       {strong_id: $researcherId})
-      MATCH (o:Organization {org_id:    $orgId})
-      MERGE (r)-[rel:AFFILIATED_WITH {tenant_id: $tenantId, org_id: $orgId}]->(o)
-      ON CREATE SET rel.created_at = $now, rel.affiliation_type = $affiliationType`,
-      { researcherId: dto.researcherStrongId, orgId: dto.orgId,
-        tenantId: dto.tenantId, now: new Date().toISOString(),
-        affiliationType: dto.affiliationType ?? null });
-    return { created: true, type: 'AFFILIATED_WITH', ...dto };
-  }
-
-  // ── OFFERED_BY (course → org) ────────────────────────────────────────────
-
-  async createOfferedBy(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (c:Course       {course_id: $courseId})
-      MATCH (o:Organization {org_id:    $orgId})
-      MERGE (c)-[r:OFFERED_BY {tenant_id: $tenantId}]->(o)
-      ON CREATE SET r.created_at = $now`,
-      { courseId: dto.courseId, orgId: dto.orgId,
-        tenantId: dto.tenantId, now: new Date().toISOString() });
-    return { created: true, type: 'OFFERED_BY', ...dto };
-  }
-
-  // ── BELONGS_TO (department → org) ────────────────────────────────────────
-
-  async createBelongsTo(dto: any) {
-    await this.neo4j.runQuery(`
-      MATCH (d:Department   {department_id: $deptId})
-      MATCH (o:Organization {org_id:        $orgId})
-      MERGE (d)-[r:BELONGS_TO {tenant_id: $tenantId}]->(o)
-      ON CREATE SET r.created_at = $now`,
-      { deptId: dto.departmentId, orgId: dto.orgId,
-        tenantId: dto.tenantId, now: new Date().toISOString() });
-    return { created: true, type: 'BELONGS_TO', ...dto };
+  private extractId(props: Record<string, any>): string {
+    // Check all known ID field patterns
+    for (const cfg of getAllEntities()) {
+      if (props[cfg.idField]) return props[cfg.idField];
+    }
+    return props.id ?? props.name ?? Object.values(props)[0] ?? 'unknown';
   }
 }

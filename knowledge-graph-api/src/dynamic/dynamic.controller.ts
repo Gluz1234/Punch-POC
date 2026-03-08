@@ -2,8 +2,10 @@ import {
   Controller, Get, Post, Put, Delete,
   Param, Body, Query, HttpCode,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { DynamicService } from './dynamic.service';
 
+@ApiTags('Dynamic')
 @Controller('dynamic')
 export class DynamicController {
   constructor(private readonly dynamicService: DynamicService) {}

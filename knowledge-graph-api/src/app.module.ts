@@ -8,6 +8,7 @@ import { PromotionsModule } from './promotions/promotions.module';
 import { DynamicModule } from './dynamic/dynamic.module';
 import { SchemaModule } from './schema/schema.module';
 import { QueryModule } from './query/query.module';
+import { DataModule } from './data/data.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { QueryModule } from './query/query.module';
     DynamicModule,
     SchemaModule,
     QueryModule,
+    DataModule,
   ],
 })
 export class AppModule {}

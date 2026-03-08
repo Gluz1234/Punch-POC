@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnApplicationBootstrap } from '@nestjs/common';
 import { Neo4jService } from '../neo4j/neo4j.service';
-import { ENTITY_CONFIGS } from '../shared/entity-config';
+import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from '../shared/entity-config';
 import { PromotionSchemaService } from './promotion-schema.service';
 import { BUILTIN_SUBTYPES, getSubtypeDefinitionByKey } from './subtype-config';
 
@@ -11,11 +11,6 @@ export class PromotionsService implements OnApplicationBootstrap {
     private readonly promotionSchema: PromotionSchemaService,
   ) {}
 
-  /**
-   * Auto-register built-in subtypes (Student, Employee, Resident, Researcher, Artist)
-   * on application bootstrap. This ensures that these subtypes are always available
-   * in Neo4j without requiring manual schema POSTs.
-   */
   async onApplicationBootstrap() {
     console.log('📋 Initializing promotion subtypes...');
     try {
@@ -23,227 +18,135 @@ export class PromotionsService implements OnApplicationBootstrap {
       console.log('✅ Promotion subtypes initialized');
     } catch (err) {
       console.error('❌ Failed to initialize promotion subtypes:', err);
-      // Don't throw — allow the app to continue even if schemas fail to register
     }
   }
 
-  // ── Read current labels on a person ──────────────────────────────────────
+  // ── Resolve entity config from label ────────────────────────────────────
 
-  async getLabels(strongId: string) {
-    const records = await this.neo4j.runQuery(
-      'MATCH (p:Person {strong_id: $strongId}) RETURN labels(p) AS labels',
-      { strongId },
+  private resolveEntityConfig(entityType: string): EntityConfig {
+    // Try exact key match first
+    const byKey = ENTITY_CONFIGS[entityType.toLowerCase()];
+    if (byKey) return byKey;
+
+    // Try label match
+    const byLabel = getAllEntities().find(
+      e => e.label.toLowerCase() === entityType.toLowerCase(),
     );
-    if (!records.length) throw new NotFoundException(`Person ${strongId} not found`);
-    return { strongId, labels: records[0].get('labels') };
+    if (byLabel) return byLabel;
+
+    throw new BadRequestException(
+      `Unknown entity type: "${entityType}". Available types: ${getAllEntities().map(e => e.key).join(', ')}`,
+    );
   }
 
-  // ── Promote to :Student ───────────────────────────────────────────────────
+  // ── Read current labels on any entity ───────────────────────────────────
 
-  async promoteToStudent(strongId: string, dto: any) {
-    // Ensure Student subtype definition is registered (fallback if app startup failed)
-    await this.ensureSubtypeDefinition('student');
+  async getLabels(entityType: string, entityId: string) {
+    const config = this.resolveEntityConfig(entityType);
+    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
+    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
 
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $strongId})
-      SET p:Student
-      SET p.student_id        = $studentId,
-          p.gpa               = $gpa,
-          p.enrollment_year   = $enrollmentYear,
-          p.enrollment_status = $enrollmentStatus,
-          p.study_mode        = $studyMode
-      RETURN p, labels(p) AS labels`, {
-      strongId,
-      studentId:        dto.studentId        ?? null,
-      gpa:              dto.gpa              ?? null,
-      enrollmentYear:   dto.enrollmentYear   ?? null,
-      enrollmentStatus: dto.enrollmentStatus ?? null,
-      studyMode:        dto.studyMode        ?? null,
-    });
-    if (!records.length) throw new NotFoundException(`Person ${strongId} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('p').properties),
-      labels: records[0].get('labels'),
-    };
+    const records = await this.neo4j.runQuery(
+      `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId}) RETURN labels(n) AS labels`,
+      { entityId },
+    );
+    if (!records.length) {
+      throw new NotFoundException(`${config.displayName} ${entityId} not found`);
+    }
+    return { entityType: config.label, entityId, labels: records[0].get('labels') };
   }
 
-  // ── Promote to :Employee ──────────────────────────────────────────────────
+  // ── Generic Promote to any subtype ──────────────────────────────────────
 
-  async promoteToEmployee(strongId: string, dto: any) {
-    // Ensure Employee subtype definition is registered (fallback if app startup failed)
-    await this.ensureSubtypeDefinition('employee');
-
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $strongId})
-      SET p:Employee
-      SET p.employee_number = $employeeNumber,
-          p.contract_type   = $contractType,
-          p.salary_band     = $salaryBand,
-          p.department      = $department,
-          p.hire_date       = $hireDate
-      RETURN p, labels(p) AS labels`, {
-      strongId,
-      employeeNumber: dto.employeeNumber ?? null,
-      contractType:   dto.contractType   ?? null,
-      salaryBand:     dto.salaryBand     ?? null,
-      department:     dto.department     ?? null,
-      hireDate:       dto.hireDate       ?? null,
-    });
-    if (!records.length) throw new NotFoundException(`Person ${strongId} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('p').properties),
-      labels: records[0].get('labels'),
-    };
-  }
-
-  // ── Promote to :Resident ──────────────────────────────────────────────────
-
-  async promoteToResident(strongId: string, dto: any) {
-    // Ensure Resident subtype definition is registered (fallback if app startup failed)
-    await this.ensureSubtypeDefinition('resident');
-
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $strongId})
-      SET p:Resident
-      SET p.resident_id       = $residentId,
-          p.registration_date = $registrationDate,
-          p.residency_type    = $residencyType,
-          p.marital_status    = $maritalStatus
-      RETURN p, labels(p) AS labels`, {
-      strongId,
-      residentId:       dto.residentId       ?? null,
-      registrationDate: dto.registrationDate ?? null,
-      residencyType:    dto.residencyType    ?? null,
-      maritalStatus:    dto.maritalStatus    ?? null,
-    });
-    if (!records.length) throw new NotFoundException(`Person ${strongId} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('p').properties),
-      labels: records[0].get('labels'),
-    };
-  }
-
-  // ── Promote to :Researcher ────────────────────────────────────────────────
-
-  async promoteToResearcher(strongId: string, dto: any) {
-    // Ensure Researcher subtype definition is registered (fallback if app startup failed)
-    await this.ensureSubtypeDefinition('researcher');
-
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $strongId})
-      SET p:Researcher
-      SET p.orcid_id        = $orcidId,
-          p.research_field  = $researchField,
-          p.h_index         = $hIndex,
-          p.researcher_type = $researcherType
-      RETURN p, labels(p) AS labels`, {
-      strongId,
-      orcidId:        dto.orcidId        ?? null,
-      researchField:  dto.researchField  ?? null,
-      hIndex:         dto.hIndex         ?? null,
-      researcherType: dto.researcherType ?? null,
-    });
-    if (!records.length) throw new NotFoundException(`Person ${strongId} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('p').properties),
-      labels: records[0].get('labels'),
-    };
-  }
-
-  // ── Promote to :Artist ────────────────────────────────────────────────────
-
-  async promoteToArtist(strongId: string, dto: any) {
-    // Ensure Artist subtype definition is registered (fallback if app startup failed)
-    await this.ensureSubtypeDefinition('artist');
-
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $strongId})
-      SET p:Artist
-      SET p.artist_id           = $artistId,
-          p.primary_medium      = $primaryMedium,
-          p.years_active_start  = $yearsActiveStart,
-          p.years_active_end    = $yearsActiveEnd,
-          p.style               = $style
-      RETURN p, labels(p) AS labels`, {
-      strongId,
-      artistId:        dto.artistId        ?? null,
-      primaryMedium:   dto.primaryMedium   ?? null,
-      yearsActiveStart: dto.yearsActiveStart ?? null,
-      yearsActiveEnd:  dto.yearsActiveEnd  ?? null,
-      style:           dto.style           ?? null,
-    });
-    if (!records.length) throw new NotFoundException(`Person ${strongId} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('p').properties),
-      labels: records[0].get('labels'),
-    };
-  }
-
-  // ── Generic Subtype Promotion ───────────────────────────────────────────
-
-  /**
-   * Promote a Person to a subtype (built-in or user-defined).
-   *
-   * When a new subtype label is encountered:
-   *   1. Extract property keys from the request body (after snake-casing)
-   *   2. Automatically create/update PromotionSubtype definition for that label
-   *   3. On subsequent calls, merge in any new property keys it hasn't seen before
-   *
-   * This allows users to define a subtype dynamically just by using it once with properties.
-   */
-  async promoteToSubtype(strongId: string, subtype: string, properties: Record<string, any>) {
+  async promoteToSubtype(
+    entityType: string,
+    entityId: string,
+    subtype: string,
+    properties: Record<string, any>,
+  ) {
+    const config = this.resolveEntityConfig(entityType);
+    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
+    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
     const safeSubtype = this.neo4j.sanitizeIdentifier(subtype);
     const safeProps = this.sanitizePropertyKeys(properties);
 
-    // Auto-register user-defined subtype: extract property keys from this request body
-    const propertyKeys = Object.keys(safeProps);
+    // Ensure built-in subtype is registered (fallback)
+    await this.ensureSubtypeDefinition(safeSubtype.toLowerCase());
 
+    // Auto-register user-defined subtype
+    const propertyKeys = Object.keys(safeProps);
     if (propertyKeys.length > 0) {
       try {
-        // Register or update the subtype definition, merging with any existing properties
         await this.promotionSchema.upsertSubtypeDefinitionMerging({
           key: safeSubtype.toLowerCase(),
           label: safeSubtype,
-          baseLabel: 'Person',
+          baseLabel: config.label,
           properties: propertyKeys,
         });
-        console.log(
-          `✓ Auto-registered subtype "${safeSubtype}" with properties: ${propertyKeys.join(', ')}`
-        );
       } catch (err) {
-        console.warn(
-          `⚠ Failed to auto-register subtype "${safeSubtype}":`,
-          err
-        );
-        // Don't throw — allow the promotion to proceed even if registration fails
+        console.warn(`⚠ Failed to auto-register subtype "${safeSubtype}":`, err);
       }
     }
 
     // Build SET clauses dynamically
-    const setParts = Object.keys(safeProps).map(k => `p.\`${k}\` = $prop_${k}`).join(', ');
+    const setParts = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`).join(', ');
     const setClause = setParts ? `SET ${setParts}` : '';
 
-    const params: Record<string, any> = { strongId };
+    const params: Record<string, any> = { entityId };
     for (const [k, v] of Object.entries(safeProps)) {
       params[`prop_${k}`] = v;
     }
 
     const records = await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $strongId})
-      SET p:\`${safeSubtype}\`
+      MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId})
+      SET n:\`${safeSubtype}\`
       ${setClause}
-      RETURN p, labels(p) AS labels`,
-      params
+      RETURN n, labels(n) AS labels`,
+      params,
     );
 
-    if (!records.length) throw new NotFoundException(`Person ${strongId} not found`);
+    if (!records.length) {
+      throw new NotFoundException(`${config.displayName} ${entityId} not found`);
+    }
     return {
-      ...this.neo4j.toPlainObject(records[0].get('p').properties),
+      ...this.neo4j.toPlainObject(records[0].get('n').properties),
       labels: records[0].get('labels'),
     };
   }
 
-  // Helper to sanitize property keys (similar to generic entity service)
+  // ── Generic listing: get all nodes with a given subtype label ───────────
+
+  async getNodesBySubtype(subtype: string, tenantId?: string) {
+    const safeSubtype = this.neo4j.sanitizeIdentifier(subtype);
+
+    let cypher: string;
+    let params: Record<string, any>;
+
+    if (tenantId) {
+      // Tenant-scoped: find nodes that have any relationship with this tenant
+      cypher = `
+        MATCH (n:\`${safeSubtype}\`)
+        WHERE EXISTS((n)-[r]->() WHERE r.tenant_id = $tenantId)
+           OR EXISTS(()-[r]->(n) WHERE r.tenant_id = $tenantId)
+        RETURN DISTINCT n, labels(n) AS labels`;
+      params = { tenantId };
+    } else {
+      // Global: all nodes with this subtype label
+      cypher = `
+        MATCH (n:\`${safeSubtype}\`)
+        RETURN n, labels(n) AS labels`;
+      params = {};
+    }
+
+    const records = await this.neo4j.runQuery(cypher, params);
+    return records.map(r => ({
+      ...this.neo4j.toPlainObject(r.get('n').properties),
+      labels: r.get('labels'),
+    }));
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
   private sanitizePropertyKeys(dto: any): Record<string, any> {
     const result: Record<string, any> = {};
     for (const [k, v] of Object.entries(dto || {})) {
@@ -255,90 +158,22 @@ export class PromotionsService implements OnApplicationBootstrap {
     return result;
   }
 
-  /**
-   * Ensure a built-in subtype definition is registered in Neo4j.
-   * Called as a fallback from each promotion method in case the app startup registration failed.
-   * Safe to call multiple times — idempotent.
-   */
   private async ensureSubtypeDefinition(key: string) {
     try {
       const definition = getSubtypeDefinitionByKey(key);
       if (!definition) return;
-
-      // Try to register; if already exists, upsertSubtypeDefinition will just update/verify it
       await this.promotionSchema.upsertSubtypeDefinition(definition);
     } catch (err) {
       console.warn(`⚠ Failed to ensure subtype "${key}" is registered:`, err);
-      // Don't throw — allow the promotion to proceed
     }
-  }
-
-  // ── Subtype listing queries ───────────────────────────────────────────────
-
-  async getStudents(tenantId: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person:Student)-[:ENROLLED_IN {tenant_id: $tenantId}]->(o:Organization)
-      RETURN DISTINCT p, labels(p) AS labels, o.name AS orgName
-      ORDER BY p.last_name`,
-      { tenantId });
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('p').properties),
-      labels:     r.get('labels'),
-      enrolledAt: r.get('orgName'),
-    }));
-  }
-
-  async getEmployees(tenantId: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person:Employee)-[:WORKS_AT {tenant_id: $tenantId}]->(o:Organization)
-      RETURN DISTINCT p, labels(p) AS labels, o.name AS orgName
-      ORDER BY p.last_name`,
-      { tenantId });
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('p').properties),
-      labels:  r.get('labels'),
-      worksAt: r.get('orgName'),
-    }));
-  }
-
-  async getResearchers() {
-    const records = await this.neo4j.runQuery(
-      'MATCH (p:Person:Researcher) RETURN p, labels(p) AS labels ORDER BY p.last_name',
-    );
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('p').properties),
-      labels: r.get('labels'),
-    }));
-  }
-
-  async getResidents(tenantId: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person:Resident)-[:LIVES_IN {tenant_id: $tenantId}]->(l:Location)
-      RETURN DISTINCT p, labels(p) AS labels, l.name AS locationName
-      ORDER BY p.last_name`,
-      { tenantId });
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('p').properties),
-      labels:   r.get('labels'),
-      location: r.get('locationName'),
-    }));
-  }
-
-  async getArtists() {
-    const records = await this.neo4j.runQuery(
-      'MATCH (p:Person:Artist) RETURN p, labels(p) AS labels ORDER BY p.last_name',
-    );
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('p').properties),
-      labels: r.get('labels'),
-    }));
   }
 }
 
 // ── Helper DTOs for typed property responses ─────────────────────────────────
 
 export interface TypedPropertiesResponse {
-  strongId: string;
+  entityType: string;
+  entityId: string;
   labels: string[];
   base: {
     label: string;
@@ -348,14 +183,10 @@ export interface TypedPropertiesResponse {
     label: string;
     properties: Record<string, any>;
   }[];
-  /**
-   * Properties that are not declared on the base entity or any known subtype.
-   * This safely captures ad-hoc or future dynamic fields.
-   */
   unknownProperties: Record<string, any>;
 }
 
-// ── Generic typed-property projection for Person promotions ──────────────────
+// ── Generic typed-property projection ────────────────────────────────────────
 
 @Injectable()
 export class PromotionProjectionService {
@@ -365,37 +196,39 @@ export class PromotionProjectionService {
   ) {}
 
   /**
-   * Return a Person node with its properties grouped by:
-   * - base Person properties
-   * - each promotion subtype's properties (Student, Employee, etc.)
+   * Return any entity node with its properties grouped by:
+   * - base entity properties
+   * - each promotion subtype's properties
    * - unknown / unclassified properties
    */
-  async getPersonTypedProperties(strongId: string): Promise<TypedPropertiesResponse> {
+  async getEntityTypedProperties(entityType: string, entityId: string): Promise<TypedPropertiesResponse> {
+    // Resolve entity config
+    const config = this.resolveEntityConfig(entityType);
+    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
+    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
+
     const records = await this.neo4j.runQuery(
-      `
-      MATCH (p:Person {strong_id: $strongId})
-      RETURN p, labels(p) AS labels
-      `,
-      { strongId },
+      `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId})
+       RETURN n, labels(n) AS labels`,
+      { entityId },
     );
 
     if (!records.length) {
-      throw new NotFoundException(`Person ${strongId} not found`);
+      throw new NotFoundException(`${config.displayName} ${entityId} not found`);
     }
 
-    const node = records[0].get('p');
+    const node = records[0].get('n');
     const labels: string[] = records[0].get('labels');
     const props = this.neo4j.toPlainObject(node.properties);
 
-    const personConfig = ENTITY_CONFIGS.person;
     const basePropKeys = new Set<string>([
-      personConfig.idField,
-      ...Object.keys(personConfig.properties),
+      config.idField,
+      ...Object.keys(config.properties),
     ]);
 
-    // Map subtype label → set of property keys for that subtype
+    // Map subtype label → set of property keys
     const subtypePropSets = new Map<string, Set<string>>();
-    const defs = await this.schema.getSubtypeDefinitionsForBase(personConfig.label);
+    const defs = await this.schema.getSubtypeDefinitionsForBase(config.label);
     defs.forEach((cfg) => {
       subtypePropSets.set(cfg.label, new Set<string>(cfg.properties));
     });
@@ -411,14 +244,10 @@ export class PromotionProjectionService {
       }
 
       let assignedToSubtype = false;
-
-      // Try to assign the property to one of the subtype labels on this node
       for (const label of labels) {
         const propSet = subtypePropSets.get(label);
         if (propSet && propSet.has(key)) {
-          if (!subtypeBuckets[label]) {
-            subtypeBuckets[label] = {};
-          }
+          if (!subtypeBuckets[label]) subtypeBuckets[label] = {};
           subtypeBuckets[label][key] = value;
           assignedToSubtype = true;
           break;
@@ -431,10 +260,11 @@ export class PromotionProjectionService {
     }
 
     return {
-      strongId,
+      entityType: config.label,
+      entityId,
       labels,
       base: {
-        label: personConfig.label,
+        label: config.label,
         properties: baseProperties,
       },
       subtypes: Object.entries(subtypeBuckets).map(([label, properties]) => ({
@@ -443,5 +273,22 @@ export class PromotionProjectionService {
       })),
       unknownProperties,
     };
+  }
+
+  // Legacy method — still works for backward compatibility
+  async getPersonTypedProperties(strongId: string): Promise<TypedPropertiesResponse> {
+    return this.getEntityTypedProperties('person', strongId);
+  }
+
+  private resolveEntityConfig(entityType: string): EntityConfig {
+    const byKey = ENTITY_CONFIGS[entityType.toLowerCase()];
+    if (byKey) return byKey;
+    const byLabel = getAllEntities().find(
+      e => e.label.toLowerCase() === entityType.toLowerCase(),
+    );
+    if (byLabel) return byLabel;
+    throw new BadRequestException(
+      `Unknown entity type: "${entityType}". Available: ${getAllEntities().map(e => e.key).join(', ')}`,
+    );
   }
 }

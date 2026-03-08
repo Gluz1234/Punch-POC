@@ -1,175 +1,129 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { Neo4jService } from '../neo4j/neo4j.service';
+import { ENTITY_CONFIGS, getAllEntities } from '../shared/entity-config';
 
 @Injectable()
 export class QueryService {
   constructor(private readonly neo4j: Neo4jService) {}
 
-  // ── Tenant-scoped ──────────────────────────────────────────────────────────
+  // ── Generic: find entities connected by a relationship ─────────────────
 
-  async getPersonsEnrolledInOrg(orgId: string, tenantId: string) {
+  async getEntitiesByRelationship(
+    sourceType: string,
+    targetType: string,
+    relationshipType: string,
+    targetId: string,
+    tenantId?: string,
+  ) {
+    const srcCfg = this.resolveEntityConfig(sourceType);
+    const tgtCfg = this.resolveEntityConfig(targetType);
+
+    const safeSrcLabel = this.neo4j.sanitizeIdentifier(srcCfg.label);
+    const safeTgtLabel = this.neo4j.sanitizeIdentifier(tgtCfg.label);
+    const safeTgtId = this.neo4j.sanitizeIdentifier(tgtCfg.idField);
+    const safeRelType = this.neo4j.sanitizeIdentifier(relationshipType.toUpperCase());
+
+    const tenantFilter = tenantId ? `{tenant_id: $tenantId}` : '';
     const records = await this.neo4j.runQuery(`
-      MATCH (p:Person)-[r:ENROLLED_IN {tenant_id: $tenantId}]->(o:Organization {org_id: $orgId})
-      RETURN p, labels(p) AS labels, r.program AS program, r.start_date AS startDate
-      ORDER BY p.last_name`,
-      { orgId, tenantId });
+      MATCH (src:\`${safeSrcLabel}\`)-[r:\`${safeRelType}\` ${tenantFilter}]->(tgt:\`${safeTgtLabel}\` {\`${safeTgtId}\`: $targetId})
+      RETURN src, labels(src) AS labels, properties(r) AS relProps
+      ORDER BY src.\`${srcCfg.idField}\``,
+      { targetId, tenantId: tenantId ?? null },
+    );
     return records.map(r => ({
-      person:    { ...this.neo4j.toPlainObject(r.get('p').properties), labels: r.get('labels') },
-      program:   r.get('program'),
-      startDate: r.get('startDate'),
+      entity: { ...this.neo4j.toPlainObject(r.get('src').properties), labels: r.get('labels') },
+      relationship: this.neo4j.toPlainObject(r.get('relProps')),
     }));
   }
 
-  async getPersonsWorkingAtOrg(orgId: string, tenantId: string) {
+  // ── Generic: cross-tenant query ────────────────────────────────────────
+
+  async getCrossTenantEntities(
+    entityType: string,
+    relationshipType: string,
+    targetTypeA: string,
+    targetIdA: string,
+    tenantA: string,
+    targetTypeB: string,
+    targetIdB: string,
+    tenantB: string,
+  ) {
+    const entityCfg = this.resolveEntityConfig(entityType);
+    const tgtCfgA = this.resolveEntityConfig(targetTypeA);
+    const tgtCfgB = this.resolveEntityConfig(targetTypeB);
+
+    const safeEntityLabel = this.neo4j.sanitizeIdentifier(entityCfg.label);
+    const safeTgtLabelA = this.neo4j.sanitizeIdentifier(tgtCfgA.label);
+    const safeTgtIdA = this.neo4j.sanitizeIdentifier(tgtCfgA.idField);
+    const safeTgtLabelB = this.neo4j.sanitizeIdentifier(tgtCfgB.label);
+    const safeTgtIdB = this.neo4j.sanitizeIdentifier(tgtCfgB.idField);
+    const safeRelType = this.neo4j.sanitizeIdentifier(relationshipType.toUpperCase());
+
     const records = await this.neo4j.runQuery(`
-      MATCH (p:Person)-[r:WORKS_AT {tenant_id: $tenantId}]->(o:Organization {org_id: $orgId})
-      RETURN p, labels(p) AS labels, r.job_title AS jobTitle, r.start_date AS startDate
-      ORDER BY p.last_name`,
-      { orgId, tenantId });
+      MATCH (e:\`${safeEntityLabel}\`)-[r1:\`${safeRelType}\` {tenant_id: $tenantA}]->(a:\`${safeTgtLabelA}\` {\`${safeTgtIdA}\`: $targetIdA})
+      MATCH (e)-[r2:\`${safeRelType}\` {tenant_id: $tenantB}]->(b:\`${safeTgtLabelB}\` {\`${safeTgtIdB}\`: $targetIdB})
+      WHERE a.\`${tgtCfgA.idField}\` <> b.\`${tgtCfgB.idField}\`
+      RETURN e, labels(e) AS labels,
+             properties(r1) AS relPropsA, a.name AS nameA,
+             properties(r2) AS relPropsB, b.name AS nameB
+      ORDER BY e.\`${entityCfg.idField}\``,
+      { targetIdA, tenantA, targetIdB, tenantB });
     return records.map(r => ({
-      person:    { ...this.neo4j.toPlainObject(r.get('p').properties), labels: r.get('labels') },
-      jobTitle:  r.get('jobTitle'),
-      startDate: r.get('startDate'),
+      entity: { ...this.neo4j.toPlainObject(r.get('e').properties), labels: r.get('labels') },
+      connectionA: { name: r.get('nameA'), tenant: tenantA, properties: this.neo4j.toPlainObject(r.get('relPropsA')) },
+      connectionB: { name: r.get('nameB'), tenant: tenantB, properties: this.neo4j.toPlainObject(r.get('relPropsB')) },
     }));
   }
 
-  async getPersonsLivingInLocation(locationId: string, tenantId?: string) {
-    const tenantFilter = tenantId ? '{tenant_id: $tenantId}' : '';
-    const records      = await this.neo4j.runQuery(`
-      MATCH (p:Person)-[r:LIVES_IN ${tenantFilter}]->(l:Location {location_id: $locationId})
-      RETURN p, labels(p) AS labels, r.tenant_id AS tenant, r.residence_type AS residenceType
-      ORDER BY p.last_name`,
-      { locationId, tenantId: tenantId ?? null });
-    return records.map(r => ({
-      person:        { ...this.neo4j.toPlainObject(r.get('p').properties), labels: r.get('labels') },
-      tenantId:      r.get('tenant'),
-      residenceType: r.get('residenceType'),
-    }));
-  }
+  // ── Generic: get tenants for any entity ─────────────────────────────────
 
-  async getPersonsRegisteredAtLocation(locationId: string, tenantId: string) {
+  async getTenantsForEntity(entityType: string, entityId: string) {
+    const config = this.resolveEntityConfig(entityType);
+    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
+    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
     const records = await this.neo4j.runQuery(`
-      MATCH (p:Person:Resident)-[r:REGISTERED_AT {tenant_id: $tenantId}]->(l:Location {location_id: $locationId})
-      RETURN p, labels(p) AS labels, r.since AS since, r.address_type AS addressType
-      ORDER BY p.last_name`,
-      { locationId, tenantId });
-    return records.map(r => ({
-      person:      { ...this.neo4j.toPlainObject(r.get('p').properties), labels: r.get('labels') },
-      since:       r.get('since'),
-      addressType: r.get('addressType'),
-    }));
-  }
-
-  // ── Cross-tenant ───────────────────────────────────────────────────────────
-
-  async getPersonsEnrolledAndWorking(orgA: string, tenantA: string, orgB: string, tenantB: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person)-[r1:ENROLLED_IN {tenant_id: $tenantA}]->(a:Organization {org_id: $orgA})
-      MATCH (p)       -[r2:WORKS_AT    {tenant_id: $tenantB}]->(b:Organization {org_id: $orgB})
-      RETURN p, labels(p) AS labels,
-             r1.program   AS program,  a.name AS orgAName,
-             r2.job_title AS jobTitle, b.name AS orgBName
-      ORDER BY p.last_name`,
-      { orgA, tenantA, orgB, tenantB });
-    return records.map(r => ({
-      person:   { ...this.neo4j.toPlainObject(r.get('p').properties), labels: r.get('labels') },
-      enrolled: { org: r.get('orgAName'), program: r.get('program'),  tenant: tenantA },
-      worksAt:  { org: r.get('orgBName'), title:   r.get('jobTitle'), tenant: tenantB },
-    }));
-  }
-
-  async getPersonsWithMultipleEmployers(tenantA: string, tenantB: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person)-[r1:WORKS_AT {tenant_id: $tenantA}]->(a:Organization)
-      MATCH (p)       -[r2:WORKS_AT {tenant_id: $tenantB}]->(b:Organization)
-      WHERE a.org_id <> b.org_id
-      RETURN p, labels(p) AS labels,
-             r1.job_title AS titleA, a.name AS orgAName,
-             r2.job_title AS titleB, b.name AS orgBName
-      ORDER BY p.last_name`,
-      { tenantA, tenantB });
-    return records.map(r => ({
-      person: { ...this.neo4j.toPlainObject(r.get('p').properties), labels: r.get('labels') },
-      jobA:   { org: r.get('orgAName'), title: r.get('titleA'), tenant: tenantA },
-      jobB:   { org: r.get('orgBName'), title: r.get('titleB'), tenant: tenantB },
-    }));
-  }
-
-  // ── Global ─────────────────────────────────────────────────────────────────
-
-  async getPersonsWithSkill(skillId: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person)-[r:HAS_SKILL]->(s:Skill {skill_id: $skillId})
-      RETURN p, labels(p) AS labels, r.tenant_id AS tenant, r.proficiency_level AS level
-      ORDER BY p.last_name`,
-      { skillId });
-    return records.map(r => ({
-      person:   { ...this.neo4j.toPlainObject(r.get('p').properties), labels: r.get('labels') },
-      tenantId: r.get('tenant'),
-      level:    r.get('level'),
-    }));
-  }
-
-  async getTenantsForPerson(strongId: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person {strong_id: $strongId})-[r]->()
+      MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId})-[r]->()
       WHERE r.tenant_id IS NOT NULL
       RETURN DISTINCT r.tenant_id AS tenant ORDER BY tenant`,
-      { strongId });
+      { entityId });
     return records.map(r => r.get('tenant'));
   }
 
-  async getOrgChart(orgId: string, tenantId: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (e:Person:Employee)-[r:WORKS_AT {tenant_id: $tenantId}]->(o:Organization {org_id: $orgId})
-      OPTIONAL MATCH (e)-[mgr:REPORTS_TO {tenant_id: $tenantId}]->(m:Person)
-      RETURN e, labels(e) AS labels, r.job_title AS jobTitle,
-             m.strong_id AS managerId,
-             m.first_name + ' ' + m.last_name AS managerName
-      ORDER BY e.last_name`,
-      { orgId, tenantId });
-    return records.map(r => ({
-      employee:  { ...this.neo4j.toPlainObject(r.get('e').properties), labels: r.get('labels') },
-      jobTitle:  r.get('jobTitle'),
-      reportsTo: r.get('managerId')
-        ? { strongId: r.get('managerId'), name: r.get('managerName') }
-        : null,
-    }));
-  }
+  // ── Generic: get nodes by label ─────────────────────────────────────────
 
-  async getCourseRegistrations(courseId: string, tenantId: string) {
-    const records = await this.neo4j.runQuery(`
-      MATCH (p:Person:Student)-[r:REGISTERED_FOR {tenant_id: $tenantId}]->(c:Course {course_id: $courseId})
-      RETURN p, labels(p) AS labels, r.grade AS grade, r.status AS status, r.academic_term AS term
-      ORDER BY p.last_name`,
-      { courseId, tenantId });
-    return records.map(r => ({
-      student: { ...this.neo4j.toPlainObject(r.get('p').properties), labels: r.get('labels') },
-      grade:   r.get('grade'),
-      status:  r.get('status'),
-      term:    r.get('term'),
-    }));
-  }
-
-  async getPersonsByLabel(label: string, tenantId?: string) {
+  async getNodesByLabel(label: string, tenantId?: string) {
     const safeLabel = this.neo4j.sanitizeIdentifier(label);
     let records: any[];
 
     if (tenantId) {
       records = await this.neo4j.runQuery(
-        `MATCH (p:Person:\`${safeLabel}\`)-[r]->()
+        `MATCH (n:\`${safeLabel}\`)-[r]->()
          WHERE r.tenant_id = $tenantId
-         RETURN DISTINCT p, labels(p) AS labels ORDER BY p.last_name`,
+         RETURN DISTINCT n, labels(n) AS labels`,
         { tenantId },
       );
     } else {
       records = await this.neo4j.runQuery(
-        `MATCH (p:Person:\`${safeLabel}\`) RETURN p, labels(p) AS labels ORDER BY p.last_name`,
+        `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels`,
       );
     }
     return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('p').properties),
+      ...this.neo4j.toPlainObject(r.get('n').properties),
       labels: r.get('labels'),
     }));
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+
+  private resolveEntityConfig(entityType: string) {
+    const byKey = ENTITY_CONFIGS[entityType.toLowerCase()];
+    if (byKey) return byKey;
+    const byLabel = getAllEntities().find(
+      e => e.label.toLowerCase() === entityType.toLowerCase(),
+    );
+    if (byLabel) return byLabel;
+    throw new BadRequestException(
+      `Unknown entity type: "${entityType}". Available: ${getAllEntities().map(e => e.key).join(', ')}`,
+    );
   }
 }

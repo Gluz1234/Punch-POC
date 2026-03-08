@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import neo4j, { Integer } from 'neo4j-driver';
 import { Neo4jService } from '../neo4j/neo4j.service';
-import { EntityConfig } from './entity-config';
+import { EntityConfig, getAllEntities } from './entity-config';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
 
 /**
@@ -172,24 +172,18 @@ export class GenericEntityService {
    * Filter out the ID field and sensitive fields from properties.
    */
   private sanitizePropertyKeys(dto: any): Record<string, any> {
+    // Build skip-list dynamically from all entity ID fields + their camelCase variants
+    const skipFields = new Set<string>();
+    for (const entity of getAllEntities()) {
+      skipFields.add(entity.idField);
+      // Also skip camelCase body keys that map to ID fields (e.g., personStrongId → strong_id)
+      const camelKey = entity.idField.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      skipFields.add(camelKey);
+    }
+
     const result: Record<string, any> = {};
     for (const [k, v] of Object.entries(dto || {})) {
-      // Skip internal/system fields
-      if (
-        ![
-          'strongId',
-          'personStrongId',
-          'courseId',
-          'orgId',
-          'locationId',
-          'skillId',
-          'educationId',
-          'departmentId',
-        ].includes(k) &&
-        v !== undefined &&
-        v !== null
-      ) {
-        // Convert camelCase to snake_case for Neo4j
+      if (!skipFields.has(k) && v !== undefined && v !== null) {
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         result[snakeKey] = v;
       }

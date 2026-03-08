@@ -281,72 +281,9 @@ export class FullTextSearchService {
     }
   }
 
-  /** Search persons by text */
-  async searchPersons(query: string, tenantId?: string, limit = 50) {
-    return this.search({
-      entity: 'person',
-      query,
-      tenantId,
-      limit,
-    });
-  }
-
-  /** Search organizations by text */
-  async searchOrganizations(query: string, limit = 50) {
-    return this.search({
-      entity: 'organization',
-      query,
-      limit,
-    });
-  }
-
-  /** Search skills by text */
-  async searchSkills(query: string, limit = 50) {
-    return this.search({
-      entity: 'skill',
-      query,
-      limit,
-    });
-  }
-
-  /** Search courses by text */
-  async searchCourses(query: string, limit = 50) {
-    return this.search({
-      entity: 'course',
-      query,
-      limit,
-    });
-  }
-
-  /** Search with WHERE clause filter */
-  async searchWithFilter(
-    entity: string,
-    query: string,
-    whereClause: string,
-    limit = 50,
-  ) {
-    return this.search({
-      entity,
-      query,
-      where: whereClause,
-      limit,
-    });
-  }
-
-  /** Advanced search with Lucene syntax (fulltext) or substring (fallback) */
-  async advancedSearch(
-    entity: string,
-    luceneQuery: string,
-    limit = 50,
-  ): Promise<FullTextSearchResult[]> {
-    return this.search({
-      entity,
-      query: luceneQuery,
-      limit,
-    });
-  }
-
-  private hasMultiTenantSupport(entity: string): boolean {
-    return entity === 'person';
+  private hasMultiTenantSupport(_entity: string): boolean {
+    // Tenant IDs live on relationships, not nodes. Any entity that
+    // participates in tenant-scoped relationships can be filtered.
+    return true;
   }
 }

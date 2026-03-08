@@ -8,6 +8,6 @@ import { PromotionsModule } from '../promotions/promotions.module';
   imports: [PromotionsModule], // For PromotionSchemaService
   controllers: [SchemaController],
   providers:   [SchemaService, SchemaRegistrationService],
-  exports:     [SchemaRegistrationService], // Export for use in other modules
+  exports:     [SchemaService, SchemaRegistrationService], // Export for use in other modules
 })
 export class SchemaModule {}

@@ -1,12 +1,68 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule }   from './app.module';
 import { FullTextSearchService } from './shared/full-text-search.service';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
   app.enableCors();
+
+  // Swagger/OpenAPI Configuration
+  const config = new DocumentBuilder()
+    .setTitle('Knowledge Graph API')
+    .setDescription('Multi-Tenant Knowledge Graph Admin API with dynamic entity creation and promotion system')
+    .setVersion('2.0')
+    .addTag('Entities', 'Standard entity CRUD operations (Person, Organization, Location, etc.)')
+    .addTag('Relationships', 'Create and manage tenant-scoped relationships between entities')
+    .addTag('Promotions', 'Promote any entity to subtypes dynamically (Student, Employee, custom subtypes on Person, Organization, etc.)')
+    .addTag('Dynamic', 'Create and manage custom entity types at runtime without code changes')
+    .addTag('Queries', 'Pre-built tenant-scoped and cross-tenant queries')
+    .addTag('Schema', 'Inspect database schema, labels, properties, constraints, and indexes')
+    .addTag('Data', 'Fetch all nodes and relationships by tenant or globally')
+    .addTag('Search', 'Full-text search across entities')
+    .build();
+  
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    customCss: `
+      .swagger-ui { background-color: #1a1a1a; }
+      .swagger-ui .topbar { display: none; }
+      .swagger-ui .info { color: #e0e0e0; }
+      .swagger-ui .info .title { color: #ffffff; }
+      .swagger-ui .scheme-container { background: #2a2a2a; }
+      .swagger-ui .opblock-tag { color: #ffffff; border-color: #4a4a4a; }
+      .swagger-ui .opblock { background: #2a2a2a; border-color: #4a4a4a; }
+      .swagger-ui .opblock .opblock-summary { border-color: #4a4a4a; }
+      .swagger-ui .opblock .opblock-summary-description { color: #e0e0e0; }
+      .swagger-ui .opblock .opblock-summary-path { color: #61affe; }
+      .swagger-ui .opblock-description-wrapper p { color: #e0e0e0; }
+      .swagger-ui .opblock-body pre { background: #1a1a1a; color: #e0e0e0; }
+      .swagger-ui .response-col_status { color: #e0e0e0; }
+      .swagger-ui .response-col_description { color: #e0e0e0; }
+      .swagger-ui table thead tr th { color: #e0e0e0; border-color: #4a4a4a; }
+      .swagger-ui table tbody tr td { color: #e0e0e0; border-color: #4a4a4a; }
+      .swagger-ui .parameter__name { color: #e0e0e0; }
+      .swagger-ui .parameter__type { color: #61affe; }
+      .swagger-ui .model-box { background: #2a2a2a; }
+      .swagger-ui .model { color: #e0e0e0; }
+      .swagger-ui .model-title { color: #ffffff; }
+      .swagger-ui .prop-type { color: #61affe; }
+      .swagger-ui .renderedMarkdown p { color: #e0e0e0; }
+      .swagger-ui section.models { border-color: #4a4a4a; }
+      .swagger-ui section.models .model-container { background: #2a2a2a; }
+      .swagger-ui .btn { color: #ffffff; border-color: #4a4a4a; }
+      .swagger-ui .authorization__btn { color: #49cc90; border-color: #49cc90; }
+      .swagger-ui input[type=text], .swagger-ui textarea, .swagger-ui select { 
+        background: #2a2a2a; 
+        color: #e0e0e0; 
+        border-color: #4a4a4a; 
+      }
+      .swagger-ui .responses-inner h4, .swagger-ui .responses-inner h5 { color: #e0e0e0; }
+    `,
+    customSiteTitle: 'Knowledge Graph API - Documentation',
+  });
 
   // Initialize full-text search indexes (non-blocking)
   const fullTextSearch = app.get(FullTextSearchService);
@@ -22,6 +78,7 @@ async function bootstrap() {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║   Knowledge Graph Admin API  →  http://localhost:${port}/api  ║
+║   Swagger Documentation     →  http://localhost:${port}/api/docs  ║
 ╚══════════════════════════════════════════════════════════╝
 
   ENTITIES

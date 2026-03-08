@@ -8,83 +8,67 @@
       "name": "1. FULL-TEXT SEARCH",
       "item": [
         {
-          "name": "Search: Simple Person Search",
+          "name": "Search: Persons",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/search/persons?q=john",
-            "description": "Simple full-text search for persons named 'john' across all text fields (first_name, last_name, email, phone)"
+            "url": "{{base_url}}/search/person?q=john",
+            "description": "Full-text search for persons named 'john' across all text fields"
           }
         },
         {
-          "name": "Search: Simple Person Search with Limit",
+          "name": "Search: Persons with Limit",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/search/persons?q=john&limit=20",
+            "url": "{{base_url}}/search/person?q=john&limit=20",
             "description": "Search with result limit"
           }
         },
         {
-          "name": "Search: Search Organizations",
+          "name": "Search: Persons with Tenant",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/search/organizations?q=microsoft",
+            "url": "{{base_url}}/search/person?q=john&tenantId=tenant_mit",
+            "description": "Search persons within a specific tenant"
+          }
+        },
+        {
+          "name": "Search: Organizations",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/search/organization?q=microsoft",
             "description": "Search organizations by name, type, industry"
           }
         },
         {
-          "name": "Search: Search Skills",
+          "name": "Search: Skills",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/search/skills?q=java",
+            "url": "{{base_url}}/search/skill?q=java",
             "description": "Search skills by name or category"
           }
         },
         {
-          "name": "Search: Search Courses",
+          "name": "Search: Courses",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/search/courses?q=python",
+            "url": "{{base_url}}/search/course?q=python",
             "description": "Search courses by name, code, or description"
           }
         },
         {
-          "name": "Search: Advanced - Prefix Search",
+          "name": "Search: Locations",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/search/advanced?entity=person&q=john*",
-            "description": "Lucene prefix search: matches john, johnny, johns, etc."
+            "url": "{{base_url}}/search/location?q=amsterdam",
+            "description": "Search locations by name"
           }
         },
         {
-          "name": "Search: Advanced - Phrase Search",
+          "name": "Search: Initialize Indexes",
           "request": {
-            "method": "GET",
-            "url": "{{base_url}}/search/advanced?entity=person&q=%22john%20smith%22",
-            "description": "Lucene phrase search: matches exact phrase 'john smith' only (URL encoded: \"john smith\")"
-          }
-        },
-        {
-          "name": "Search: Advanced - AND Query",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/search/advanced?entity=person&q=john%20AND%20smith",
-            "description": "Lucene AND search: both 'john' and 'smith' must be present (URL encoded)"
-          }
-        },
-        {
-          "name": "Search: Advanced - OR Query",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/search/advanced?entity=person&q=john%20OR%20jane",
-            "description": "Lucene OR search: either 'john' or 'jane' (or both) (URL encoded)"
-          }
-        },
-        {
-          "name": "Search: Advanced - Fuzzy Search",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/search/advanced?entity=person&q=john~",
-            "description": "Lucene fuzzy search: matches 'john' with typo tolerance (jahn, jon, etc.)"
+            "method": "POST",
+            "url": "{{base_url}}/search/init-indexes",
+            "description": "Initialize full-text search indexes for all entity types"
           }
         }
       ]
@@ -152,66 +136,7 @@
             "description": "Get all persons living in a specific location"
           }
         },
-        {
-          "name": "Convenience: Get All Persons (Simple)",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/search/persons",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 50\n}"
-            },
-            "description": "Pre-built endpoint: Get all persons"
-          }
-        },
-        {
-          "name": "Convenience: Get Persons at Org",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/search/persons-at-org",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"orgId\": \"ORG_001\",\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 100\n}"
-            },
-            "description": "Pre-built endpoint: Get persons working at organization"
-          }
-        },
-        {
-          "name": "Convenience: Get Persons Enrolled At",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/search/persons-enrolled-at",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"orgId\": \"ORG_MIT\",\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 100\n}"
-            },
-            "description": "Pre-built endpoint: Get persons enrolled in organization"
-          }
-        },
-        {
-          "name": "Convenience: Get Persons with Skill",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/search/persons-with-skill",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"skillId\": \"JAVA\",\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 50\n}"
-            },
-            "description": "Pre-built endpoint: Get persons with a specific skill"
-          }
-        },
-        {
-          "name": "Convenience: Get Person Profile",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/search/person-profile",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"personId\": \"P_001\",\n  \"tenantId\": \"TENANT_1\"\n}"
-            },
-            "description": "Pre-built endpoint: Get all relationships for a person"
-          }
-        }
+
       ]
     },
     {
@@ -291,10 +216,10 @@
           "name": "Relationship: Create WORKS_AT",
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/relationships/works-at",
+            "url": "{{base_url}}/relationships",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"personStrongId\": \"P_001\",\n  \"orgId\": \"ORG_001\",\n  \"tenantId\": \"TENANT_1\",\n  \"jobTitle\": \"Software Engineer\",\n  \"startDate\": \"2023-01-15\"\n}"
+              "raw": "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"P_001\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"ORG_001\",\n  \"relationshipType\": \"WORKS_AT\",\n  \"tenantId\": \"TENANT_1\",\n  \"properties\": {\n    \"jobTitle\": \"Software Engineer\",\n    \"startDate\": \"2023-01-15\"\n  }\n}"
             },
             "description": "Create a WORKS_AT relationship between person and organization"
           }
@@ -303,12 +228,28 @@
           "name": "Relationship: Create HAS_SKILL",
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/relationships/has-skill",
+            "url": "{{base_url}}/relationships",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"personStrongId\": \"P_001\",\n  \"skillId\": \"JAVA\",\n  \"tenantId\": \"TENANT_1\",\n  \"proficiency\": \"Expert\",\n  \"yearsOfExperience\": 5\n}"
+              "raw": "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"P_001\",\n  \"targetType\": \"skill\",\n  \"targetId\": \"JAVA\",\n  \"relationshipType\": \"HAS_SKILL\",\n  \"tenantId\": \"TENANT_1\",\n  \"properties\": {\n    \"proficiency\": \"Expert\",\n    \"yearsOfExperience\": 5\n  }\n}"
             },
             "description": "Create a HAS_SKILL relationship"
+          }
+        },
+        {
+          "name": "Relationship: Get Person Relationships",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/relationships/person/P_001",
+            "description": "Get all relationships for a person"
+          }
+        },
+        {
+          "name": "Relationship: Delete WORKS_AT",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/relationships/person/P_001/WORKS_AT/TENANT_1?targetType=organization&targetId=ORG_001",
+            "description": "Delete a specific relationship"
           }
         }
       ]

@@ -1,0 +1,38 @@
+{
+    "label": "Person",
+    "properties": [
+        {
+            "name": "strong_id",
+            "type": "String"
+        },
+        {
+            "name": "birth_date",
+            "type": "Date"
+        },
+        {
+            "name": "email",
+            "type": "String"
+        },
+        {
+            "name": "first_name",
+            "type": "String"
+        },
+        {
+            "name": "last_name",
+            "type": "String"
+        },
+        {
+            "name": "nationality",
+            "type": "String"
+        },
+        {
+            "name": "phone",
+            "type": "String"
+        },
+        {
+            "name": "status",
+            "type": "String"
+        }
+    ],
+    "totalProperties": 8
+}

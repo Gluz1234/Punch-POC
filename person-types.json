@@ -1,0 +1,52 @@
+{
+    "strongId": "person-sarah-chen",
+    "labels": [
+        "Person",
+        "Researcher",
+        "Employee",
+        "Student"
+    ],
+    "base": {
+        "label": "Person",
+        "properties": {
+            "last_name": "Chen",
+            "nationality": "American",
+            "strong_id": "person-sarah-chen",
+            "first_name": "Sarah",
+            "email": "sarah.chen@gmail.com",
+            "status": "Active"
+        }
+    },
+    "subtypes": [
+        {
+            "label": "Employee",
+            "properties": {
+                "salary_band": "L4",
+                "hire_date": "2023-08-01T00:00:00.0000000",
+                "contract_type": "Permanent",
+                "employee_number": "G-44001",
+                "department": "Cloud"
+            }
+        },
+        {
+            "label": "Researcher",
+            "properties": {
+                "h_index": 3,
+                "research_field": "Machine Learning",
+                "orcid_id": "0000-0002-1111-2222",
+                "researcher_type": "PhD"
+            }
+        },
+        {
+            "label": "Student",
+            "properties": {
+                "student_id": "MIT-2019-001",
+                "study_mode": "Full-time",
+                "gpa": 3.9,
+                "enrollment_year": 2019,
+                "enrollment_status": "Graduated"
+            }
+        }
+    ],
+    "unknownProperties": {}
+}
