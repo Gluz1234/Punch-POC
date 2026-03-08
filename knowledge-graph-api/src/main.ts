@@ -21,7 +21,7 @@ async function bootstrap() {
     .addTag('Queries', 'Pre-built tenant-scoped and cross-tenant queries')
     .addTag('Schema', 'Inspect database schema, labels, properties, constraints, and indexes')
     .addTag('Data', 'Fetch all nodes and relationships by tenant or globally')
-    .addTag('Search', 'Full-text search across entities')
+    .addTag('Search', 'Dynamic search across entities with filters, ranges, relationships, facets, aggregations, and autocomplete')
     .build();
   
   const document = SwaggerModule.createDocument(app, config);
@@ -148,12 +148,11 @@ async function bootstrap() {
     GET  /api/query/course-registrations/:courseId/:tenantId
     GET  /api/query/label/:label?tenantId=
 
-  SEARCH  (full-text search with Lucene syntax)
-    GET  /api/search/persons?q=john
-    GET  /api/search/organizations?q=microsoft
-    GET  /api/search/skills?q=java
-    GET  /api/search/courses?q=python
-    GET  /api/search/advanced?entity=person&q=john*&limit=50
+  SEARCH  (dynamic, config-driven)
+    GET   /api/search/:entityType?q=john&fields=first_name,last_name&limit=50
+    GET   /api/search/:entityType/autocomplete?q=jo&field=first_name&limit=10
+    POST  /api/search/:entityType/query
+    POST  /api/search/init-indexes
 
   SCHEMA  (live graph introspection)
     GET  /api/schema

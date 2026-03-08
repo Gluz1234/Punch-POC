@@ -1,123 +1,1147 @@
 {
-  "info": { "name": "Knowledge Graph Admin API v3 (Generic)", "description": "Multi-Tenant Knowledge Graph API with dynamically generated endpoints. All standard entities (Person, Organization, Location, Skill, Education, Course, Department) are served by a single generic service with configuration-driven routes.", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
-  "variable": [{ "key": "base", "value": "http://localhost:3000/api" }],
-  "item": [
-    { "name": "Persons", "item": [
-      { "name": "Create Person", "request": { "method": "POST", "url": "{{base}}/persons", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"strongId\": \"person-sarah-chen\",\n  \"firstName\": \"Sarah\",\n  \"lastName\": \"Chen\",\n  \"email\": \"sarah.chen@gmail.com\",\n  \"nationality\": \"American\",\n  \"status\": \"Active\"\n}" } } },
-      { "name": "Get All Persons",  "request": { "method": "GET",    "url": "{{base}}/persons" } },
-      { "name": "Get One Person",   "request": { "method": "GET",    "url": "{{base}}/persons/person-sarah-chen" } },
-      { "name": "Update Person",    "request": { "method": "PUT",    "url": "{{base}}/persons/person-sarah-chen", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"firstName\": \"Sarah\",\n  \"lastName\": \"Chen\",\n  \"email\": \"sarah.chen@google.com\",\n  \"status\": \"Active\"\n}" } } },
-      { "name": "Delete Person",    "request": { "method": "DELETE", "url": "{{base}}/persons/person-to-delete" } }
-    ]},
-    { "name": "Organizations", "item": [
-      { "name": "Create Org",    "request": { "method": "POST",   "url": "{{base}}/organizations", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"orgId\": \"org-mit\",\n  \"name\": \"MIT\",\n  \"organizationType\": \"University\",\n  \"industry\": \"Education\"\n}" } } },
-      { "name": "Get All Orgs",  "request": { "method": "GET",    "url": "{{base}}/organizations" } },
-      { "name": "Get One Org",   "request": { "method": "GET",    "url": "{{base}}/organizations/org-mit" } },
-      { "name": "Delete Org",    "request": { "method": "DELETE", "url": "{{base}}/organizations/org-to-delete" } }
-    ]},
-    { "name": "Locations", "item": [
-      { "name": "Create Location","request": { "method": "POST", "url": "{{base}}/locations", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"locationId\": \"loc-amsterdam\",\n  \"name\": \"Amsterdam\",\n  \"locationType\": \"City\",\n  \"latitude\": 52.3676,\n  \"longitude\": 4.9041\n}" } } },
-      { "name": "Get All Locations","request": { "method": "GET", "url": "{{base}}/locations" } },
-      { "name": "Get One Location", "request": { "method": "GET", "url": "{{base}}/locations/loc-amsterdam" } }
-    ]},
-    { "name": "Skills", "item": [
-      { "name": "Create Skill",  "request": { "method": "POST", "url": "{{base}}/skills", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"skillId\": \"skill-python\",\n  \"name\": \"Python\",\n  \"category\": \"Programming Language\"\n}" } } },
-      { "name": "Get All Skills","request": { "method": "GET",  "url": "{{base}}/skills" } },
-      { "name": "Get One Skill", "request": { "method": "GET",  "url": "{{base}}/skills/skill-python" } }
-    ]},
-    { "name": "Education", "item": [
-      { "name": "Create Education","request": { "method": "POST", "url": "{{base}}/education", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"educationId\": \"edu-cs-mit\",\n  \"title\": \"BSc Computer Science\",\n  \"educationType\": \"Degree\",\n  \"fieldOfStudy\": \"Computer Science\"\n}" } } },
-      { "name": "Get All Education","request": { "method": "GET", "url": "{{base}}/education" } }
-    ]},
-    { "name": "Courses", "item": [
-      { "name": "Create Course",    "request": { "method": "POST", "url": "{{base}}/courses", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"courseId\": \"course-6006\",\n  \"orgId\": \"org-mit\",\n  \"name\": \"Introduction to Algorithms\",\n  \"code\": \"6.006\",\n  \"credits\": 12,\n  \"level\": \"Undergraduate\"\n}" } } },
-      { "name": "Get All Courses",  "request": { "method": "GET",  "url": "{{base}}/courses" } },
-      { "name": "Courses by Org",   "request": { "method": "GET",  "url": "{{base}}/courses/by-org/org-mit" } }
-    ]},
-    { "name": "Departments", "item": [
-      { "name": "Create Dept",      "request": { "method": "POST", "url": "{{base}}/departments", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"departmentId\": \"dept-mit-cs\",\n  \"orgId\": \"org-mit\",\n  \"name\": \"Dept. of EECS\",\n  \"code\": \"EECS\"\n}" } } },
-      { "name": "Get All Depts",    "request": { "method": "GET",  "url": "{{base}}/departments" } },
-      { "name": "Depts by Org",     "request": { "method": "GET",  "url": "{{base}}/departments/by-org/org-mit" } }
-    ]},
-    { "name": "Relationships", "item": [
-      { "name": "Create ENROLLED_IN (Person→Org)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"ENROLLED_IN\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"program\": \"BSc Computer Science\",\n    \"start_date\": \"2019-09-01\"\n  }\n}" } } },
-      { "name": "Create WORKS_AT (Person→Org)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-google\",\n  \"relationshipType\": \"WORKS_AT\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"job_title\": \"Software Engineer L4\"\n  }\n}" } } },
-      { "name": "Create LIVES_IN (Person→Location)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"location\",\n  \"targetId\": \"loc-amsterdam\",\n  \"relationshipType\": \"LIVES_IN\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"residence_type\": \"Primary\"\n  }\n}" } } },
-      { "name": "Create HAS_SKILL (Person→Skill)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"skill\",\n  \"targetId\": \"skill-python\",\n  \"relationshipType\": \"HAS_SKILL\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"proficiency_level\": \"Expert\"\n  }\n}" } } },
-      { "name": "Create COMPLETED (Person→Education)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"education\",\n  \"targetId\": \"edu-cs-mit\",\n  \"relationshipType\": \"COMPLETED\",\n  \"tenantId\": \"tenant_mit\"\n}" } } },
-      { "name": "Create PROVIDED_BY (Education→Org)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"education\",\n  \"sourceId\": \"edu-cs-mit\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"PROVIDED_BY\",\n  \"tenantId\": \"tenant_mit\"\n}" } } },
-      { "name": "Create REQUIRES_SKILL (Org→Skill)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"organization\",\n  \"sourceId\": \"org-google\",\n  \"targetType\": \"skill\",\n  \"targetId\": \"skill-python\",\n  \"relationshipType\": \"REQUIRES_SKILL\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"requirement_level\": \"Expert\"\n  }\n}" } } },
-      { "name": "Create HAS_ADVISOR (Person→Person)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"person\",\n  \"targetId\": \"person-prof-johnson\",\n  \"relationshipType\": \"HAS_ADVISOR\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"advisor_role\": \"Primary\"\n  }\n}" } } },
-      { "name": "Create REGISTERED_FOR (Person→Course)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"course\",\n  \"targetId\": \"course-6006\",\n  \"relationshipType\": \"REGISTERED_FOR\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"status\": \"Enrolled\"\n  }\n}" } } },
-      { "name": "Create REPORTS_TO (Person→Person)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"person\",\n  \"targetId\": \"person-yuki-tanaka\",\n  \"relationshipType\": \"REPORTS_TO\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"reporting_type\": \"Direct\"\n  }\n}" } } },
-      { "name": "Create BELONGS_TO (Dept→Org)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"department\",\n  \"sourceId\": \"dept-mit-cs\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"BELONGS_TO\",\n  \"tenantId\": \"tenant_mit\"\n}" } } },
-      { "name": "Create OFFERED_BY (Course→Org)", "request": { "method": "POST", "url": "{{base}}/relationships", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"sourceType\": \"course\",\n  \"sourceId\": \"course-6006\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"OFFERED_BY\",\n  \"tenantId\": \"tenant_mit\"\n}" } } },
-      { "name": "Get Person Relationships", "request": { "method": "GET", "url": "{{base}}/relationships/person/person-sarah-chen" } },
-      { "name": "Get Person Rels (tenant)", "request": { "method": "GET", "url": "{{base}}/relationships/person/person-sarah-chen?tenantId=tenant_mit" } },
-      { "name": "Get Org Relationships", "request": { "method": "GET", "url": "{{base}}/relationships/organization/org-mit" } },
-      { "name": "Delete ENROLLED_IN", "request": { "method": "DELETE", "url": "{{base}}/relationships/person/person-sarah-chen/ENROLLED_IN/tenant_mit?targetType=organization&targetId=org-mit" } },
-      { "name": "Delete WORKS_AT", "request": { "method": "DELETE", "url": "{{base}}/relationships/person/person-sarah-chen/WORKS_AT/tenant_google?targetType=organization&targetId=org-google" } }
-    ]},
-    { "name": "Promotions", "item": [
-      { "name": "Get Entity Labels (Person)",  "request": { "method": "GET",  "url": "{{base}}/promotions/person/person-sarah-chen/labels" } },
-      { "name": "Get Entity Labels (Org)",     "request": { "method": "GET",  "url": "{{base}}/promotions/organization/org-google/labels" } },
-      { "name": "Get Typed Properties (Person)", "request": { "method": "GET",  "url": "{{base}}/promotions/person/person-sarah-chen/typed-properties" } },
-      { "name": "Promote Person to Student",   "request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/promote/Student",    "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"studentId\": \"MIT-2019-001\",\n  \"gpa\": 3.9,\n  \"enrollmentYear\": 2019,\n  \"enrollmentStatus\": \"Graduated\",\n  \"studyMode\": \"Full-time\"\n}" } } },
-      { "name": "Promote Person to Employee",  "request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/promote/Employee",   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"employeeNumber\": \"G-44001\",\n  \"contractType\": \"Permanent\",\n  \"salaryBand\": \"L4\",\n  \"department\": \"Cloud\"\n}" } } },
-      { "name": "Promote Person to Researcher","request": { "method": "POST", "url": "{{base}}/promotions/person/person-sarah-chen/promote/Researcher", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"orcidId\": \"0000-0002-1111-2222\",\n  \"researchField\": \"Machine Learning\",\n  \"hIndex\": 3,\n  \"researcherType\": \"PhD\"\n}" } } },
-      { "name": "Promote Org to Partner",      "request": { "method": "POST", "url": "{{base}}/promotions/organization/org-google/promote/Partner",     "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"partnerTier\": \"Gold\",\n  \"partnerSince\": \"2020-01-01\"\n}" } } },
-      { "name": "Promote Location to Landmark","request": { "method": "POST", "url": "{{base}}/promotions/location/loc-amsterdam/promote/Landmark",    "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"landmarkType\": \"Historical\",\n  \"yearEstablished\": 1275\n}" } } },
-      { "name": "List by Subtype (Students)",   "request": { "method": "GET",  "url": "{{base}}/promotions/list/Student?tenantId=tenant_mit" } },
-      { "name": "List by Subtype (Employees)",  "request": { "method": "GET",  "url": "{{base}}/promotions/list/Employee?tenantId=tenant_google" } },
-      { "name": "List by Subtype (All Researchers)", "request": { "method": "GET",  "url": "{{base}}/promotions/list/Researcher" } },
-      { "name": "Define dynamic subtype (Alumni)", "request": { "method": "POST", "url": "{{base}}/promotions/schema/subtypes", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"key\": \"alumni\",\n  \"label\": \"Alumni\",\n  \"baseLabel\": \"Person\",\n  \"properties\": [\n    \"alumni_id\",\n    \"graduation_year\",\n    \"degree_type\"\n  ]\n}" } } },
-      { "name": "List subtypes for Person", "request": { "method": "GET", "url": "{{base}}/promotions/schema/subtypes/Person" } },
-      { "name": "List all subtypes",        "request": { "method": "GET", "url": "{{base}}/promotions/schema/subtypes" } }
-    ]},
-    { "name": "Dynamic (New Types)", "item": [
-      { "name": "Create Volunteer node",       "request": { "method": "POST",   "url": "{{base}}/dynamic/nodes",                                          "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"labels\": [\"Volunteer\"],\n  \"idField\": \"volunteer_id\",\n  \"id\": \"vol-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"name\": \"Community Helper\",\n    \"area\": \"Education\",\n    \"hours_committed\": 40,\n    \"tenant_id\": \"tenant_ngo\"\n  }\n}" } } },
-      { "name": "Create ResearchProject node", "request": { "method": "POST",   "url": "{{base}}/dynamic/nodes",                                          "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"labels\": [\"ResearchProject\"],\n  \"idField\": \"project_id\",\n  \"id\": \"proj-ml-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"title\": \"Graph ML for Urban Planning\",\n    \"status\": \"Active\",\n    \"budget\": 250000\n  }\n}" } } },
-      { "name": "Create multi-label node",     "request": { "method": "POST",   "url": "{{base}}/dynamic/nodes",                                          "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"labels\": [\"Asset\", \"ITEquipment\"],\n  \"idField\": \"asset_id\",\n  \"id\": \"asset-laptop-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"model\": \"MacBook Pro M3\",\n    \"tenant_id\": \"tenant_google\"\n  }\n}" } } },
-      { "name": "Get all Volunteer nodes",     "request": { "method": "GET",    "url": "{{base}}/dynamic/nodes/Volunteer" } },
-      { "name": "Get one Volunteer",           "request": { "method": "GET",    "url": "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001" } },
-      { "name": "Update Volunteer",            "request": { "method": "PUT",    "url": "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001",            "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"properties\": {\n    \"hours_committed\": 80,\n    \"status\": \"Active\"\n  }\n}" } } },
-      { "name": "Add extra label",             "request": { "method": "POST",   "url": "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001/labels",     "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"newLabel\": \"CommunityProgram\"\n}" } } },
-      { "name": "Delete Volunteer node",       "request": { "method": "DELETE", "url": "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001" } },
-      { "name": "Connect Person→Volunteer",    "request": { "method": "POST",   "url": "{{base}}/dynamic/relationships",                                   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"Volunteer\",\n  \"toIdField\": \"volunteer_id\",\n  \"toId\": \"vol-001\",\n  \"type\": \"IS_VOLUNTEER\",\n  \"properties\": {\n    \"tenant_id\": \"tenant_ngo\",\n    \"role\": \"Coordinator\"\n  }\n}" } } },
-      { "name": "Connect Person→Project",      "request": { "method": "POST",   "url": "{{base}}/dynamic/relationships",                                   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"ResearchProject\",\n  \"toIdField\": \"project_id\",\n  \"toId\": \"proj-ml-001\",\n  \"type\": \"WORKS_ON\",\n  \"properties\": {\n    \"tenant_id\": \"tenant_mit\",\n    \"role\": \"Lead Researcher\"\n  }\n}" } } },
-      { "name": "Get node relationships",      "request": { "method": "GET",    "url": "{{base}}/dynamic/relationships/Person/strong_id/person-sarah-chen?direction=out" } },
-      { "name": "Delete dynamic relationship", "request": { "method": "DELETE", "url": "{{base}}/dynamic/relationships",                                   "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw","raw":"{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"Volunteer\",\n  \"toIdField\": \"volunteer_id\",\n  \"toId\": \"vol-001\",\n  \"type\": \"IS_VOLUNTEER\"\n}" } } }
-    ]},
-    { "name": "Queries", "item": [
-      { "name": "Persons ENROLLED_IN Org (MIT)",       "request": { "method": "GET", "url": "{{base}}/query/person/by-relationship/ENROLLED_IN/organization/org-mit?tenantId=tenant_mit" } },
-      { "name": "Persons WORKS_AT Org (Google)",       "request": { "method": "GET", "url": "{{base}}/query/person/by-relationship/WORKS_AT/organization/org-google?tenantId=tenant_google" } },
-      { "name": "Persons WORKS_AT Org (Microsoft)",    "request": { "method": "GET", "url": "{{base}}/query/person/by-relationship/WORKS_AT/organization/org-microsoft?tenantId=tenant_microsoft" } },
-      { "name": "Persons LIVES_IN Location (Amsterdam)","request": { "method": "GET", "url": "{{base}}/query/person/by-relationship/LIVES_IN/location/loc-amsterdam" } },
-      { "name": "Persons HAS_SKILL (Python)",          "request": { "method": "GET", "url": "{{base}}/query/person/by-relationship/HAS_SKILL/skill/skill-python" } },
-      { "name": "Persons REGISTERED_FOR Course",       "request": { "method": "GET", "url": "{{base}}/query/person/by-relationship/REGISTERED_FOR/course/course-6006?tenantId=tenant_mit" } },
-      { "name": "Orgs REQUIRES_SKILL (Python)",        "request": { "method": "GET", "url": "{{base}}/query/organization/by-relationship/REQUIRES_SKILL/skill/skill-python" } },
-      { "name": "Cross: WORKS_AT across tenants",      "request": { "method": "GET", "url": "{{base}}/query/cross/person/WORKS_AT?targetTypeA=organization&targetIdA=org-google&tenantA=tenant_google&targetTypeB=organization&targetIdB=org-microsoft&tenantB=tenant_microsoft" } },
-      { "name": "Tenants for Person",                  "request": { "method": "GET", "url": "{{base}}/query/tenants-for/person/person-sarah-chen" } },
-      { "name": "Tenants for Organization",            "request": { "method": "GET", "url": "{{base}}/query/tenants-for/organization/org-mit" } },
-      { "name": "Nodes by label: Student",             "request": { "method": "GET", "url": "{{base}}/query/nodes-by-label/Student?tenantId=tenant_mit" } },
-      { "name": "Nodes by label: Researcher",          "request": { "method": "GET", "url": "{{base}}/query/nodes-by-label/Researcher" } },
-      { "name": "Nodes by label: Employee",            "request": { "method": "GET", "url": "{{base}}/query/nodes-by-label/Employee?tenantId=tenant_google" } }
-    ]},
-    { "name": "Schema", "item": [
-      { "name": "Full snapshot",               "request": { "method": "GET", "url": "{{base}}/schema" } },
-      { "name": "All labels",                  "request": { "method": "GET", "url": "{{base}}/schema/labels" } },
-      { "name": "Person properties",           "request": { "method": "GET", "url": "{{base}}/schema/labels/Person/properties" } },
-      { "name": "Volunteer properties",        "request": { "method": "GET", "url": "{{base}}/schema/labels/Volunteer/properties" } },
-      { "name": "All relationship types",      "request": { "method": "GET", "url": "{{base}}/schema/relationship-types" } },
-      { "name": "WORKS_AT properties",         "request": { "method": "GET", "url": "{{base}}/schema/relationship-types/WORKS_AT/properties" } },
-      { "name": "All constraints",             "request": { "method": "GET", "url": "{{base}}/schema/constraints" } },
-      { "name": "Node counts",                 "request": { "method": "GET", "url": "{{base}}/schema/counts" } },
-      { "name": "All tenants",                 "request": { "method": "GET", "url": "{{base}}/schema/tenants" } }
-    ]},
-    { "name": "Data (Fetch All)", "item": [
-      { "name": "Get All Data (Global)",           "request": { "method": "GET", "url": "{{base}}/data/all?limit=10000" } },
-      { "name": "Get All Data by Tenant ID",       "request": { "method": "GET", "url": "{{base}}/data/tenant/tenant_mit?limit=10000" } },
-      { "name": "Get Relationships by Tenant ID",  "request": { "method": "GET", "url": "{{base}}/data/relationships/tenant/tenant_google?limit=10000" } }
-    ]}
-  ]
+    "info":  {
+                 "name":  "Knowledge Graph Admin API v3 (Generic)",
+                 "description":  "Multi-Tenant Knowledge Graph API with dynamically generated endpoints. All standard entities (Person, Organization, Location, Skill, Education, Course, Department) are served by a single generic service with configuration-driven routes.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "base",
+                         "value":  "http://localhost:3000/api"
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Persons",
+                     "item":  [
+                                  {
+                                      "name":  "Create Person",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/persons",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"strongId\": \"person-sarah-chen\",\n  \"firstName\": \"Sarah\",\n  \"lastName\": \"Chen\",\n  \"email\": \"sarah.chen@gmail.com\",\n  \"nationality\": \"American\",\n  \"status\": \"Active\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get All Persons",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/persons"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get One Person",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/persons/person-sarah-chen"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Update Person",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "url":  "{{base}}/persons/person-sarah-chen",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"firstName\": \"Sarah\",\n  \"lastName\": \"Chen\",\n  \"email\": \"sarah.chen@google.com\",\n  \"status\": \"Active\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete Person",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{base}}/persons/person-to-delete"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Organizations",
+                     "item":  [
+                                  {
+                                      "name":  "Create Org",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/organizations",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"orgId\": \"org-mit\",\n  \"name\": \"MIT\",\n  \"organizationType\": \"University\",\n  \"industry\": \"Education\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get All Orgs",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/organizations"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get One Org",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/organizations/org-mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete Org",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{base}}/organizations/org-to-delete"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Locations",
+                     "item":  [
+                                  {
+                                      "name":  "Create Location",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/locations",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"locationId\": \"loc-amsterdam\",\n  \"name\": \"Amsterdam\",\n  \"locationType\": \"City\",\n  \"latitude\": 52.3676,\n  \"longitude\": 4.9041\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get All Locations",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/locations"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get One Location",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/locations/loc-amsterdam"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Skills",
+                     "item":  [
+                                  {
+                                      "name":  "Create Skill",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/skills",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"skillId\": \"skill-python\",\n  \"name\": \"Python\",\n  \"category\": \"Programming Language\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get All Skills",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/skills"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get One Skill",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/skills/skill-python"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Education",
+                     "item":  [
+                                  {
+                                      "name":  "Create Education",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/education",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"educationId\": \"edu-cs-mit\",\n  \"title\": \"BSc Computer Science\",\n  \"educationType\": \"Degree\",\n  \"fieldOfStudy\": \"Computer Science\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get All Education",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/education"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Courses",
+                     "item":  [
+                                  {
+                                      "name":  "Create Course",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/courses",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"courseId\": \"course-6006\",\n  \"orgId\": \"org-mit\",\n  \"name\": \"Introduction to Algorithms\",\n  \"code\": \"6.006\",\n  \"credits\": 12,\n  \"level\": \"Undergraduate\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get All Courses",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/courses"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Courses by Org",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/courses/by-org/org-mit"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Departments",
+                     "item":  [
+                                  {
+                                      "name":  "Create Dept",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/departments",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"departmentId\": \"dept-mit-cs\",\n  \"orgId\": \"org-mit\",\n  \"name\": \"Dept. of EECS\",\n  \"code\": \"EECS\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get All Depts",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/departments"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Depts by Org",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/departments/by-org/org-mit"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Relationships",
+                     "item":  [
+                                  {
+                                      "name":  "Create ENROLLED_IN (Person->Org)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"ENROLLED_IN\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"program\": \"BSc Computer Science\",\n    \"start_date\": \"2019-09-01\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create WORKS_AT (Person->Org)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-google\",\n  \"relationshipType\": \"WORKS_AT\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"job_title\": \"Software Engineer L4\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create LIVES_IN (Person->Location)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"location\",\n  \"targetId\": \"loc-amsterdam\",\n  \"relationshipType\": \"LIVES_IN\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"residence_type\": \"Primary\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create HAS_SKILL (Person->Skill)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"skill\",\n  \"targetId\": \"skill-python\",\n  \"relationshipType\": \"HAS_SKILL\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"proficiency_level\": \"Expert\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create COMPLETED (Person->Education)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"education\",\n  \"targetId\": \"edu-cs-mit\",\n  \"relationshipType\": \"COMPLETED\",\n  \"tenantId\": \"tenant_mit\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create PROVIDED_BY (Education->Org)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"education\",\n  \"sourceId\": \"edu-cs-mit\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"PROVIDED_BY\",\n  \"tenantId\": \"tenant_mit\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create REQUIRES_SKILL (Org->Skill)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"organization\",\n  \"sourceId\": \"org-google\",\n  \"targetType\": \"skill\",\n  \"targetId\": \"skill-python\",\n  \"relationshipType\": \"REQUIRES_SKILL\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"requirement_level\": \"Expert\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create HAS_ADVISOR (Person->Person)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"person\",\n  \"targetId\": \"person-prof-johnson\",\n  \"relationshipType\": \"HAS_ADVISOR\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"advisor_role\": \"Primary\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create REGISTERED_FOR (Person->Course)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"course\",\n  \"targetId\": \"course-6006\",\n  \"relationshipType\": \"REGISTERED_FOR\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"status\": \"Enrolled\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create REPORTS_TO (Person->Person)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"person\",\n  \"targetId\": \"person-yuki-tanaka\",\n  \"relationshipType\": \"REPORTS_TO\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"reporting_type\": \"Direct\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create BELONGS_TO (Dept->Org)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"department\",\n  \"sourceId\": \"dept-mit-cs\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"BELONGS_TO\",\n  \"tenantId\": \"tenant_mit\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create OFFERED_BY (Course->Org)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"sourceType\": \"course\",\n  \"sourceId\": \"course-6006\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"OFFERED_BY\",\n  \"tenantId\": \"tenant_mit\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Person Relationships",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/relationships/person/person-sarah-chen"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Person Rels (tenant)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/relationships/person/person-sarah-chen?tenantId=tenant_mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Org Relationships",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/relationships/organization/org-mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete ENROLLED_IN",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{base}}/relationships/person/person-sarah-chen/ENROLLED_IN/tenant_mit?targetType=organization\u0026targetId=org-mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete WORKS_AT",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{base}}/relationships/person/person-sarah-chen/WORKS_AT/tenant_google?targetType=organization\u0026targetId=org-google"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Promotions",
+                     "item":  [
+                                  {
+                                      "name":  "Get Entity Labels (Person)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/labels"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Entity Labels (Org)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/organization/org-google/labels"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Typed Properties (Person)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/typed-properties"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Promote Person to Student",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/promote/Student",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"studentId\": \"MIT-2019-001\",\n  \"gpa\": 3.9,\n  \"enrollmentYear\": 2019,\n  \"enrollmentStatus\": \"Graduated\",\n  \"studyMode\": \"Full-time\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Promote Person to Employee",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/promote/Employee",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"employeeNumber\": \"G-44001\",\n  \"contractType\": \"Permanent\",\n  \"salaryBand\": \"L4\",\n  \"department\": \"Cloud\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Promote Person to Researcher",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/promote/Researcher",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"orcidId\": \"0000-0002-1111-2222\",\n  \"researchField\": \"Machine Learning\",\n  \"hIndex\": 3,\n  \"researcherType\": \"PhD\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Promote Org to Partner",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/promotions/organization/org-google/promote/Partner",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"partnerTier\": \"Gold\",\n  \"partnerSince\": \"2020-01-01\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Promote Location to Landmark",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/promotions/location/loc-amsterdam/promote/Landmark",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"landmarkType\": \"Historical\",\n  \"yearEstablished\": 1275\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "List by Subtype (Students)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/list/Student?tenantId=tenant_mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "List by Subtype (Employees)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/list/Employee?tenantId=tenant_google"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "List by Subtype (All Researchers)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/list/Researcher"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Define dynamic subtype (Alumni)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/promotions/schema/subtypes",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"key\": \"alumni\",\n  \"label\": \"Alumni\",\n  \"baseLabel\": \"Person\",\n  \"properties\": [\n    \"alumni_id\",\n    \"graduation_year\",\n    \"degree_type\"\n  ]\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "List subtypes for Person",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/schema/subtypes/Person"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "List all subtypes",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/schema/subtypes"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Dynamic (New Types)",
+                     "item":  [
+                                  {
+                                      "name":  "Create Volunteer node",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/dynamic/nodes",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"labels\": [\"Volunteer\"],\n  \"idField\": \"volunteer_id\",\n  \"id\": \"vol-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"name\": \"Community Helper\",\n    \"area\": \"Education\",\n    \"hours_committed\": 40,\n    \"tenant_id\": \"tenant_ngo\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create ResearchProject node",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/dynamic/nodes",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"labels\": [\"ResearchProject\"],\n  \"idField\": \"project_id\",\n  \"id\": \"proj-ml-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"title\": \"Graph ML for Urban Planning\",\n    \"status\": \"Active\",\n    \"budget\": 250000\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Create multi-label node",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/dynamic/nodes",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"labels\": [\"Asset\", \"ITEquipment\"],\n  \"idField\": \"asset_id\",\n  \"id\": \"asset-laptop-001\",\n  \"createConstraint\": true,\n  \"properties\": {\n    \"model\": \"MacBook Pro M3\",\n    \"tenant_id\": \"tenant_google\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get all Volunteer nodes",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/dynamic/nodes/Volunteer"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get one Volunteer",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Update Volunteer",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "url":  "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"properties\": {\n    \"hours_committed\": 80,\n    \"status\": \"Active\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Add extra label",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001/labels",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"newLabel\": \"CommunityProgram\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete Volunteer node",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{base}}/dynamic/nodes/Volunteer/volunteer_id/vol-001"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Connect Person->Volunteer",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/dynamic/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"Volunteer\",\n  \"toIdField\": \"volunteer_id\",\n  \"toId\": \"vol-001\",\n  \"type\": \"IS_VOLUNTEER\",\n  \"properties\": {\n    \"tenant_id\": \"tenant_ngo\",\n    \"role\": \"Coordinator\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Connect Person->Project",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/dynamic/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"ResearchProject\",\n  \"toIdField\": \"project_id\",\n  \"toId\": \"proj-ml-001\",\n  \"type\": \"WORKS_ON\",\n  \"properties\": {\n    \"tenant_id\": \"tenant_mit\",\n    \"role\": \"Lead Researcher\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get node relationships",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/dynamic/relationships/Person/strong_id/person-sarah-chen?direction=out"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete dynamic relationship",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{base}}/dynamic/relationships",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"Volunteer\",\n  \"toIdField\": \"volunteer_id\",\n  \"toId\": \"vol-001\",\n  \"type\": \"IS_VOLUNTEER\"\n}"
+                                                               }
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Queries",
+                     "item":  [
+                                  {
+                                      "name":  "Persons ENROLLED_IN Org (MIT)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/person/by-relationship/ENROLLED_IN/organization/org-mit?tenantId=tenant_mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Persons WORKS_AT Org (Google)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/person/by-relationship/WORKS_AT/organization/org-google?tenantId=tenant_google"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Persons WORKS_AT Org (Microsoft)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/person/by-relationship/WORKS_AT/organization/org-microsoft?tenantId=tenant_microsoft"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Persons LIVES_IN Location (Amsterdam)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/person/by-relationship/LIVES_IN/location/loc-amsterdam"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Persons HAS_SKILL (Python)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/person/by-relationship/HAS_SKILL/skill/skill-python"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Persons REGISTERED_FOR Course",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/person/by-relationship/REGISTERED_FOR/course/course-6006?tenantId=tenant_mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Orgs REQUIRES_SKILL (Python)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/organization/by-relationship/REQUIRES_SKILL/skill/skill-python"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Cross: WORKS_AT across tenants",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/cross/person/WORKS_AT?targetTypeA=organization\u0026targetIdA=org-google\u0026tenantA=tenant_google\u0026targetTypeB=organization\u0026targetIdB=org-microsoft\u0026tenantB=tenant_microsoft"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Tenants for Person",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/tenants-for/person/person-sarah-chen"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Tenants for Organization",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/tenants-for/organization/org-mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Nodes by label: Student",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/nodes-by-label/Student?tenantId=tenant_mit"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Nodes by label: Researcher",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/nodes-by-label/Researcher"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Nodes by label: Employee",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/query/nodes-by-label/Employee?tenantId=tenant_google"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Search (Dynamic)",
+                     "item":  [
+                                  {
+                                      "name":  "Search: Basic Person Query",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/search/person?q=john",
+                                                      "description":  "Simple search across default text fields"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Search: Field-Scoped Query",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/search/person?q=john\u0026fields=first_name,last_name\u0026limit=25",
+                                                      "description":  "Search only specific fields"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Search: Prefix and Fuzzy",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/search/person?q=john*\u0026limit=20",
+                                                      "description":  "Use operators like prefix (*), fuzzy (~), phrase, AND/OR"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Autocomplete: Person Name",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/search/person/autocomplete?q=jo\u0026fields=first_name,last_name\u0026limit=10",
+                                                      "description":  "Autocomplete suggestions across multiple fields"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Autocomplete: Tenant Scoped",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/search/person/autocomplete?q=jo\u0026field=first_name\u0026tenantId=TENANT_1\u0026limit=10",
+                                                      "description":  "Autocomplete limited to tenant-scoped relationships"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Advanced Search: Full Dynamic Example",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/search/person/query",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"q\": \"john\",\n  \"fields\": [\"first_name\", \"last_name\"],\n  \"fieldQueries\": [\n    {\n      \"field\": \"email\",\n      \"query\": \"gmail.com\",\n      \"operator\": \"contains\",\n      \"boost\": 1.5\n    }\n  ],\n  \"ranges\": [\n    {\n      \"field\": \"birth_date\",\n      \"gte\": \"1990-01-01\"\n    }\n  ],\n  \"relationships\": [\n    {\n      \"type\": \"WORKS_AT\",\n      \"direction\": \"OUTGOING\",\n      \"entity\": \"organization\",\n      \"targetFilters\": {\n        \"org_id\": \"ORG_001\"\n      },\n      \"query\": \"mit\",\n      \"fields\": [\"name\"]\n    }\n  ],\n  \"facets\": [\n    {\n      \"field\": \"status\",\n      \"limit\": 10\n    }\n  ],\n  \"aggregations\": [\n    {\n      \"operation\": \"count\",\n      \"name\": \"total_results\"\n    },\n    {\n      \"operation\": \"countDistinct\",\n      \"field\": \"nationality\",\n      \"name\": \"unique_nationalities\"\n    }\n  ],\n  \"explain\": true,\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 25\n}"
+                                                               },
+                                                      "description":  "Field filters + ranges + relationship filters + facets + aggregations + explain"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Advanced Search: Relationship Aware",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/search/person/query",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"q\": \"engineer\",\n  \"relationships\": [\n    {\n      \"type\": \"WORKS_AT\",\n      \"direction\": \"OUTGOING\",\n      \"entity\": \"organization\",\n      \"targetFilters\": {\n        \"org_id\": \"ORG_001\"\n      }\n    }\n  ],\n  \"explain\": true,\n  \"tenantId\": \"TENANT_1\",\n  \"limit\": 20\n}"
+                                                               },
+                                                      "description":  "Relationship-aware matching without hardcoded entity logic"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Search: Initialize Engine",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/search/init-indexes",
+                                                      "description":  "Initialize and verify search engine capabilities"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Schema",
+                     "item":  [
+                                  {
+                                      "name":  "Full snapshot",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "All labels",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/labels"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Person properties",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/labels/Person/properties"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Volunteer properties",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/labels/Volunteer/properties"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "All relationship types",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/relationship-types"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "WORKS_AT properties",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/relationship-types/WORKS_AT/properties"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "All constraints",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/constraints"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Node counts",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/counts"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "All tenants",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/tenants"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Data (Fetch All)",
+                     "item":  [
+                                  {
+                                      "name":  "Get All Data (Global)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/data/all?limit=10000"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get All Data by Tenant ID",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/data/tenant/tenant_mit?limit=10000"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Relationships by Tenant ID",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/data/relationships/tenant/tenant_google?limit=10000"
+                                                  }
+                                  }
+                              ]
+                 }
+             ]
 }
+
