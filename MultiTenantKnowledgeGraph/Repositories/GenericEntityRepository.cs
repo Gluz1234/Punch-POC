@@ -16,7 +16,7 @@ public abstract class GenericEntityRepository<T> where T : class, new()
 
     // Override these in derived classes if needed
     protected virtual string NodeLabel => typeof(T).Name;
-    protected virtual string IdProperty => "id"; // Override per entity
+    protected virtual string IdProperty => "EntityId"; // Override per entity
     protected virtual Func<T, string> GetIdValue => throw new NotImplementedException("Override GetIdValue in derived class");
 
     public GenericEntityRepository(Neo4jService neo4j) => Neo4j = neo4j;
@@ -33,7 +33,7 @@ public abstract class GenericEntityRepository<T> where T : class, new()
             .Select(kvp => $"n.{kvp.Key} = ${kvp.Key}"));
 
         var cypher = $@"
-            MERGE (n:{NodeLabel} {{{GetSnakeCasePropertyName(IdProperty)}: ${IdProperty}}})
+            MERGE (n:{NodeLabel}:Entity {{{GetSnakeCasePropertyName(IdProperty)}: ${IdProperty}}})
             ON CREATE SET {setClause}
             ON MATCH SET {setClause}
             RETURN n";
@@ -78,7 +78,7 @@ public abstract class GenericEntityRepository<T> where T : class, new()
         var cypher = $"MATCH (n:{NodeLabel} {{{idFieldSnake}: ${IdProperty}}}) RETURN n";
 
         await using var session = Neo4j.OpenSession();
-        var result = await session.RunAsync(cypher, new { id });
+        var result = await session.RunAsync(cypher, new Dictionary<string, object> { { IdProperty, id } });
 
         if (await result.FetchAsync())
         {
@@ -183,7 +183,7 @@ public abstract class GenericEntityRepository<T> where T : class, new()
 
     /// <summary>
     /// Converts C# property names to snake_case for Neo4j.
-    /// Examples: FirstName → first_name, StrongId → strong_id
+    /// Examples: FirstName → first_name, EntityId → entity_id
     /// </summary>
     protected string GetSnakeCasePropertyName(string propertyName)
     {

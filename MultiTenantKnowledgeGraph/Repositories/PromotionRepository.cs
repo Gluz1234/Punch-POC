@@ -36,7 +36,7 @@ public class PromotionRepository
     public async Task PromoteToStudentAsync(StudentProfile profile)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $strongId})
+            MATCH (p:Person {entity_id: $strongId})
             SET p:Student
             SET p.student_id       = $studentId,
                 p.gpa              = $gpa,
@@ -48,7 +48,7 @@ public class PromotionRepository
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
-            strongId         = profile.StrongId,
+            strongId         = profile.EntityId,
             studentId        = profile.StudentId,
             gpa              = profile.Gpa,
             enrollmentYear   = profile.EnrollmentYear,
@@ -64,7 +64,7 @@ public class PromotionRepository
     public async Task PromoteToEmployeeAsync(EmployeeProfile profile)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $strongId})
+            MATCH (p:Person {entity_id: $strongId})
             SET p:Employee
             SET p.employee_number = $employeeNumber,
                 p.contract_type   = $contractType,
@@ -76,7 +76,7 @@ public class PromotionRepository
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
-            strongId       = profile.StrongId,
+            strongId       = profile.EntityId,
             employeeNumber = profile.EmployeeNumber,
             contractType   = profile.ContractType,
             salaryBand     = profile.SalaryBand,
@@ -92,7 +92,7 @@ public class PromotionRepository
     public async Task PromoteToResidentAsync(ResidentProfile profile)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $strongId})
+            MATCH (p:Person {entity_id: $strongId})
             SET p:Resident
             SET p.resident_id        = $residentId,
                 p.registration_date  = $registrationDate,
@@ -103,7 +103,7 @@ public class PromotionRepository
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
-            strongId         = profile.StrongId,
+            strongId         = profile.EntityId,
             residentId       = profile.ResidentId,
             registrationDate = profile.RegistrationDate?.ToString("o"),
             residencyType    = profile.ResidencyType,
@@ -119,7 +119,7 @@ public class PromotionRepository
     public async Task PromoteToResearcherAsync(ResearcherProfile profile)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $strongId})
+            MATCH (p:Person {entity_id: $strongId})
             SET p:Researcher
             SET p.orcid_id        = $orcidId,
                 p.research_field  = $researchField,
@@ -130,7 +130,7 @@ public class PromotionRepository
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
-            strongId       = profile.StrongId,
+            strongId       = profile.EntityId,
             orcidId        = profile.OrcidId,
             researchField  = profile.ResearchField,
             hIndex         = profile.HIndex,
@@ -149,7 +149,7 @@ public class PromotionRepository
         var setClause = setParts.Any() ? $"SET {string.Join(", ", setParts)}" : "";
         
         var cypher = $@"
-            MATCH (p:Person {{strong_id: $strongId}})
+            MATCH (p:Person {{entity_id: $strongId}})
             SET p:`{subtype}`
             {setClause}
             RETURN p";
@@ -171,7 +171,7 @@ public class PromotionRepository
     /// </summary>
     public async Task<List<string>> GetLabelsAsync(string strongId)
     {
-        const string cypher = "MATCH (p:Person {strong_id: $strongId}) RETURN labels(p) AS labels";
+        const string cypher = "MATCH (p:Person {entity_id: $strongId}) RETURN labels(p) AS labels";
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new { strongId });
         if (await result.FetchAsync())
@@ -186,8 +186,8 @@ public class PromotionRepository
     public async Task CreateHasAdvisorAsync(HasAdvisorRelationship rel)
     {
         const string cypher = @"
-            MATCH (s:Student {strong_id: $studentId})
-            MATCH (a:Person  {strong_id: $advisorId})
+            MATCH (s:Student {entity_id: $studentId})
+            MATCH (a:Person  {entity_id: $advisorId})
             MERGE (s)-[r:HAS_ADVISOR {tenant_id: $tenantId, advisor_id: $advisorId}]->(a)
             ON CREATE SET
                 r.created_at  = $createdAt,
@@ -209,9 +209,9 @@ public class PromotionRepository
     public async Task CreateRegisteredForAsync(RegisteredForRelationship rel)
     {
         const string cypher = @"
-            MATCH (s:Student {strong_id: $studentId})
-            MATCH (c:Course  {course_id: $courseId})
-            MERGE (s)-[r:REGISTERED_FOR {tenant_id: $tenantId, course_id: $courseId}]->(c)
+            MATCH (s:Student {entity_id: $studentId})
+            MATCH (c:Course  {entity_id: $courseId})
+            MERGE (s)-[r:REGISTERED_FOR {tenant_id: $tenantId, entity_id: $courseId}]->(c)
             ON CREATE SET
                 r.created_at   = $createdAt,
                 r.grade        = $grade,
@@ -240,8 +240,8 @@ public class PromotionRepository
     public async Task CreateReportsToAsync(ReportsToRelationship rel)
     {
         const string cypher = @"
-            MATCH (e:Employee {strong_id: $employeeId})
-            MATCH (m:Employee {strong_id: $managerId})
+            MATCH (e:Employee {entity_id: $employeeId})
+            MATCH (m:Employee {entity_id: $managerId})
             MERGE (e)-[r:REPORTS_TO {tenant_id: $tenantId}]->(m)
             ON CREATE SET
                 r.created_at    = $createdAt,
@@ -263,9 +263,9 @@ public class PromotionRepository
     public async Task CreateWorksInDepartmentAsync(WorksInRelationship rel)
     {
         const string cypher = @"
-            MATCH (e:Employee   {strong_id:    $employeeId})
-            MATCH (d:Department {department_id: $deptId})
-            MERGE (e)-[r:WORKS_IN {tenant_id: $tenantId, department_id: $deptId}]->(d)
+            MATCH (e:Employee   {entity_id:    $employeeId})
+            MATCH (d:Department {entity_id: $deptId})
+            MERGE (e)-[r:WORKS_IN {tenant_id: $tenantId, entity_id: $deptId}]->(d)
             ON CREATE SET
                 r.created_at = $createdAt,
                 r.role       = $role,
@@ -292,9 +292,9 @@ public class PromotionRepository
     public async Task CreateRegisteredAtAsync(RegisteredAtRelationship rel)
     {
         const string cypher = @"
-            MATCH (r:Resident {strong_id:  $residentId})
-            MATCH (l:Location {location_id: $locationId})
-            MERGE (r)-[rel:REGISTERED_AT {tenant_id: $tenantId, location_id: $locationId}]->(l)
+            MATCH (r:Resident {entity_id:  $residentId})
+            MATCH (l:Location {entity_id: $locationId})
+            MERGE (r)-[rel:REGISTERED_AT {tenant_id: $tenantId, entity_id: $locationId}]->(l)
             ON CREATE SET
                 rel.created_at  = $createdAt,
                 rel.since       = $since,
@@ -321,9 +321,9 @@ public class PromotionRepository
     public async Task CreateAffiliatedWithAsync(AffiliatedWithRelationship rel)
     {
         const string cypher = @"
-            MATCH (r:Researcher  {strong_id: $researcherId})
-            MATCH (o:Organization {org_id:   $orgId})
-            MERGE (r)-[rel:AFFILIATED_WITH {tenant_id: $tenantId, org_id: $orgId}]->(o)
+            MATCH (r:Researcher  {entity_id: $researcherId})
+            MATCH (o:Organization {entity_id:   $orgId})
+            MERGE (r)-[rel:AFFILIATED_WITH {tenant_id: $tenantId, entity_id: $orgId}]->(o)
             ON CREATE SET
                 rel.created_at       = $createdAt,
                 rel.affiliation_type = $affiliationType
@@ -348,7 +348,7 @@ public class PromotionRepository
     public async Task<Course> UpsertCourseAsync(Course course)
     {
         const string cypher = @"
-            MERGE (c:Course {course_id: $courseId})
+            MERGE (c:Course {entity_id: $courseId})
             ON CREATE SET
                 c.name          = $name,
                 c.org_id        = $orgId,
@@ -369,7 +369,7 @@ public class PromotionRepository
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
-            courseId = course.CourseId,
+            courseId = course.EntityId,
             name     = course.Name,
             orgId    = course.OrgId,
             code     = course.Code,
@@ -385,8 +385,8 @@ public class PromotionRepository
     public async Task CreateOfferedByAsync(OfferedByRelationship rel)
     {
         const string cypher = @"
-            MATCH (c:Course       {course_id: $courseId})
-            MATCH (o:Organization {org_id:    $orgId})
+            MATCH (c:Course       {entity_id: $courseId})
+            MATCH (o:Organization {entity_id:    $orgId})
             MERGE (c)-[r:OFFERED_BY {tenant_id: $tenantId}]->(o)
             ON CREATE SET r.created_at = $createdAt
             RETURN r";
@@ -419,7 +419,7 @@ public class PromotionRepository
     public async Task<Department> UpsertDepartmentAsync(Department dept)
     {
         const string cypher = @"
-            MERGE (d:Department {department_id: $deptId})
+            MERGE (d:Department {entity_id: $deptId})
             ON CREATE SET
                 d.name        = $name,
                 d.org_id      = $orgId,
@@ -436,7 +436,7 @@ public class PromotionRepository
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
-            deptId      = dept.DepartmentId,
+            deptId      = dept.EntityId,
             name        = dept.Name,
             orgId       = dept.OrgId,
             code        = dept.Code,
@@ -450,8 +450,8 @@ public class PromotionRepository
     public async Task CreateBelongsToAsync(BelongsToRelationship rel)
     {
         const string cypher = @"
-            MATCH (d:Department   {department_id: $deptId})
-            MATCH (o:Organization {org_id:        $orgId})
+            MATCH (d:Department   {entity_id: $deptId})
+            MATCH (o:Organization {entity_id:        $orgId})
             MERGE (d)-[r:BELONGS_TO {tenant_id: $tenantId}]->(o)
             ON CREATE SET r.created_at = $createdAt
             RETURN r";
@@ -492,7 +492,7 @@ public class PromotionRepository
         // relationship under this tenant — and who carry the :Student label.
         const string cypher = @"
             MATCH (p:Person:Student)-[r:ENROLLED_IN {tenant_id: $tenantId}]->(o:Organization)
-            RETURN DISTINCT p.strong_id AS id, p.first_name AS fn, p.last_name AS ln,
+            RETURN DISTINCT p.entity_id AS id, p.first_name AS fn, p.last_name AS ln,
                    p.gpa AS gpa, p.enrollment_status AS status, labels(p) AS lbls
             ORDER BY ln, fn";
 
@@ -515,7 +515,7 @@ public class PromotionRepository
     {
         const string cypher = @"
             MATCH (p:Person:Employee)-[r:WORKS_AT {tenant_id: $tenantId}]->(o:Organization)
-            RETURN DISTINCT p.strong_id AS id, p.first_name AS fn, p.last_name AS ln,
+            RETURN DISTINCT p.entity_id AS id, p.first_name AS fn, p.last_name AS ln,
                    p.contract_type AS ct, p.salary_band AS sb, labels(p) AS lbls
             ORDER BY ln, fn";
 
@@ -538,7 +538,7 @@ public class PromotionRepository
     {
         const string cypher = @"
             MATCH (p:Person:Researcher)
-            RETURN p.strong_id AS id, p.first_name AS fn, p.last_name AS ln,
+            RETURN p.entity_id AS id, p.first_name AS fn, p.last_name AS ln,
                    p.orcid_id AS orcid, p.research_field AS field,
                    p.researcher_type AS rtype, labels(p) AS lbls
             ORDER BY ln, fn";
@@ -559,7 +559,7 @@ public class PromotionRepository
 
     private static Course MapCourse(INode n) => new()
     {
-        CourseId     = n["course_id"].As<string>(),
+        EntityId     = n["entity_id"].As<string>(),
         Name         = n["name"].As<string>(),
         OrgId        = n["org_id"].As<string>(),
         Code         = n.Properties.ContainsKey("code")          ? n["code"].As<string?>()          : null,
@@ -571,7 +571,7 @@ public class PromotionRepository
 
     private static Department MapDepartment(INode n) => new()
     {
-        DepartmentId = n["department_id"].As<string>(),
+        EntityId     = n["entity_id"].As<string>(),
         Name         = n["name"].As<string>(),
         OrgId        = n["org_id"].As<string>(),
         Code         = n.Properties.ContainsKey("code")        ? n["code"].As<string?>()        : null,

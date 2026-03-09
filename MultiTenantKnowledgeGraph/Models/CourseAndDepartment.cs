@@ -8,7 +8,7 @@ namespace MultiTenantKnowledgeGraph.Models;
 public class Course
 {
     // ----- Required -----
-    public string CourseId   { get; set; } = string.Empty;
+    public string EntityId   { get; set; } = string.Empty;
     public string Name       { get; set; } = string.Empty;
     public string OrgId      { get; set; } = string.Empty;  // owning university
 
@@ -19,7 +19,7 @@ public class Course
     public string? Level         { get; set; }              // Undergraduate / Graduate / PhD
     public string? AcademicTerm  { get; set; }              // e.g. "Fall 2023"
 
-    public override string ToString() => $"Course [{CourseId}]: {Name} ({Code})";
+    public override string ToString() => $"Course [{EntityId}]: {Name} ({Code})";
 }
 
 /// <summary>
@@ -29,7 +29,7 @@ public class Course
 public class Department
 {
     // ----- Required -----
-    public string DepartmentId { get; set; } = string.Empty;
+    public string EntityId     { get; set; } = string.Empty;
     public string Name         { get; set; } = string.Empty;
     public string OrgId        { get; set; } = string.Empty;  // parent organization
 
@@ -38,5 +38,5 @@ public class Department
     public string? Description { get; set; }
     public string? HeadName    { get; set; }                   // dept head (denormalized for display)
 
-    public override string ToString() => $"Department [{DepartmentId}]: {Name}";
+    public override string ToString() => $"Department [{EntityId}]: {Name}";
 }

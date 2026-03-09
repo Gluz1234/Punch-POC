@@ -18,7 +18,7 @@ public class Person
     /// Global unique identifier. Used as the MERGE key — guarantees no duplicate nodes.
     /// Could be a national ID, passport number, SSN, or any stable external identifier.
     /// </summary>
-    public string StrongId { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
 
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
@@ -37,5 +37,5 @@ public class Person
     public string? Status { get; set; }
 
     public override string ToString() =>
-        $"Person [{StrongId}]: {FirstName} {LastName}";
+        $"Person [{EntityId}]: {FirstName} {LastName}";
 }

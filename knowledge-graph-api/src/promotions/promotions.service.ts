@@ -42,18 +42,19 @@ export class PromotionsService implements OnApplicationBootstrap {
   // ── Read current labels on any entity ───────────────────────────────────
 
   async getLabels(entityType: string, entityId: string) {
-    const config = this.resolveEntityConfig(entityType);
-    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
-    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
-
-    const records = await this.neo4j.runQuery(
-      `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId}) RETURN labels(n) AS labels`,
-      { entityId },
-    );
-    if (!records.length) {
-      throw new NotFoundException(`${config.displayName} ${entityId} not found`);
+    const requested = this.resolveEntityConfig(entityType);
+    const response = await this.getLabelsById(entityId);
+    if (response.entityType.toLowerCase() !== requested.label.toLowerCase()) {
+      throw new BadRequestException(
+        `entityType mismatch for ${entityId}: expected ${requested.label}, found ${response.entityType}`,
+      );
     }
-    return { entityType: config.label, entityId, labels: records[0].get('labels') };
+    return response;
+  }
+
+  async getLabelsById(entityId: string) {
+    const { labels, config } = await this.getEntityNodeById(entityId);
+    return { entityType: config.label, entityId, labels };
   }
 
   // ── Generic Promote to any subtype ──────────────────────────────────────
@@ -64,9 +65,23 @@ export class PromotionsService implements OnApplicationBootstrap {
     subtype: string,
     properties: Record<string, any>,
   ) {
-    const config = this.resolveEntityConfig(entityType);
-    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
-    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
+    const requested = this.resolveEntityConfig(entityType);
+    const promoted = await this.promoteToSubtypeById(entityId, subtype, properties);
+    if (!promoted.labels.some((label: string) => label.toLowerCase() === requested.label.toLowerCase())) {
+      throw new BadRequestException(
+        `entityType mismatch for ${entityId}: expected ${requested.label}`,
+      );
+    }
+    return promoted;
+  }
+
+  async promoteToSubtypeById(
+    entityId: string,
+    subtype: string,
+    properties: Record<string, any>,
+  ) {
+    const { config } = await this.getEntityNodeById(entityId);
+    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
     const safeSubtype = this.neo4j.sanitizeIdentifier(subtype);
     const safeProps = this.sanitizePropertyKeys(properties);
 
@@ -98,7 +113,7 @@ export class PromotionsService implements OnApplicationBootstrap {
     }
 
     const records = await this.neo4j.runQuery(`
-      MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId})
+      MATCH (n:Entity {\`${safeIdField}\`: $entityId})
       SET n:\`${safeSubtype}\`
       ${setClause}
       RETURN n, labels(n) AS labels`,
@@ -167,6 +182,33 @@ export class PromotionsService implements OnApplicationBootstrap {
       console.warn(`⚠ Failed to ensure subtype "${key}" is registered:`, err);
     }
   }
+
+  private async getEntityNodeById(entityId: string): Promise<{ labels: string[]; config: EntityConfig }> {
+    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
+    const records = await this.neo4j.runQuery(
+      `MATCH (n:Entity {\`${safeIdField}\`: $entityId}) RETURN labels(n) AS labels LIMIT 1`,
+      { entityId },
+    );
+
+    if (!records.length) {
+      throw new NotFoundException(`Entity ${entityId} not found`);
+    }
+
+    const labels: string[] = records[0].get('labels');
+    const config = this.resolveEntityConfigFromLabels(labels);
+    return { labels, config };
+  }
+
+  private resolveEntityConfigFromLabels(labels: string[]): EntityConfig {
+    const lower = new Set(labels.map(l => l.toLowerCase()));
+    const config = getAllEntities().find(e => lower.has(e.label.toLowerCase()));
+    if (!config) {
+      throw new BadRequestException(
+        `Unable to resolve base entity type from labels: ${labels.join(', ')}`,
+      );
+    }
+    return config;
+  }
 }
 
 // ── Helper DTOs for typed property responses ─────────────────────────────────
@@ -202,24 +244,32 @@ export class PromotionProjectionService {
    * - unknown / unclassified properties
    */
   async getEntityTypedProperties(entityType: string, entityId: string): Promise<TypedPropertiesResponse> {
-    // Resolve entity config
-    const config = this.resolveEntityConfig(entityType);
-    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
-    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
+    const requested = this.resolveEntityConfig(entityType);
+    const response = await this.getEntityTypedPropertiesById(entityId);
+    if (response.entityType.toLowerCase() !== requested.label.toLowerCase()) {
+      throw new BadRequestException(
+        `entityType mismatch for ${entityId}: expected ${requested.label}, found ${response.entityType}`,
+      );
+    }
+    return response;
+  }
 
+  async getEntityTypedPropertiesById(entityId: string): Promise<TypedPropertiesResponse> {
+    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
     const records = await this.neo4j.runQuery(
-      `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId})
+      `MATCH (n:Entity {\`${safeIdField}\`: $entityId})
        RETURN n, labels(n) AS labels`,
       { entityId },
     );
 
     if (!records.length) {
-      throw new NotFoundException(`${config.displayName} ${entityId} not found`);
+      throw new NotFoundException(`Entity ${entityId} not found`);
     }
 
     const node = records[0].get('n');
     const labels: string[] = records[0].get('labels');
     const props = this.neo4j.toPlainObject(node.properties);
+    const config = this.resolveEntityConfigFromLabels(labels);
 
     const basePropKeys = new Set<string>([
       config.idField,
@@ -290,5 +340,16 @@ export class PromotionProjectionService {
     throw new BadRequestException(
       `Unknown entity type: "${entityType}". Available: ${getAllEntities().map(e => e.key).join(', ')}`,
     );
+  }
+
+  private resolveEntityConfigFromLabels(labels: string[]): EntityConfig {
+    const lower = new Set(labels.map(l => l.toLowerCase()));
+    const config = getAllEntities().find(e => lower.has(e.label.toLowerCase()));
+    if (!config) {
+      throw new BadRequestException(
+        `Unable to resolve base entity type from labels: ${labels.join(', ')}`,
+      );
+    }
+    return config;
   }
 }

@@ -13,7 +13,7 @@ namespace MultiTenantKnowledgeGraph.Repositories;
 /// the RELATIONSHIP itself.
 ///
 /// This means:
-///   - One Person node [strong_id=123] exists once in the graph.
+///   - One Person node [entity_id=123] exists once in the graph.
 ///   - Multiple tenants can each have a relationship TO that person.
 ///   - Tenant-scoped queries filter WHERE r.tenant_id = $tenantId
 ///   - Cross-tenant queries omit the tenant filter entirely.
@@ -35,9 +35,9 @@ public class RelationshipRepository
         // MERGE prevents duplicate relationships for the same person+org+tenant.
         // ON CREATE SET stamps created_at only once.
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})
-            MATCH (o:Organization {org_id: $orgId})
-            MERGE (p)-[r:ENROLLED_IN {tenant_id: $tenantId, org_id: $orgId}]->(o)
+            MATCH (p:Person {entity_id: $personId})
+            MATCH (o:Organization {entity_id: $orgId})
+            MERGE (p)-[r:ENROLLED_IN {tenant_id: $tenantId, entity_id: $orgId}]->(o)
             ON CREATE SET
                 r.created_at = $createdAt,
                 r.start_date = $startDate,
@@ -60,7 +60,7 @@ public class RelationshipRepository
     public async Task DeleteEnrolledInAsync(string personStrongId, string orgId, string tenantId)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})-[r:ENROLLED_IN {tenant_id: $tenantId, org_id: $orgId}]->(o:Organization)
+            MATCH (p:Person {entity_id: $personId})-[r:ENROLLED_IN {tenant_id: $tenantId, entity_id: $orgId}]->(o:Organization)
             DELETE r";
 
         await using var session = _neo4j.OpenSession();
@@ -74,9 +74,9 @@ public class RelationshipRepository
     public async Task CreateWorksAtAsync(WorksAtRelationship rel)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})
-            MATCH (o:Organization {org_id: $orgId})
-            MERGE (p)-[r:WORKS_AT {tenant_id: $tenantId, org_id: $orgId}]->(o)
+            MATCH (p:Person {entity_id: $personId})
+            MATCH (o:Organization {entity_id: $orgId})
+            MERGE (p)-[r:WORKS_AT {tenant_id: $tenantId, entity_id: $orgId}]->(o)
             ON CREATE SET
                 r.created_at = $createdAt,
                 r.job_title  = $jobTitle,
@@ -99,7 +99,7 @@ public class RelationshipRepository
     public async Task DeleteWorksAtAsync(string personStrongId, string orgId, string tenantId)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})-[r:WORKS_AT {tenant_id: $tenantId, org_id: $orgId}]->(o:Organization)
+            MATCH (p:Person {entity_id: $personId})-[r:WORKS_AT {tenant_id: $tenantId, entity_id: $orgId}]->(o:Organization)
             DELETE r";
 
         await using var session = _neo4j.OpenSession();
@@ -113,9 +113,9 @@ public class RelationshipRepository
     public async Task CreateLivesInAsync(LivesInRelationship rel)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})
-            MATCH (l:Location {location_id: $locationId})
-            MERGE (p)-[r:LIVES_IN {tenant_id: $tenantId, location_id: $locationId}]->(l)
+            MATCH (p:Person {entity_id: $personId})
+            MATCH (l:Location {entity_id: $locationId})
+            MERGE (p)-[r:LIVES_IN {tenant_id: $tenantId, entity_id: $locationId}]->(l)
             ON CREATE SET
                 r.created_at     = $createdAt,
                 r.residence_type = $residenceType
@@ -136,7 +136,7 @@ public class RelationshipRepository
     public async Task DeleteLivesInAsync(string personStrongId, string locationId, string tenantId)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})-[r:LIVES_IN {tenant_id: $tenantId, location_id: $locationId}]->(l:Location)
+            MATCH (p:Person {entity_id: $personId})-[r:LIVES_IN {tenant_id: $tenantId, entity_id: $locationId}]->(l:Location)
             DELETE r";
 
         await using var session = _neo4j.OpenSession();
@@ -150,9 +150,9 @@ public class RelationshipRepository
     public async Task CreateHasSkillAsync(HasSkillRelationship rel)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})
-            MATCH (s:Skill {skill_id: $skillId})
-            MERGE (p)-[r:HAS_SKILL {tenant_id: $tenantId, skill_id: $skillId}]->(s)
+            MATCH (p:Person {entity_id: $personId})
+            MATCH (s:Skill {entity_id: $skillId})
+            MERGE (p)-[r:HAS_SKILL {tenant_id: $tenantId, entity_id: $skillId}]->(s)
             ON CREATE SET
                 r.created_at        = $createdAt,
                 r.proficiency_level = $level
@@ -173,7 +173,7 @@ public class RelationshipRepository
     public async Task DeleteHasSkillAsync(string personStrongId, string skillId, string tenantId)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})-[r:HAS_SKILL {tenant_id: $tenantId, skill_id: $skillId}]->(s:Skill)
+            MATCH (p:Person {entity_id: $personId})-[r:HAS_SKILL {tenant_id: $tenantId, entity_id: $skillId}]->(s:Skill)
             DELETE r";
 
         await using var session = _neo4j.OpenSession();
@@ -187,9 +187,9 @@ public class RelationshipRepository
     public async Task CreateCompletedAsync(CompletedRelationship rel)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})
-            MATCH (e:Education {education_id: $educationId})
-            MERGE (p)-[r:COMPLETED {tenant_id: $tenantId, education_id: $educationId}]->(e)
+            MATCH (p:Person {entity_id: $personId})
+            MATCH (e:Education {entity_id: $educationId})
+            MERGE (p)-[r:COMPLETED {tenant_id: $tenantId, entity_id: $educationId}]->(e)
             ON CREATE SET r.created_at = $createdAt
             RETURN r";
 
@@ -207,7 +207,7 @@ public class RelationshipRepository
     public async Task DeleteCompletedAsync(string personStrongId, string educationId, string tenantId)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $personId})-[r:COMPLETED {tenant_id: $tenantId, education_id: $educationId}]->(e:Education)
+            MATCH (p:Person {entity_id: $personId})-[r:COMPLETED {tenant_id: $tenantId, entity_id: $educationId}]->(e:Education)
             DELETE r";
 
         await using var session = _neo4j.OpenSession();
@@ -221,8 +221,8 @@ public class RelationshipRepository
     public async Task CreateProvidedByAsync(ProvidedByRelationship rel)
     {
         const string cypher = @"
-            MATCH (e:Education {education_id: $educationId})
-            MATCH (o:Organization {org_id: $orgId})
+            MATCH (e:Education {entity_id: $educationId})
+            MATCH (o:Organization {entity_id: $orgId})
             MERGE (e)-[r:PROVIDED_BY {tenant_id: $tenantId}]->(o)
             ON CREATE SET r.created_at = $createdAt
             RETURN r";
@@ -245,9 +245,9 @@ public class RelationshipRepository
     public async Task CreateRequiresSkillAsync(RequiresSkillRelationship rel)
     {
         const string cypher = @"
-            MATCH (o:Organization {org_id: $orgId})
-            MATCH (s:Skill {skill_id: $skillId})
-            MERGE (o)-[r:REQUIRES_SKILL {tenant_id: $tenantId, skill_id: $skillId}]->(s)
+            MATCH (o:Organization {entity_id: $orgId})
+            MATCH (s:Skill {entity_id: $skillId})
+            MERGE (o)-[r:REQUIRES_SKILL {tenant_id: $tenantId, entity_id: $skillId}]->(s)
             ON CREATE SET
                 r.created_at       = $createdAt,
                 r.requirement_level = $reqLevel
@@ -273,20 +273,20 @@ public class RelationshipRepository
     /// Returns a human-readable summary of all relationships for a person,
     /// optionally filtered by tenant.
     /// </summary>
-    public async Task<List<string>> ListPersonRelationshipsAsync(string strongId, string? tenantId = null)
+    public async Task<List<string>> ListPersonRelationshipsAsync(string personEntityId, string? tenantId = null)
     {
         // When tenantId is provided: filter by tenant (tenant-scoped query).
         // When null: return all relationships across all tenants (global query).
         var tenantFilter = tenantId is not null ? "WHERE r.tenant_id = $tenantId" : "";
 
         var cypher = $@"
-            MATCH (p:Person {{strong_id: $strongId}})-[r]->(n)
+             MATCH (p:Person {{entity_id: $personEntityId}})-[r]->(n)
             {tenantFilter}
             RETURN type(r) AS relType, r.tenant_id AS tenant, labels(n) AS targetLabels,
-                   COALESCE(n.name, n.org_id, n.skill_id, n.location_id, n.education_id) AS targetId";
+                 COALESCE(n.entity_id, n.name) AS targetId";
 
         await using var session = _neo4j.OpenSession();
-        var result = await session.RunAsync(cypher, new { strongId, tenantId });
+         var result = await session.RunAsync(cypher, new { personEntityId, tenantId });
 
         var lines = new List<string>();
         await foreach (var record in result)

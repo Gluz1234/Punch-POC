@@ -9,7 +9,7 @@ public class Skill
 {
     // ----- Required Properties -----
 
-    public string SkillId { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
 
     // ----- Optional Properties -----
@@ -23,5 +23,5 @@ public class Skill
     public string? LevelScale { get; set; }
 
     public override string ToString() =>
-        $"Skill [{SkillId}]: {Name}";
+        $"Skill [{EntityId}]: {Name}";
 }

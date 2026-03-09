@@ -1,7 +1,8 @@
-{
+﻿{
     "info":  {
-                 "name":  "Knowledge Graph Admin API v3 (Generic)",
+                 "name":  "Knowledge Graph Admin API v4 (Entity ID Routes)",
                  "description":  "Multi-Tenant Knowledge Graph API with dynamically generated endpoints. All standard entities (Person, Organization, Location, Skill, Education, Course, Department) are served by a single generic service with configuration-driven routes.",
+                 "version":  "4.0.0",
                  "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
              },
     "variable":  [
@@ -303,7 +304,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"ENROLLED_IN\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"program\": \"BSc Computer Science\",\n    \"start_date\": \"2019-09-01\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"ENROLLED_IN\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"program\": \"BSc Computer Science\",\n    \"start_date\": \"2019-09-01\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -320,7 +321,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-google\",\n  \"relationshipType\": \"WORKS_AT\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"job_title\": \"Software Engineer L4\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetId\": \"org-google\",\n  \"relationshipType\": \"WORKS_AT\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"job_title\": \"Software Engineer L4\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -337,7 +338,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"location\",\n  \"targetId\": \"loc-amsterdam\",\n  \"relationshipType\": \"LIVES_IN\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"residence_type\": \"Primary\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetId\": \"loc-amsterdam\",\n  \"relationshipType\": \"LIVES_IN\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"residence_type\": \"Primary\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -354,7 +355,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"skill\",\n  \"targetId\": \"skill-python\",\n  \"relationshipType\": \"HAS_SKILL\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"proficiency_level\": \"Expert\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetId\": \"skill-python\",\n  \"relationshipType\": \"HAS_SKILL\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"proficiency_level\": \"Expert\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -371,7 +372,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"education\",\n  \"targetId\": \"edu-cs-mit\",\n  \"relationshipType\": \"COMPLETED\",\n  \"tenantId\": \"tenant_mit\"\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetId\": \"edu-cs-mit\",\n  \"relationshipType\": \"COMPLETED\",\n  \"tenantId\": \"tenant_mit\"\n}"
                                                                }
                                                   }
                                   },
@@ -388,7 +389,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"education\",\n  \"sourceId\": \"edu-cs-mit\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"PROVIDED_BY\",\n  \"tenantId\": \"tenant_mit\"\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"edu-cs-mit\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"PROVIDED_BY\",\n  \"tenantId\": \"tenant_mit\"\n}"
                                                                }
                                                   }
                                   },
@@ -405,7 +406,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"organization\",\n  \"sourceId\": \"org-google\",\n  \"targetType\": \"skill\",\n  \"targetId\": \"skill-python\",\n  \"relationshipType\": \"REQUIRES_SKILL\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"requirement_level\": \"Expert\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"org-google\",\n  \"targetId\": \"skill-python\",\n  \"relationshipType\": \"REQUIRES_SKILL\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"requirement_level\": \"Expert\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -422,7 +423,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"person\",\n  \"targetId\": \"person-prof-johnson\",\n  \"relationshipType\": \"HAS_ADVISOR\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"advisor_role\": \"Primary\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetId\": \"person-prof-johnson\",\n  \"relationshipType\": \"HAS_ADVISOR\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"advisor_role\": \"Primary\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -439,7 +440,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"course\",\n  \"targetId\": \"course-6006\",\n  \"relationshipType\": \"REGISTERED_FOR\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"status\": \"Enrolled\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetId\": \"course-6006\",\n  \"relationshipType\": \"REGISTERED_FOR\",\n  \"tenantId\": \"tenant_mit\",\n  \"properties\": {\n    \"status\": \"Enrolled\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -456,7 +457,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetType\": \"person\",\n  \"targetId\": \"person-yuki-tanaka\",\n  \"relationshipType\": \"REPORTS_TO\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"reporting_type\": \"Direct\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"person-sarah-chen\",\n  \"targetId\": \"person-yuki-tanaka\",\n  \"relationshipType\": \"REPORTS_TO\",\n  \"tenantId\": \"tenant_google\",\n  \"properties\": {\n    \"reporting_type\": \"Direct\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -473,7 +474,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"department\",\n  \"sourceId\": \"dept-mit-cs\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"BELONGS_TO\",\n  \"tenantId\": \"tenant_mit\"\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"dept-mit-cs\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"BELONGS_TO\",\n  \"tenantId\": \"tenant_mit\"\n}"
                                                                }
                                                   }
                                   },
@@ -490,7 +491,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"course\",\n  \"sourceId\": \"course-6006\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"OFFERED_BY\",\n  \"tenantId\": \"tenant_mit\"\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"course-6006\",\n  \"targetId\": \"org-mit\",\n  \"relationshipType\": \"OFFERED_BY\",\n  \"tenantId\": \"tenant_mit\"\n}"
                                                                }
                                                   }
                                   },
@@ -498,35 +499,35 @@
                                       "name":  "Get Person Relationships",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/relationships/person/person-sarah-chen"
+                                                      "url":  "{{base}}/relationships/person-sarah-chen"
                                                   }
                                   },
                                   {
                                       "name":  "Get Person Rels (tenant)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/relationships/person/person-sarah-chen?tenantId=tenant_mit"
+                                                      "url":  "{{base}}/relationships/person-sarah-chen?tenantId=tenant_mit"
                                                   }
                                   },
                                   {
                                       "name":  "Get Org Relationships",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/relationships/organization/org-mit"
+                                                      "url":  "{{base}}/relationships/org-mit"
                                                   }
                                   },
                                   {
                                       "name":  "Delete ENROLLED_IN",
                                       "request":  {
                                                       "method":  "DELETE",
-                                                      "url":  "{{base}}/relationships/person/person-sarah-chen/ENROLLED_IN/tenant_mit?targetType=organization\u0026targetId=org-mit"
+                                                      "url":  "{{base}}/relationships/person-sarah-chen/ENROLLED_IN/tenant_mit?targetId=org-mit"
                                                   }
                                   },
                                   {
                                       "name":  "Delete WORKS_AT",
                                       "request":  {
                                                       "method":  "DELETE",
-                                                      "url":  "{{base}}/relationships/person/person-sarah-chen/WORKS_AT/tenant_google?targetType=organization\u0026targetId=org-google"
+                                                      "url":  "{{base}}/relationships/person-sarah-chen/WORKS_AT/tenant_google?targetId=org-google"
                                                   }
                                   }
                               ]
@@ -538,28 +539,28 @@
                                       "name":  "Get Entity Labels (Person)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/labels"
+                                                      "url":  "{{base}}/promotions/person-sarah-chen/labels"
                                                   }
                                   },
                                   {
                                       "name":  "Get Entity Labels (Org)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/promotions/organization/org-google/labels"
+                                                      "url":  "{{base}}/promotions/org-google/labels"
                                                   }
                                   },
                                   {
                                       "name":  "Get Typed Properties (Person)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/typed-properties"
+                                                      "url":  "{{base}}/promotions/person-sarah-chen/typed-properties"
                                                   }
                                   },
                                   {
                                       "name":  "Promote Person to Student",
                                       "request":  {
                                                       "method":  "POST",
-                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/promote/Student",
+                                                      "url":  "{{base}}/promotions/person-sarah-chen/promote/Student",
                                                       "header":  [
                                                                      {
                                                                          "key":  "Content-Type",
@@ -576,7 +577,7 @@
                                       "name":  "Promote Person to Employee",
                                       "request":  {
                                                       "method":  "POST",
-                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/promote/Employee",
+                                                      "url":  "{{base}}/promotions/person-sarah-chen/promote/Employee",
                                                       "header":  [
                                                                      {
                                                                          "key":  "Content-Type",
@@ -593,7 +594,7 @@
                                       "name":  "Promote Person to Researcher",
                                       "request":  {
                                                       "method":  "POST",
-                                                      "url":  "{{base}}/promotions/person/person-sarah-chen/promote/Researcher",
+                                                      "url":  "{{base}}/promotions/person-sarah-chen/promote/Researcher",
                                                       "header":  [
                                                                      {
                                                                          "key":  "Content-Type",
@@ -610,7 +611,7 @@
                                       "name":  "Promote Org to Partner",
                                       "request":  {
                                                       "method":  "POST",
-                                                      "url":  "{{base}}/promotions/organization/org-google/promote/Partner",
+                                                      "url":  "{{base}}/promotions/org-google/promote/Partner",
                                                       "header":  [
                                                                      {
                                                                          "key":  "Content-Type",
@@ -627,7 +628,7 @@
                                       "name":  "Promote Location to Landmark",
                                       "request":  {
                                                       "method":  "POST",
-                                                      "url":  "{{base}}/promotions/location/loc-amsterdam/promote/Landmark",
+                                                      "url":  "{{base}}/promotions/loc-amsterdam/promote/Landmark",
                                                       "header":  [
                                                                      {
                                                                          "key":  "Content-Type",
@@ -926,14 +927,14 @@
                                       "name":  "Tenants for Person",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/query/tenants-for/person/person-sarah-chen"
+                                                      "url":  "{{base}}/query/tenants-for/person-sarah-chen"
                                                   }
                                   },
                                   {
                                       "name":  "Tenants for Organization",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/query/tenants-for/organization/org-mit"
+                                                      "url":  "{{base}}/query/tenants-for/org-mit"
                                                   }
                                   },
                                   {
@@ -1144,4 +1145,6 @@
                  }
              ]
 }
+
+
 

@@ -77,12 +77,10 @@ export class QueryService {
 
   // ── Generic: get tenants for any entity ─────────────────────────────────
 
-  async getTenantsForEntity(entityType: string, entityId: string) {
-    const config = this.resolveEntityConfig(entityType);
-    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
-    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
+  async getTenantsForEntity(entityId: string) {
+    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
     const records = await this.neo4j.runQuery(`
-      MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId})-[r]->()
+      MATCH (n:Entity {\`${safeIdField}\`: $entityId})-[r]->()
       WHERE r.tenant_id IS NOT NULL
       RETURN DISTINCT r.tenant_id AS tenant ORDER BY tenant`,
       { entityId });

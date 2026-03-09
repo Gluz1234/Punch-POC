@@ -16,7 +16,7 @@ using MultiTenantKnowledgeGraph.Seed;
 // Multi-Tenancy Model:
 //   Shared nodes (Person, Organization, Skill, Location, Education)
 //   Tenant context stored on RELATIONSHIPS via tenant_id property
-//   No node duplication — identity resolved by strong_id MERGE
+//   No node duplication — identity resolved by entity_id MERGE
 // ══════════════════════════════════════════════════════════════════════════════
 
 Console.WriteLine("=================================================");

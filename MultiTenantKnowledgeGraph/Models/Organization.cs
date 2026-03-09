@@ -8,7 +8,7 @@ public class Organization
 {
     // ----- Required Properties -----
 
-    public string OrgId { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
@@ -25,5 +25,5 @@ public class Organization
     public string? Phone { get; set; }
 
     public override string ToString() =>
-        $"Organization [{OrgId}]: {Name} ({OrganizationType})";
+        $"Organization [{EntityId}]: {Name} ({OrganizationType})";
 }

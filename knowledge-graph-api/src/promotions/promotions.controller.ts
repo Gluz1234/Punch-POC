@@ -17,38 +17,72 @@ export class PromotionsController {
 
   // ── Generic entity endpoints ────────────────────────────────────────────────
 
-  @Get(':entityType/:entityId/labels')
-  @ApiOperation({ summary: 'Get entity labels', description: 'Returns all labels for a specific entity (e.g. Person, Organization)' })
-  @ApiParam({ name: 'entityType', description: 'Entity type key or label', example: 'person' })
-  @ApiParam({ name: 'entityId', description: 'Entity ID value', example: 'person-sarah-chen' })
+  @Get(':entityId/labels')
+  @ApiOperation({ summary: 'Get entity labels by ID', description: 'Returns all labels for an entity using only entity_id.' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiResponse({ status: 200, description: 'Labels for the entity' })
-  getLabels(
+  getLabelsById(
+    @Param('entityId') entityId: string,
+  ) {
+    return this.promotionsService.getLabelsById(entityId);
+  }
+
+  @Get(':entityType/:entityId/labels')
+  @ApiOperation({ summary: 'Get entity labels (legacy route)', description: 'Backward-compatible route. entityType is validated against the entity labels and lookup is resolved by entity_id.' })
+  @ApiParam({ name: 'entityType', description: 'Legacy entity type key or label', example: 'person' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiResponse({ status: 200, description: 'Labels for the entity' })
+  getLabelsLegacy(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
   ) {
     return this.promotionsService.getLabels(entityType, entityId);
   }
 
-  @Get(':entityType/:entityId/typed-properties')
-  @ApiOperation({ summary: 'Get typed properties', description: 'Returns properties grouped by base entity and subtype categories' })
-  @ApiParam({ name: 'entityType', description: 'Entity type key or label', example: 'person' })
-  @ApiParam({ name: 'entityId', description: 'Entity ID value', example: 'person-sarah-chen' })
+  @Get(':entityId/typed-properties')
+  @ApiOperation({ summary: 'Get typed properties by ID', description: 'Returns properties grouped by base entity and subtype categories using only entity_id.' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiResponse({ status: 200, description: 'Properties organized by base and subtype categories' })
-  getTypedProperties(
+  getTypedPropertiesById(
+    @Param('entityId') entityId: string,
+  ) {
+    return this.promotionProjection.getEntityTypedPropertiesById(entityId);
+  }
+
+  @Get(':entityType/:entityId/typed-properties')
+  @ApiOperation({ summary: 'Get typed properties (legacy route)', description: 'Backward-compatible route. entityType is validated and lookup is resolved by entity_id.' })
+  @ApiParam({ name: 'entityType', description: 'Legacy entity type key or label', example: 'person' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiResponse({ status: 200, description: 'Properties organized by base and subtype categories' })
+  getTypedPropertiesLegacy(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
   ) {
     return this.promotionProjection.getEntityTypedProperties(entityType, entityId);
   }
 
-  @Post(':entityType/:entityId/promote/:subtype')
-  @ApiOperation({ summary: 'Promote entity to subtype', description: 'Add a subtype label and properties to any entity. Works for any entity type (person, organization, etc.) and any subtype (Student, Employee, or custom).' })
-  @ApiParam({ name: 'entityType', description: 'Entity type key or label', example: 'person' })
-  @ApiParam({ name: 'entityId', description: 'Entity ID value', example: 'person-sarah-chen' })
+  @Post(':entityId/promote/:subtype')
+  @ApiOperation({ summary: 'Promote entity to subtype by ID', description: 'Add a subtype label and properties to any entity using only entity_id.' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiParam({ name: 'subtype', description: 'Subtype label to add', example: 'Student' })
   @ApiBody({ schema: { example: { studentId: 'MIT-2019-001', gpa: 3.9, enrollmentYear: 2019 } } })
   @ApiResponse({ status: 201, description: 'Entity promoted to subtype successfully' })
-  promoteToSubtype(
+  promoteToSubtypeById(
+    @Param('entityId') entityId: string,
+    @Param('subtype') subtype: string,
+    @Body() properties: Record<string, any>,
+  ) {
+    return this.promotionsService.promoteToSubtypeById(entityId, subtype, properties);
+  }
+
+  @Post(':entityType/:entityId/promote/:subtype')
+  @ApiOperation({ summary: 'Promote entity to subtype (legacy route)', description: 'Backward-compatible route. entityType is validated and lookup is resolved by entity_id.' })
+  @ApiParam({ name: 'entityType', description: 'Legacy entity type key or label', example: 'person' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiParam({ name: 'subtype', description: 'Subtype label to add', example: 'Student' })
+  @ApiBody({ schema: { example: { studentId: 'MIT-2019-001', gpa: 3.9, enrollmentYear: 2019 } } })
+  @ApiResponse({ status: 201, description: 'Entity promoted to subtype successfully' })
+  promoteToSubtypeLegacy(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
     @Param('subtype') subtype: string,

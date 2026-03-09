@@ -15,7 +15,7 @@ namespace MultiTenantKnowledgeGraph.Models.Extensions;
 /// </summary>
 public class StudentProfile
 {
-    public string StrongId { get; set; } = string.Empty;     // links to Person
+    public string EntityId { get; set; } = string.Empty;     // links to Person
 
     // Student-specific fields (stored directly on the shared node)
     public string? StudentId { get; set; }                   // institutional ID
@@ -31,7 +31,7 @@ public class StudentProfile
 /// </summary>
 public class EmployeeProfile
 {
-    public string StrongId { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
 
     public string? EmployeeNumber { get; set; }
     public string? ContractType { get; set; }                // Permanent / Contract / Freelance
@@ -46,7 +46,7 @@ public class EmployeeProfile
 /// </summary>
 public class ResidentProfile
 {
-    public string StrongId { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
 
     public string? ResidentId { get; set; }                  // municipal registration number
     public DateTime? RegistrationDate { get; set; }
@@ -60,7 +60,7 @@ public class ResidentProfile
 /// </summary>
 public class ResearcherProfile
 {
-    public string StrongId { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
 
     public string? OrcidId { get; set; }                     // global researcher identifier
     public string? ResearchField { get; set; }

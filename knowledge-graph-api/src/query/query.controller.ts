@@ -67,16 +67,26 @@ export class QueryController {
 
   // ── Generic: tenants for entity ───────────────────────────────────────────
 
-  @Get('tenants-for/:entityType/:entityId')
-  @ApiOperation({ summary: 'Get tenant IDs for any entity', description: 'Returns all distinct tenant IDs from relationships of the given entity' })
-  @ApiParam({ name: 'entityType', description: 'Entity type key or label', example: 'person' })
-  @ApiParam({ name: 'entityId', description: 'Entity ID value', example: 'person-sarah-chen' })
+  @Get('tenants-for/:entityId')
+  @ApiOperation({ summary: 'Get tenant IDs by entity ID', description: 'Returns all distinct tenant IDs from relationships of the given entity_id.' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiResponse({ status: 200, description: 'Array of tenant IDs' })
-  tenantsForEntity(
-    @Param('entityType') entityType: string,
+  tenantsForEntityById(
     @Param('entityId') entityId: string,
   ) {
-    return this.queryService.getTenantsForEntity(entityType, entityId);
+    return this.queryService.getTenantsForEntity(entityId);
+  }
+
+  @Get('tenants-for/:entityType/:entityId')
+  @ApiOperation({ summary: 'Get tenant IDs for any entity (legacy route)', description: 'Backward-compatible route. entityType is ignored and lookup is resolved by entity_id.' })
+  @ApiParam({ name: 'entityType', description: 'Legacy entity type key (ignored)', example: 'person' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiResponse({ status: 200, description: 'Array of tenant IDs' })
+  tenantsForEntityLegacy(
+    @Param('entityType') _entityType: string,
+    @Param('entityId') entityId: string,
+  ) {
+    return this.queryService.getTenantsForEntity(entityId);
   }
 
   // ── Generic: nodes by label ───────────────────────────────────────────────

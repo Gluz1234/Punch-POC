@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { int } from 'neo4j-driver';
+import { randomUUID } from 'crypto';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
 
@@ -17,12 +18,14 @@ export class DynamicService {
 
   async upsertNode(dto: any) {
     if (!dto.labels?.length)  throw new BadRequestException('At least one label is required');
-    if (!dto.idField)         throw new BadRequestException('idField is required');
-    if (dto.id === undefined) throw new BadRequestException('id is required');
 
-    const safeLabels  = (dto.labels as string[]).map(l => this.neo4j.sanitizeIdentifier(l));
-    const safeIdField = this.neo4j.sanitizeIdentifier(dto.idField);
+    const safeLabels = Array.from(new Set([...(dto.labels as string[]), 'Entity']))
+      .map(l => this.neo4j.sanitizeIdentifier(l));
+    const safeIdField = this.neo4j.sanitizeIdentifier(dto.idField ?? 'entity_id');
     const safeProps   = this.sanitizePropertyKeys(dto.properties ?? {});
+    const nodeId = (dto.id !== undefined && dto.id !== null && String(dto.id).trim())
+      ? String(dto.id).trim()
+      : randomUUID();
 
     if (dto.createConstraint) {
       await this.neo4j.createConstraintForLabel(safeLabels[0], safeIdField);
@@ -32,7 +35,7 @@ export class DynamicService {
     const setParts  = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`);
     const setClause = setParts.length ? `, ${setParts.join(', ')}` : '';
 
-    const params: Record<string, any> = { nodeId: String(dto.id) };
+    const params: Record<string, any> = { nodeId };
     for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(`
@@ -204,7 +207,7 @@ export class DynamicService {
       RETURN type(r)        AS relType,
              properties(r)  AS relProps,
              labels(m)      AS otherLabels,
-             COALESCE(m.name, m.strong_id, m.org_id, m.skill_id,
+             COALESCE(m.entity_id, m.name, m.strong_id, m.org_id, m.skill_id,
                       m.location_id, m.education_id, m.course_id,
                       m.department_id, m.id) AS otherId`,
       { id },
@@ -245,7 +248,7 @@ export class DynamicService {
 
     // Check if this type already has a registered schema
     const existingSchema = await this.schemaRegistration.getEntitySchema(safeLabel);
-    const idField = `${safeLabel.toLowerCase()}_id`;
+    const idField = 'entity_id';
     const safeIdField = this.neo4j.sanitizeIdentifier(idField);
 
     if (!existingSchema) {
@@ -268,7 +271,7 @@ export class DynamicService {
     }
 
     // Generate a unique id for the node
-    const nodeId = `${safeLabel.toLowerCase()}_${Date.now()}`;
+    const nodeId = randomUUID();
 
     // Build SET clause from properties
     const setParts = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`);
@@ -278,7 +281,7 @@ export class DynamicService {
     for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(
-      `MERGE (n:\`${safeLabel}\` {\`${safeIdField}\`: $nodeId})
+      `MERGE (n:\`${safeLabel}\`:Entity {\`${safeIdField}\`: $nodeId})
        ON CREATE SET n.\`${safeIdField}\` = $nodeId${setClause}
        ON MATCH  SET n.\`${safeIdField}\` = $nodeId${setClause}
        RETURN n, labels(n) AS labels`,

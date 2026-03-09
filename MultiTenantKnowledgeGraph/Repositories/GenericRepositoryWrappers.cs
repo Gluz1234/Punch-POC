@@ -13,8 +13,8 @@ namespace MultiTenantKnowledgeGraph.Repositories;
 public class PersonRepository : GenericEntityRepository<Person>
 {
     protected override string NodeLabel => "Person";
-    protected override string IdProperty => "StrongId";
-    protected override Func<Person, string> GetIdValue => p => p.StrongId;
+    protected override string IdProperty => "EntityId";
+    protected override Func<Person, string> GetIdValue => p => p.EntityId;
 
     public PersonRepository(Neo4jService neo4j) : base(neo4j) { }
 }
@@ -25,8 +25,8 @@ public class PersonRepository : GenericEntityRepository<Person>
 public class OrganizationRepository : GenericEntityRepository<Organization>
 {
     protected override string NodeLabel => "Organization";
-    protected override string IdProperty => "OrgId";
-    protected override Func<Organization, string> GetIdValue => o => o.OrgId;
+    protected override string IdProperty => "EntityId";
+    protected override Func<Organization, string> GetIdValue => o => o.EntityId;
 
     public OrganizationRepository(Neo4jService neo4j) : base(neo4j) { }
 }
@@ -37,8 +37,8 @@ public class OrganizationRepository : GenericEntityRepository<Organization>
 public class LocationRepository : GenericEntityRepository<Location>
 {
     protected override string NodeLabel => "Location";
-    protected override string IdProperty => "LocationId";
-    protected override Func<Location, string> GetIdValue => l => l.LocationId;
+    protected override string IdProperty => "EntityId";
+    protected override Func<Location, string> GetIdValue => l => l.EntityId;
 
     public LocationRepository(Neo4jService neo4j) : base(neo4j) { }
 }
@@ -49,8 +49,8 @@ public class LocationRepository : GenericEntityRepository<Location>
 public class SkillRepository : GenericEntityRepository<Skill>
 {
     protected override string NodeLabel => "Skill";
-    protected override string IdProperty => "SkillId";
-    protected override Func<Skill, string> GetIdValue => s => s.SkillId;
+    protected override string IdProperty => "EntityId";
+    protected override Func<Skill, string> GetIdValue => s => s.EntityId;
 
     public SkillRepository(Neo4jService neo4j) : base(neo4j) { }
 }
@@ -61,8 +61,8 @@ public class SkillRepository : GenericEntityRepository<Skill>
 public class EducationRepository : GenericEntityRepository<Education>
 {
     protected override string NodeLabel => "Education";
-    protected override string IdProperty => "EducationId";
-    protected override Func<Education, string> GetIdValue => e => e.EducationId;
+    protected override string IdProperty => "EntityId";
+    protected override Func<Education, string> GetIdValue => e => e.EntityId;
 
     public EducationRepository(Neo4jService neo4j) : base(neo4j) { }
 }
@@ -73,8 +73,8 @@ public class EducationRepository : GenericEntityRepository<Education>
 public class CourseRepository : GenericEntityRepository<Course>
 {
     protected override string NodeLabel => "Course";
-    protected override string IdProperty => "CourseId";
-    protected override Func<Course, string> GetIdValue => c => c.CourseId;
+    protected override string IdProperty => "EntityId";
+    protected override Func<Course, string> GetIdValue => c => c.EntityId;
 
     public CourseRepository(Neo4jService neo4j) : base(neo4j) { }
 }
@@ -85,8 +85,8 @@ public class CourseRepository : GenericEntityRepository<Course>
 public class DepartmentRepository : GenericEntityRepository<Department>
 {
     protected override string NodeLabel => "Department";
-    protected override string IdProperty => "DepartmentId";
-    protected override Func<Department, string> GetIdValue => d => d.DepartmentId;
+    protected override string IdProperty => "EntityId";
+    protected override Func<Department, string> GetIdValue => d => d.EntityId;
 
     public DepartmentRepository(Neo4jService neo4j) : base(neo4j) { }
 }

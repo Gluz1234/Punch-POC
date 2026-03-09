@@ -30,36 +30,36 @@ public class PromotionService
 
     public Task PromoteToStudentAsync(StudentProfile profile)
     {
-        if (string.IsNullOrWhiteSpace(profile.StrongId))
-            throw new ArgumentException("StrongId required for promotion.");
+        if (string.IsNullOrWhiteSpace(profile.EntityId))
+            throw new ArgumentException("EntityId required for promotion.");
         return _repo.PromoteToStudentAsync(profile);
     }
 
     public Task PromoteToEmployeeAsync(EmployeeProfile profile)
     {
-        if (string.IsNullOrWhiteSpace(profile.StrongId))
-            throw new ArgumentException("StrongId required for promotion.");
+        if (string.IsNullOrWhiteSpace(profile.EntityId))
+            throw new ArgumentException("EntityId required for promotion.");
         return _repo.PromoteToEmployeeAsync(profile);
     }
 
     public Task PromoteToResidentAsync(ResidentProfile profile)
     {
-        if (string.IsNullOrWhiteSpace(profile.StrongId))
-            throw new ArgumentException("StrongId required for promotion.");
+        if (string.IsNullOrWhiteSpace(profile.EntityId))
+            throw new ArgumentException("EntityId required for promotion.");
         return _repo.PromoteToResidentAsync(profile);
     }
 
     public Task PromoteToResearcherAsync(ResearcherProfile profile)
     {
-        if (string.IsNullOrWhiteSpace(profile.StrongId))
-            throw new ArgumentException("StrongId required for promotion.");
+        if (string.IsNullOrWhiteSpace(profile.EntityId))
+            throw new ArgumentException("EntityId required for promotion.");
         return _repo.PromoteToResearcherAsync(profile);
     }
 
     public Task PromoteToSubtypeAsync(string strongId, string subtype, Dictionary<string, object> properties)
     {
         if (string.IsNullOrWhiteSpace(strongId))
-            throw new ArgumentException("StrongId required for promotion.");
+            throw new ArgumentException("EntityId required for promotion.");
         if (string.IsNullOrWhiteSpace(subtype))
             throw new ArgumentException("Subtype required.");
         return _repo.PromoteToSubtypeAsync(strongId, subtype, properties);
@@ -99,8 +99,8 @@ public class PromotionService
 
     public Task<Course> CreateOrUpdateCourseAsync(Course course)
     {
-        if (string.IsNullOrWhiteSpace(course.CourseId))
-            throw new ArgumentException("CourseId required.");
+        if (string.IsNullOrWhiteSpace(course.EntityId))
+            course.EntityId = Guid.NewGuid().ToString("N");
         return _repo.UpsertCourseAsync(course);
     }
 
@@ -109,8 +109,8 @@ public class PromotionService
 
     public Task<Department> CreateOrUpdateDepartmentAsync(Department dept)
     {
-        if (string.IsNullOrWhiteSpace(dept.DepartmentId))
-            throw new ArgumentException("DepartmentId required.");
+        if (string.IsNullOrWhiteSpace(dept.EntityId))
+            dept.EntityId = Guid.NewGuid().ToString("N");
         return _repo.UpsertDepartmentAsync(dept);
     }
 

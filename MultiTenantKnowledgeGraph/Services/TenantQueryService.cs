@@ -40,7 +40,7 @@ public class TenantQueryService
         string orgId, string tenantId)
     {
         const string cypher = @"
-            MATCH (p:Person)-[r:ENROLLED_IN {tenant_id: $tenantId}]->(o:Organization {org_id: $orgId})
+            MATCH (p:Person)-[r:ENROLLED_IN {tenant_id: $tenantId}]->(o:Organization {entity_id: $orgId})
             RETURN p, r.program AS program
             ORDER BY p.last_name, p.first_name";
 
@@ -64,7 +64,7 @@ public class TenantQueryService
         string orgId, string tenantId)
     {
         const string cypher = @"
-            MATCH (p:Person)-[r:WORKS_AT {tenant_id: $tenantId}]->(o:Organization {org_id: $orgId})
+            MATCH (p:Person)-[r:WORKS_AT {tenant_id: $tenantId}]->(o:Organization {entity_id: $orgId})
             RETURN p, r.job_title AS jobTitle
             ORDER BY p.last_name";
 
@@ -89,7 +89,7 @@ public class TenantQueryService
     ///   - Working at orgB (under tenant tenantB)
     ///
     /// This is only possible because the Person node is shared across tenants.
-    /// The same strong_id appears in both relationship contexts.
+    /// The same entity_id appears in both relationship contexts.
     ///
     /// Use case: "Find all persons who are university students AND employed by Company B"
     /// </summary>
@@ -101,9 +101,9 @@ public class TenantQueryService
         // Neo4j will only return persons where BOTH relationship patterns match.
         const string cypher = @"
             MATCH (p:Person)-[enrollment:ENROLLED_IN {tenant_id: $enrollTenant}]
-                  ->(o1:Organization {org_id: $enrollOrgId})
+                  ->(o1:Organization {entity_id: $enrollOrgId})
             MATCH (p)         -[employment:WORKS_AT   {tenant_id: $worksTenant}]
-                  ->(o2:Organization {org_id: $worksOrgId})
+                  ->(o2:Organization {entity_id: $worksOrgId})
             RETURN p,
                    enrollment.program   AS program,
                    employment.job_title AS jobTitle
@@ -142,7 +142,7 @@ public class TenantQueryService
         string skillId)
     {
         const string cypher = @"
-            MATCH (p:Person)-[r:HAS_SKILL]->(s:Skill {skill_id: $skillId})
+            MATCH (p:Person)-[r:HAS_SKILL]->(s:Skill {entity_id: $skillId})
             RETURN p, r.tenant_id AS tenantId, r.proficiency_level AS level
             ORDER BY p.last_name";
 
@@ -167,7 +167,7 @@ public class TenantQueryService
     public async Task<List<(Person Person, string TenantId)>> GetPersonsLivingInLocationAsync(string locationId)
     {
         const string cypher = @"
-            MATCH (p:Person)-[r:LIVES_IN]->(l:Location {location_id: $locationId})
+            MATCH (p:Person)-[r:LIVES_IN]->(l:Location {entity_id: $locationId})
             RETURN p, r.tenant_id AS tenantId
             ORDER BY p.last_name";
 
@@ -184,16 +184,16 @@ public class TenantQueryService
     /// Returns all tenants that have a relationship with a specific person.
     /// Useful for understanding which tenants "know about" a given individual.
     /// </summary>
-    public async Task<List<string>> GetTenantsForPersonAsync(string strongId)
+    public async Task<List<string>> GetTenantsForPersonAsync(string entityId)
     {
         const string cypher = @"
-            MATCH (p:Person {strong_id: $strongId})-[r]->()
+            MATCH (p:Person {entity_id: $entityId})-[r]->()
             WHERE r.tenant_id IS NOT NULL
             RETURN DISTINCT r.tenant_id AS tenantId
             ORDER BY tenantId";
 
         await using var session = _driver.AsyncSession();
-        var result = await session.RunAsync(cypher, new { strongId });
+        var result = await session.RunAsync(cypher, new { entityId });
 
         var tenants = new List<string>();
         await foreach (var record in result)
@@ -207,7 +207,7 @@ public class TenantQueryService
 
     private static Person MapPerson(INode node) => new()
     {
-        StrongId    = node["strong_id"].As<string>(),
+        EntityId    = node["entity_id"].As<string>(),
         FirstName   = node["first_name"].As<string>(),
         LastName    = node["last_name"].As<string>(),
         Email       = node.Properties.ContainsKey("email") ? node["email"].As<string?>() : null,

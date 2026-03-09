@@ -11,8 +11,11 @@ export interface EntityConfig {
   /** Neo4j label (e.g., "Person", "Course") */
   label: string;
   
-  /** ID field name in the entity (e.g., "strong_id", "courseId") */
+  /** Canonical ID field name (shared across all entity types) */
   idField: string;
+
+  /** Optional legacy ID field aliases accepted during migration */
+  legacyIdFields?: string[];
   
   /** Display name for error messages */
   displayName: string;
@@ -42,7 +45,8 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   person: {
     key: 'person',
     label: 'Person',
-    idField: 'strong_id',
+    idField: 'entity_id',
+    legacyIdFields: ['strong_id', 'strongId'],
     displayName: 'Person',
     route: 'persons',
     properties: {
@@ -55,7 +59,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       birth_date: 'Birth date',
     },
     propertyTypes: {
-      strong_id: 'String',
+      entity_id: 'String',
       first_name: 'String',
       last_name: 'String',
       email: 'String',
@@ -69,7 +73,8 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   organization: {
     key: 'organization',
     label: 'Organization',
-    idField: 'org_id',
+    idField: 'entity_id',
+    legacyIdFields: ['org_id', 'orgId'],
     displayName: 'Organization',
     route: 'organizations',
     properties: {
@@ -78,7 +83,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       industry: 'Industry',
     },
     propertyTypes: {
-      org_id: 'String',
+      entity_id: 'String',
       name: 'String',
       organization_type: 'String',
       industry: 'String',
@@ -88,7 +93,8 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   location: {
     key: 'location',
     label: 'Location',
-    idField: 'location_id',
+    idField: 'entity_id',
+    legacyIdFields: ['location_id', 'locationId'],
     displayName: 'Location',
     route: 'locations',
     properties: {
@@ -100,7 +106,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       population: 'Population',
     },
     propertyTypes: {
-      location_id: 'String',
+      entity_id: 'String',
       name: 'String',
       location_type: 'String',
       latitude: 'Float',
@@ -113,7 +119,8 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   skill: {
     key: 'skill',
     label: 'Skill',
-    idField: 'skill_id',
+    idField: 'entity_id',
+    legacyIdFields: ['skill_id', 'skillId'],
     displayName: 'Skill',
     route: 'skills',
     properties: {
@@ -121,7 +128,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       category: 'Skill category',
     },
     propertyTypes: {
-      skill_id: 'String',
+      entity_id: 'String',
       name: 'String',
       category: 'String',
     },
@@ -130,7 +137,8 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   education: {
     key: 'education',
     label: 'Education',
-    idField: 'education_id',
+    idField: 'entity_id',
+    legacyIdFields: ['education_id', 'educationId'],
     displayName: 'Education',
     route: 'education',
     properties: {
@@ -139,7 +147,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       field_of_study: 'Field of study',
     },
     propertyTypes: {
-      education_id: 'String',
+      entity_id: 'String',
       title: 'String',
       education_type: 'String',
       field_of_study: 'String',
@@ -149,7 +157,8 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   course: {
     key: 'course',
     label: 'Course',
-    idField: 'course_id',
+    idField: 'entity_id',
+    legacyIdFields: ['course_id', 'courseId'],
     displayName: 'Course',
     route: 'courses',
     properties: {
@@ -162,7 +171,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       org_id: 'Organization ID',
     },
     propertyTypes: {
-      course_id: 'String',
+      entity_id: 'String',
       name: 'String',
       code: 'String',
       credits: 'Integer',
@@ -183,7 +192,8 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   department: {
     key: 'department',
     label: 'Department',
-    idField: 'department_id',
+    idField: 'entity_id',
+    legacyIdFields: ['department_id', 'departmentId'],
     displayName: 'Department',
     route: 'departments',
     properties: {
@@ -192,7 +202,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       org_id: 'Organization ID',
     },
     propertyTypes: {
-      department_id: 'String',
+      entity_id: 'String',
       name: 'String',
       code: 'String',
       org_id: 'String',

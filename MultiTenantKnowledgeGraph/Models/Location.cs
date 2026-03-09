@@ -8,7 +8,7 @@ public class Location
 {
     // ----- Required Properties -----
 
-    public string LocationId { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
@@ -24,5 +24,5 @@ public class Location
     public long? Population { get; set; }
 
     public override string ToString() =>
-        $"Location [{LocationId}]: {Name} ({LocationType})";
+        $"Location [{EntityId}]: {Name} ({LocationType})";
 }

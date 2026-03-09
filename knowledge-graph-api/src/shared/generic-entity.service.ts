@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import neo4j, { Integer } from 'neo4j-driver';
+import { randomUUID } from 'crypto';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { EntityConfig, getAllEntities } from './entity-config';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
@@ -23,22 +24,20 @@ export class GenericEntityService {
    * Uses Cypher MERGE on the ID field to guarantee uniqueness.
    */
   async upsert(config: EntityConfig, dto: any) {
-    if (!dto[config.idField]) {
-      throw new BadRequestException(`${config.idField} is required`);
-    }
-
     // Ensure entity schema is registered (fallback if app startup failed)
     await this.schemaRegistration.ensureEntitySchema(config.key);
 
-    const idValue = dto[config.idField];
+    const idValue = this.resolveIncomingEntityId(config, dto) ?? randomUUID();
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
-    const safeProps = this.sanitizePropertyKeys(dto);
+    const safeProps = this.sanitizePropertyKeys(config, dto);
 
     // Build SET clauses for all properties
     const setParts = Object.keys(safeProps)
       .map(k => `n.\`${k}\` = $prop_${k}`)
       .join(', ');
+    const onCreateSet = [`n.\`${safeIdField}\` = $nodeId`, setParts].filter(Boolean).join(', ');
+    const onMatchSet = setParts ? `ON MATCH SET ${setParts}` : '';
 
     const params: Record<string, any> = { nodeId: String(idValue) };
     for (const [k, v] of Object.entries(safeProps)) {
@@ -46,9 +45,9 @@ export class GenericEntityService {
     }
 
     const records = await this.neo4j.runQuery(`
-      MERGE (n:\`${safeLabel}\` {\`${safeIdField}\`: $nodeId})
-      ON CREATE SET ${setParts}
-      ON MATCH SET ${setParts}
+      MERGE (n:\`${safeLabel}\`:Entity {\`${safeIdField}\`: $nodeId})
+      ON CREATE SET ${onCreateSet}
+      ${onMatchSet}
       RETURN n, labels(n) AS labels`,
       params,
     );
@@ -116,7 +115,7 @@ export class GenericEntityService {
 
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
-    const safeProps = this.sanitizePropertyKeys(dto);
+    const safeProps = this.sanitizePropertyKeys(config, dto);
 
     if (!Object.keys(safeProps).length) {
       throw new BadRequestException('No properties provided to update');
@@ -171,7 +170,7 @@ export class GenericEntityService {
   /**
    * Filter out the ID field and sensitive fields from properties.
    */
-  private sanitizePropertyKeys(dto: any): Record<string, any> {
+  private sanitizePropertyKeys(config: EntityConfig, dto: any): Record<string, any> {
     // Build skip-list dynamically from all entity ID fields + their camelCase variants
     const skipFields = new Set<string>();
     for (const entity of getAllEntities()) {
@@ -179,7 +178,12 @@ export class GenericEntityService {
       // Also skip camelCase body keys that map to ID fields (e.g., personStrongId → strong_id)
       const camelKey = entity.idField.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
       skipFields.add(camelKey);
+      for (const legacyField of entity.legacyIdFields ?? []) {
+        skipFields.add(legacyField);
+      }
     }
+
+    skipFields.add('id');
 
     const result: Record<string, any> = {};
     for (const [k, v] of Object.entries(dto || {})) {
@@ -189,6 +193,22 @@ export class GenericEntityService {
       }
     }
     return result;
+  }
+
+  private resolveIncomingEntityId(config: EntityConfig, dto: any): string | null {
+    const candidates = [
+      dto?.[config.idField],
+      ...((config.legacyIdFields ?? []).map(k => dto?.[k])),
+      dto?.id,
+    ];
+
+    for (const value of candidates) {
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+
+    return null;
   }
 
   /**

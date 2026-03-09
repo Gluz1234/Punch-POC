@@ -19,23 +19,23 @@ public class PersonService
 
     public Task<Person> CreateOrUpdateAsync(Person person)
     {
-        if (string.IsNullOrWhiteSpace(person.StrongId))
-            throw new ArgumentException("Person.StrongId is required and must be unique.");
+        if (string.IsNullOrWhiteSpace(person.EntityId))
+            person.EntityId = Guid.NewGuid().ToString("N");
         if (string.IsNullOrWhiteSpace(person.FirstName) || string.IsNullOrWhiteSpace(person.LastName))
             throw new ArgumentException("Person first and last name are required.");
 
-        // MERGE on strong_id — identity rule enforced here
+        // MERGE on entity_id — identity rule enforced here
         return _repo.UpsertAsync(person);
     }
 
-    public Task<Person?> GetByIdAsync(string strongId) => _repo.GetByIdAsync(strongId);
+    public Task<Person?> GetByIdAsync(string entityId) => _repo.GetByIdAsync(entityId);
 
     public Task<List<Person>> GetAllAsync() => _repo.GetAllAsync();
 
-    public async Task<bool> DeleteAsync(string strongId)
+    public async Task<bool> DeleteAsync(string entityId)
     {
         // Warn: deletes person from ALL tenant contexts
-        return await _repo.DeleteAsync(strongId);
+        return await _repo.DeleteAsync(entityId);
     }
 }
 
@@ -50,8 +50,8 @@ public class OrganizationService
 
     public Task<Organization> CreateOrUpdateAsync(Organization org)
     {
-        if (string.IsNullOrWhiteSpace(org.OrgId))
-            throw new ArgumentException("Organization.OrgId is required.");
+        if (string.IsNullOrWhiteSpace(org.EntityId))
+            org.EntityId = Guid.NewGuid().ToString("N");
 
         var validTypes = new[] { "University", "Company", "Municipality" };
         if (!validTypes.Contains(org.OrganizationType))
@@ -60,9 +60,9 @@ public class OrganizationService
         return _repo.UpsertAsync(org);
     }
 
-    public Task<Organization?> GetByIdAsync(string orgId) => _repo.GetByIdAsync(orgId);
+    public Task<Organization?> GetByIdAsync(string entityId) => _repo.GetByIdAsync(entityId);
     public Task<List<Organization>> GetAllAsync() => _repo.GetAllAsync();
-    public Task<bool> DeleteAsync(string orgId) => _repo.DeleteAsync(orgId);
+    public Task<bool> DeleteAsync(string entityId) => _repo.DeleteAsync(entityId);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -76,8 +76,8 @@ public class LocationService
 
     public Task<Location> CreateOrUpdateAsync(Location location)
     {
-        if (string.IsNullOrWhiteSpace(location.LocationId))
-            throw new ArgumentException("Location.LocationId is required.");
+        if (string.IsNullOrWhiteSpace(location.EntityId))
+            location.EntityId = Guid.NewGuid().ToString("N");
 
         var validTypes = new[] { "City", "Region", "Country" };
         if (!validTypes.Contains(location.LocationType))
@@ -86,9 +86,9 @@ public class LocationService
         return _repo.UpsertAsync(location);
     }
 
-    public Task<Location?> GetByIdAsync(string locationId) => _repo.GetByIdAsync(locationId);
+    public Task<Location?> GetByIdAsync(string entityId) => _repo.GetByIdAsync(entityId);
     public Task<List<Location>> GetAllAsync() => _repo.GetAllAsync();
-    public Task<bool> DeleteAsync(string locationId) => _repo.DeleteAsync(locationId);
+    public Task<bool> DeleteAsync(string entityId) => _repo.DeleteAsync(entityId);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -102,14 +102,14 @@ public class SkillService
 
     public Task<Skill> CreateOrUpdateAsync(Skill skill)
     {
-        if (string.IsNullOrWhiteSpace(skill.SkillId))
-            throw new ArgumentException("Skill.SkillId is required.");
+        if (string.IsNullOrWhiteSpace(skill.EntityId))
+            skill.EntityId = Guid.NewGuid().ToString("N");
         return _repo.UpsertAsync(skill);
     }
 
-    public Task<Skill?> GetByIdAsync(string skillId) => _repo.GetByIdAsync(skillId);
+    public Task<Skill?> GetByIdAsync(string entityId) => _repo.GetByIdAsync(entityId);
     public Task<List<Skill>> GetAllAsync() => _repo.GetAllAsync();
-    public Task<bool> DeleteAsync(string skillId) => _repo.DeleteAsync(skillId);
+    public Task<bool> DeleteAsync(string entityId) => _repo.DeleteAsync(entityId);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -123,8 +123,8 @@ public class EducationService
 
     public Task<Education> CreateOrUpdateAsync(Education edu)
     {
-        if (string.IsNullOrWhiteSpace(edu.EducationId))
-            throw new ArgumentException("Education.EducationId is required.");
+        if (string.IsNullOrWhiteSpace(edu.EntityId))
+            edu.EntityId = Guid.NewGuid().ToString("N");
 
         var validTypes = new[] { "Degree", "Certificate", "Course" };
         if (!validTypes.Contains(edu.EducationType))
@@ -133,9 +133,9 @@ public class EducationService
         return _repo.UpsertAsync(edu);
     }
 
-    public Task<Education?> GetByIdAsync(string educationId) => _repo.GetByIdAsync(educationId);
+    public Task<Education?> GetByIdAsync(string entityId) => _repo.GetByIdAsync(entityId);
     public Task<List<Education>> GetAllAsync() => _repo.GetAllAsync();
-    public Task<bool> DeleteAsync(string educationId) => _repo.DeleteAsync(educationId);
+    public Task<bool> DeleteAsync(string entityId) => _repo.DeleteAsync(entityId);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

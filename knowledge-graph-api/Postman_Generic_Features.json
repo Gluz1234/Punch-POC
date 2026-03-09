@@ -1,6 +1,7 @@
-{
+﻿{
     "info":  {
-                 "name":  "Knowledge Graph - New Generic Features",
+                 "name":  "Knowledge Graph - New Generic Features v2 (Entity ID Routes)",
+                 "version":  "2.0.0",
                  "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
              },
     "item":  [
@@ -238,7 +239,7 @@
                                                       "url":  "{{base_url}}/relationships",
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"P_001\",\n  \"targetType\": \"organization\",\n  \"targetId\": \"ORG_001\",\n  \"relationshipType\": \"WORKS_AT\",\n  \"tenantId\": \"TENANT_1\",\n  \"properties\": {\n    \"jobTitle\": \"Software Engineer\",\n    \"startDate\": \"2023-01-15\"\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"P_001\",\n  \"targetId\": \"ORG_001\",\n  \"relationshipType\": \"WORKS_AT\",\n  \"tenantId\": \"TENANT_1\",\n  \"properties\": {\n    \"jobTitle\": \"Software Engineer\",\n    \"startDate\": \"2023-01-15\"\n  }\n}"
                                                                },
                                                       "description":  "Create a WORKS_AT relationship between person and organization"
                                                   }
@@ -250,7 +251,7 @@
                                                       "url":  "{{base_url}}/relationships",
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"sourceType\": \"person\",\n  \"sourceId\": \"P_001\",\n  \"targetType\": \"skill\",\n  \"targetId\": \"JAVA\",\n  \"relationshipType\": \"HAS_SKILL\",\n  \"tenantId\": \"TENANT_1\",\n  \"properties\": {\n    \"proficiency\": \"Expert\",\n    \"yearsOfExperience\": 5\n  }\n}"
+                                                                   "raw":  "{\n  \"sourceId\": \"P_001\",\n  \"targetId\": \"JAVA\",\n  \"relationshipType\": \"HAS_SKILL\",\n  \"tenantId\": \"TENANT_1\",\n  \"properties\": {\n    \"proficiency\": \"Expert\",\n    \"yearsOfExperience\": 5\n  }\n}"
                                                                },
                                                       "description":  "Create a HAS_SKILL relationship"
                                                   }
@@ -259,7 +260,7 @@
                                       "name":  "Relationship: Get Person Relationships",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base_url}}/relationships/person/P_001",
+                                                      "url":  "{{base_url}}/relationships/P_001",
                                                       "description":  "Get all relationships for a person"
                                                   }
                                   },
@@ -267,7 +268,7 @@
                                       "name":  "Relationship: Delete WORKS_AT",
                                       "request":  {
                                                       "method":  "DELETE",
-                                                      "url":  "{{base_url}}/relationships/person/P_001/WORKS_AT/TENANT_1?targetType=organization\u0026targetId=ORG_001",
+                                                      "url":  "{{base_url}}/relationships/P_001/WORKS_AT/TENANT_1?targetId=ORG_001",
                                                       "description":  "Delete a specific relationship"
                                                   }
                                   }
@@ -282,3 +283,5 @@
                      }
                  ]
 }
+
+

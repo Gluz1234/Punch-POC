@@ -9,7 +9,7 @@ public class Education
 {
     // ----- Required Properties -----
 
-    public string EducationId { get; set; } = string.Empty;
+    public string EntityId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
@@ -25,5 +25,5 @@ public class Education
     public string? Grade { get; set; }
 
     public override string ToString() =>
-        $"Education [{EducationId}]: {Title} ({EducationType})";
+        $"Education [{EntityId}]: {Title} ({EducationType})";
 }

@@ -36,15 +36,47 @@ public class Neo4jService : IDisposable
     {
         await using var session = OpenSession();
 
+                var migrationQueries = new[]
+                {
+                        @"MATCH (n)
+                            WHERE n:Person OR n:Organization OR n:Location OR n:Skill OR n:Education OR n:Course OR n:Department
+                            SET n:Entity",
+                        @"MATCH (n)
+                            WHERE (n:Person OR n:Organization OR n:Location OR n:Skill OR n:Education OR n:Course OR n:Department)
+                                AND n.entity_id IS NULL
+                            SET n.entity_id = coalesce(
+                                n.strong_id,
+                                n.org_id,
+                                n.location_id,
+                                n.skill_id,
+                                n.education_id,
+                                n.course_id,
+                                n.department_id,
+                                n.id,
+                                randomUUID()
+                            )",
+                        @"MATCH (n:Entity)
+                            WHERE n.entity_id IS NOT NULL
+                            WITH n.entity_id AS entityId, collect(n) AS nodes
+                            WHERE size(nodes) > 1
+                            FOREACH (x IN tail(nodes) | SET x.entity_id = randomUUID())"
+                };
+
+                foreach (var cypher in migrationQueries)
+                {
+                        await session.RunAsync(cypher);
+                }
+
         var constraints = new[]
         {
-            "CREATE CONSTRAINT person_strong_id IF NOT EXISTS FOR (p:Person)      REQUIRE p.strong_id    IS UNIQUE",
-            "CREATE CONSTRAINT org_id           IF NOT EXISTS FOR (o:Organization) REQUIRE o.org_id       IS UNIQUE",
-            "CREATE CONSTRAINT location_id      IF NOT EXISTS FOR (l:Location)     REQUIRE l.location_id  IS UNIQUE",
-            "CREATE CONSTRAINT skill_id         IF NOT EXISTS FOR (s:Skill)        REQUIRE s.skill_id     IS UNIQUE",
-            "CREATE CONSTRAINT education_id     IF NOT EXISTS FOR (e:Education)    REQUIRE e.education_id IS UNIQUE",
-            "CREATE CONSTRAINT course_id        IF NOT EXISTS FOR (c:Course)       REQUIRE c.course_id    IS UNIQUE",
-            "CREATE CONSTRAINT department_id    IF NOT EXISTS FOR (d:Department)   REQUIRE d.department_id IS UNIQUE",
+            "CREATE CONSTRAINT entity_entity_id       IF NOT EXISTS FOR (e:Entity)       REQUIRE e.entity_id IS UNIQUE",
+            "CREATE CONSTRAINT person_entity_id       IF NOT EXISTS FOR (p:Person)       REQUIRE p.entity_id IS UNIQUE",
+            "CREATE CONSTRAINT organization_entity_id IF NOT EXISTS FOR (o:Organization) REQUIRE o.entity_id IS UNIQUE",
+            "CREATE CONSTRAINT location_entity_id     IF NOT EXISTS FOR (l:Location)     REQUIRE l.entity_id IS UNIQUE",
+            "CREATE CONSTRAINT skill_entity_id        IF NOT EXISTS FOR (s:Skill)        REQUIRE s.entity_id IS UNIQUE",
+            "CREATE CONSTRAINT education_entity_id    IF NOT EXISTS FOR (e:Education)    REQUIRE e.entity_id IS UNIQUE",
+            "CREATE CONSTRAINT course_entity_id       IF NOT EXISTS FOR (c:Course)       REQUIRE c.entity_id IS UNIQUE",
+            "CREATE CONSTRAINT department_entity_id   IF NOT EXISTS FOR (d:Department)   REQUIRE d.entity_id IS UNIQUE",
         };
 
         foreach (var cypher in constraints)

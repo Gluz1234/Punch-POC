@@ -230,13 +230,13 @@ export class DataService {
    */
   private _getIdFieldForLabel(label: string): string | null {
     const idFieldMap: Record<string, string> = {
-      Person: 'strong_id',
-      Organization: 'org_id',
-      Location: 'location_id',
-      Skill: 'skill_id',
-      Education: 'education_id',
-      Course: 'course_id',
-      Department: 'department_id',
+      Person: 'entity_id',
+      Organization: 'entity_id',
+      Location: 'entity_id',
+      Skill: 'entity_id',
+      Education: 'entity_id',
+      Course: 'entity_id',
+      Department: 'entity_id',
     };
     return idFieldMap[label] || null;
   }

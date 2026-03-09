@@ -9,18 +9,30 @@ export class RelationshipsController {
 
   // ── Generic entity relationship listing ───────────────────────────────────
 
-  @Get(':entityType/:entityId')
-  @ApiOperation({ summary: 'Get all relationships for any entity', description: 'Returns all outgoing relationships for any entity type (person, organization, skill, etc.)' })
-  @ApiParam({ name: 'entityType', description: 'Entity type key (e.g. person, organization, skill)', example: 'person' })
-  @ApiParam({ name: 'entityId', description: 'Entity ID value', example: 'person-sarah-chen' })
+  @Get(':entityId')
+  @ApiOperation({ summary: 'Get all relationships by entity ID', description: 'Returns all outgoing relationships for an entity using only entity_id (type is not required).' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiQuery({ name: 'tenantId', required: false, description: 'Optional tenant ID to filter by' })
   @ApiResponse({ status: 200, description: 'List of relationships' })
-  getEntityRelationships(
-    @Param('entityType') entityType: string,
+  getEntityRelationshipsById(
     @Param('entityId') entityId: string,
     @Query('tenantId') tenantId?: string,
   ) {
-    return this.relationshipsService.getEntityRelationships(entityType, entityId, tenantId);
+    return this.relationshipsService.getEntityRelationships(entityId, tenantId);
+  }
+
+  @Get(':entityType/:entityId')
+  @ApiOperation({ summary: 'Get all relationships (legacy route)', description: 'Backward-compatible route. entityType is ignored and relationships are resolved by entity_id only.' })
+  @ApiParam({ name: 'entityType', description: 'Legacy entity type key (ignored)', example: 'person' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiQuery({ name: 'tenantId', required: false, description: 'Optional tenant ID to filter by' })
+  @ApiResponse({ status: 200, description: 'List of relationships' })
+  getEntityRelationshipsLegacy(
+    @Param('entityType') _entityType: string,
+    @Param('entityId') entityId: string,
+    @Query('tenantId') tenantId?: string,
+  ) {
+    return this.relationshipsService.getEntityRelationships(entityId, tenantId);
   }
 
   // ── Generic create relationship ───────────────────────────────────────────
@@ -30,10 +42,8 @@ export class RelationshipsController {
   @ApiBody({
     schema: {
       example: {
-        sourceType: 'person',
-        sourceId: 'person-sarah-chen',
-        targetType: 'organization',
-        targetId: 'org-mit',
+        sourceId: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea',
+        targetId: 'f2c7e45c-9fcc-4ed3-b966-b75bbeca57ff',
         relationshipType: 'ENROLLED_IN',
         tenantId: 'tenant_mit',
         properties: { program: 'BSc Computer Science', start_date: '2024-09-01' },
@@ -47,30 +57,51 @@ export class RelationshipsController {
 
   // ── Generic delete relationship ───────────────────────────────────────────
 
-  @Delete(':sourceType/:sourceId/:relationshipType/:tenantId')
+  @Delete(':sourceId/:relationshipType/:tenantId')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Delete a relationship', description: 'Deletes a relationship by source entity, relationship type, and tenant. Optionally specify target to narrow.' })
-  @ApiParam({ name: 'sourceType', description: 'Source entity type', example: 'person' })
-  @ApiParam({ name: 'sourceId', description: 'Source entity ID', example: 'person-sarah-chen' })
+  @ApiOperation({ summary: 'Delete a relationship by IDs', description: 'Deletes relationships by source entity_id, relationship type, and tenant. Optionally specify targetId.' })
+  @ApiParam({ name: 'sourceId', description: 'Source entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiParam({ name: 'relationshipType', description: 'Relationship type', example: 'ENROLLED_IN' })
   @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'tenant_mit' })
-  @ApiQuery({ name: 'targetType', required: false, description: 'Target entity type (optional, narrows delete)' })
-  @ApiQuery({ name: 'targetId', required: false, description: 'Target entity ID (optional, narrows delete)' })
+  @ApiQuery({ name: 'targetId', required: false, description: 'Target entity UUID (optional, narrows delete)' })
   @ApiResponse({ status: 200, description: 'Relationship deleted' })
-  deleteRelationship(
-    @Param('sourceType') sourceType: string,
+  deleteRelationshipById(
     @Param('sourceId') sourceId: string,
     @Param('relationshipType') relationshipType: string,
     @Param('tenantId') tenantId: string,
-    @Query('targetType') targetType?: string,
     @Query('targetId') targetId?: string,
   ) {
     return this.relationshipsService.deleteRelationship({
-      sourceType,
       sourceId,
       relationshipType,
       tenantId,
-      targetType,
+      targetId,
+    });
+  }
+
+  @Delete(':sourceType/:sourceId/:relationshipType/:tenantId')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete a relationship (legacy route)', description: 'Backward-compatible route. sourceType/targetType are ignored and deletion is resolved by entity_id.' })
+  @ApiParam({ name: 'sourceType', description: 'Legacy source type (ignored)', example: 'person' })
+  @ApiParam({ name: 'sourceId', description: 'Source entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiParam({ name: 'relationshipType', description: 'Relationship type', example: 'ENROLLED_IN' })
+  @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'tenant_mit' })
+  @ApiQuery({ name: 'targetType', required: false, description: 'Legacy target type (ignored)' })
+  @ApiQuery({ name: 'targetId', required: false, description: 'Target entity UUID (optional, narrows delete)' })
+  @ApiResponse({ status: 200, description: 'Relationship deleted' })
+  deleteRelationshipLegacy(
+    @Param('sourceType') _sourceType: string,
+    @Param('sourceId') sourceId: string,
+    @Param('relationshipType') relationshipType: string,
+    @Param('tenantId') tenantId: string,
+    @Query('targetType') _targetType?: string,
+    @Query('targetId') targetId?: string,
+  ) {
+    return this.relationshipsService.deleteRelationship({
+      sourceType: _sourceType,
+      sourceId,
+      relationshipType,
+      tenantId,
       targetId,
     });
   }
