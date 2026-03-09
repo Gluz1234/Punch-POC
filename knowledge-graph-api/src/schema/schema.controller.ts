@@ -95,6 +95,20 @@ export class SchemaController {
     return this.schemaService.getSchemaForTenant(tenantId);
   }
 
+  @Get('basetypes')
+  @ApiOperation({ summary: 'Get all base types', description: 'List all configured base types and any custom base labels discovered from subtype definitions.' })
+  @ApiResponse({ status: 200, description: 'Base types with subtype counts and totals' })
+  getAllBaseTypes() {
+    return this.schemaService.getAllBaseTypes();
+  }
+
+  @Get('subtypes')
+  @ApiOperation({ summary: 'Get all subtype definitions', description: 'List all promotion subtype definitions across all base labels.' })
+  @ApiResponse({ status: 200, description: 'Subtype definitions with total count' })
+  getAllSubtypes() {
+    return this.schemaService.getAllSubtypes();
+  }
+
   private parseBooleanQuery(value?: string): boolean {
     return value === '1' || value?.toLowerCase() === 'true';
   }

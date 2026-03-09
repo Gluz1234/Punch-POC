@@ -342,4 +342,45 @@ export class SchemaService {
       RETURN DISTINCT r.tenant_id AS tenant ORDER BY tenant`);
     return records.map(r => r.get('tenant'));
   }
+
+  async getAllBaseTypes() {
+    const configured = getAllEntities();
+    const subtypeDefs = await this.promotionSchema.getAllSubtypeDefinitions();
+
+    // Collect custom base labels not in the configured entity list
+    const configuredLabelSet = new Set(configured.map((e) => e.label.toLowerCase()));
+    const customBaseLabels = Array.from(
+      new Set(
+        subtypeDefs
+          .map((def) => def.baseLabel?.trim())
+          .filter((label) => label && !configuredLabelSet.has(label.toLowerCase())),
+      ),
+    ) as string[];
+
+    const allBaseLabels = [
+      ...configured.map((e) => e.label),
+      ...customBaseLabels.sort((a, b) => a.localeCompare(b)),
+    ];
+
+    const nodeLabels = await Promise.all(
+      allBaseLabels.map((label) => this.getPropertiesForLabel(label)),
+    );
+
+    return {
+      nodeLabels,
+      totalBaseTypes: nodeLabels.length,
+    };
+  }
+
+  async getAllSubtypes() {
+    const subtypeDefs = await this.promotionSchema.getAllSubtypeDefinitions();
+    const nodeLabels = await Promise.all(
+      subtypeDefs.map((def) => this.getPropertiesForLabel(def.label)),
+    );
+
+    return {
+      nodeLabels,
+      totalSubtypes: nodeLabels.length,
+    };
+  }
 }
