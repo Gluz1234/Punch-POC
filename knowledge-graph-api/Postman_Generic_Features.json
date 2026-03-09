@@ -273,6 +273,77 @@
                                                   }
                                   }
                               ]
+                 },
+                 {
+                     "name":  "6. IDENTITY + TENANT SCHEMA",
+                     "item":  [
+                                  {
+                                      "name":  "Identity: Resolve Canonical ID",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base_url}}/identity/P_001/canonical",
+                                                      "description":  "Resolve canonical entity_id after merge workflows"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Identity: Possible Duplicates",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base_url}}/identity/P_001/possible-duplicates?limit=5",
+                                                      "description":  "Get duplicate suggestions with score and reasons"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Identity: Merge Entities",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base_url}}/identity/merge",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"primaryEntityId\": \"P_001\",\n  \"duplicateEntityId\": \"P_001_DUP\",\n  \"reason\": \"manual validation\"\n}"
+                                                               },
+                                                      "description":  "Merge duplicate into primary identity"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Identity: Unmerge by Merge ID",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base_url}}/identity/unmerge/REPLACE_WITH_MERGE_ID",
+                                                      "description":  "Revert a previous merge event"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Promotions: All Base Types",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base_url}}/promotions/schema/base-types",
+                                                      "description":  "List configured/custom base labels and subtype counts"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Promotions: Types by Tenant",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base_url}}/promotions/schema/tenants/TENANT_1/types",
+                                                      "description":  "List base/subtype/unknown labels used in a tenant"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Schema: Tenant Snapshot",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base_url}}/schema/tenants/TENANT_1/schema",
+                                                      "description":  "Get tenant-scoped schema labels and relationship types"
+                                                  }
+                                  }
+                              ]
                  }
              ],
     "variable":  [

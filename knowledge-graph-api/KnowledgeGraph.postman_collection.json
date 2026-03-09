@@ -2,7 +2,7 @@
     "info":  {
                  "name":  "Knowledge Graph Admin API v4 (Entity ID Routes)",
                  "description":  "Multi-Tenant Knowledge Graph API with dynamically generated endpoints. All standard entities (Person, Organization, Location, Skill, Education, Course, Department) are served by a single generic service with configuration-driven routes.",
-                 "version":  "4.0.0",
+                 "version":  "4.1.0",
                  "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
              },
     "variable":  [
@@ -68,6 +68,80 @@
                                       "request":  {
                                                       "method":  "DELETE",
                                                       "url":  "{{base}}/persons/person-to-delete"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Person possible duplicates",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/persons/person-sarah-chen/possible-duplicates?limit=5"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Merge duplicate person",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/persons/person-sarah-chen/merge/person-sarah-chen-duplicate",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"reason\": \"Manual review confirmed duplicate\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Unmerge person merge event",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/persons/unmerge/replace-with-merge-id"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Identity Resolution",
+                     "item":  [
+                                  {
+                                      "name":  "Resolve canonical entity ID",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/identity/person-sarah-chen/canonical"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Possible duplicates by entity ID",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/identity/person-sarah-chen/possible-duplicates?limit=5"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Merge entities (global)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/identity/merge",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"primaryEntityId\": \"person-sarah-chen\",\n  \"duplicateEntityId\": \"person-sarah-chen-duplicate\",\n  \"reason\": \"Same entity from different source systems\"\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Unmerge entities by merge ID",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/identity/unmerge/replace-with-merge-id"
                                                   }
                                   }
                               ]
@@ -692,6 +766,20 @@
                                                       "method":  "GET",
                                                       "url":  "{{base}}/promotions/schema/subtypes"
                                                   }
+                                  },
+                                  {
+                                      "name":  "List all base types",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/schema/base-types"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "List all types for tenant",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/promotions/schema/tenants/tenant_mit/types"
+                                                  }
                                   }
                               ]
                  },
@@ -1113,6 +1201,13 @@
                                       "request":  {
                                                       "method":  "GET",
                                                       "url":  "{{base}}/schema/tenants"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Tenant schema snapshot",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/tenants/tenant_mit/schema"
                                                   }
                                   }
                               ]
