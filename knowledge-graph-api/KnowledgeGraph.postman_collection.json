@@ -1207,7 +1207,7 @@
                                       "name":  "Tenant schema snapshot",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/schema/tenants/tenant_mit/schema"
+                                                      "url":  "{{base}}/schema/tenants/tenant_mit"
                                                   }
                                   }
                               ]
