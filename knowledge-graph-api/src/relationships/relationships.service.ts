@@ -1,39 +1,132 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import neo4j from 'neo4j-driver';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { getAllEntities } from '../shared/entity-config';
+import { PromotionProjectionService } from '../promotions/promotion-projection.service';
 
 @Injectable()
 export class RelationshipsService {
-  constructor(private readonly neo4j: Neo4jService) {}
+  constructor(
+    private readonly neo4j: Neo4jService,
+    private readonly projection: PromotionProjectionService,
+  ) {}
 
   private static readonly CANONICAL_ID_FIELD = 'entity_id';
+
+  // ── Generic: list all relationships for a tenant ─────────────────────────
+
+  async getRelationshipsByTenant(tenantId: string, limit = 10000) {
+    const normalizedLimit = this.normalizeLimit(limit);
+
+    const records = await this.neo4j.runQuery(
+      `
+      MATCH (src)-[r {tenant_id: $tenantId}]->(tgt)
+      RETURN src, tgt, r, type(r) AS relType,
+             labels(src) AS srcLabels,
+             labels(tgt) AS tgtLabels
+      LIMIT $limit
+      `,
+      { tenantId, limit: neo4j.int(normalizedLimit) },
+    );
+
+    const relationshipsByType: Record<string, any[]> = {};
+
+    for (const record of records) {
+      const relType = record.get('relType') as string;
+      const fromNode = await this.projection.projectTypedNode(
+        this.neo4j.toPlainObject(record.get('src').properties),
+        record.get('srcLabels') as string[],
+      );
+      const toNode = await this.projection.projectTypedNode(
+        this.neo4j.toPlainObject(record.get('tgt').properties),
+        record.get('tgtLabels') as string[],
+      );
+
+      const relationship = {
+        _id: record.get('r').identity.toNumber(),
+        type: relType,
+        ...this.neo4j.toPlainObject(record.get('r').properties),
+        from: fromNode,
+        to: toNode,
+      };
+
+      if (!relationshipsByType[relType]) {
+        relationshipsByType[relType] = [];
+      }
+
+      relationshipsByType[relType].push(relationship);
+    }
+
+    return {
+      tenantId,
+      relationshipsByType,
+      statistics: {
+        totalRelationships: records.length,
+        relationshipTypeCount: Object.keys(relationshipsByType).length,
+        perType: Object.entries(relationshipsByType).map(([type, rels]) => ({
+          type,
+          count: rels.length,
+        })),
+      },
+    };
+  }
 
   // ── Generic: list all relationships for any entity ──────────────────────────
 
   async getEntityRelationships(entityId: string, tenantId?: string) {
     const safeIdField = this.neo4j.sanitizeIdentifier(RelationshipsService.CANONICAL_ID_FIELD);
-    const filter = tenantId ? 'WHERE r.tenant_id = $tenantId' : '';
+    const tenantFilter = tenantId ? 'AND r.tenant_id = $tenantId' : '';
+
     const records = await this.neo4j.runQuery(`
-      MATCH (n:Entity {\`${safeIdField}\`: $entityId})-[r]->(t)
-      ${filter}
-      RETURN type(r)       AS relType,
-             r.tenant_id   AS tenant,
-             labels(t)     AS targetLabels,
-             properties(r) AS relProps,
-             properties(t) AS targetProps,
-             t.\`${safeIdField}\` AS targetEntityId`,
-      { entityId, tenantId: tenantId ?? null },
+      MATCH (src:Entity {\`${safeIdField}\`: $entityId})-[r]->(tgt)
+      WHERE true ${tenantFilter}
+      RETURN src, tgt, r, type(r) AS relType,
+             labels(src) AS srcLabels,
+             labels(tgt) AS tgtLabels`,
+      { entityId, ...(tenantId ? { tenantId } : {}) },
     );
-    return records.map(r => {
-      const targetProps = this.neo4j.toPlainObject(r.get('targetProps'));
-      return {
-        type:         r.get('relType'),
-        tenantId:     r.get('tenant'),
-        targetLabels: r.get('targetLabels'),
-        targetId:     r.get('targetEntityId') ?? this.extractId(targetProps),
-        properties:   this.neo4j.toPlainObject(r.get('relProps')),
+
+    const relationshipsByType: Record<string, any[]> = {};
+
+    for (const record of records) {
+      const relType = record.get('relType') as string;
+      const fromNode = await this.projection.projectTypedNode(
+        this.neo4j.toPlainObject(record.get('src').properties),
+        record.get('srcLabels') as string[],
+      );
+      const toNode = await this.projection.projectTypedNode(
+        this.neo4j.toPlainObject(record.get('tgt').properties),
+        record.get('tgtLabels') as string[],
+      );
+
+      const relationship = {
+        _id: record.get('r').identity.toNumber(),
+        type: relType,
+        ...this.neo4j.toPlainObject(record.get('r').properties),
+        from: fromNode,
+        to: toNode,
       };
-    });
+
+      if (!relationshipsByType[relType]) {
+        relationshipsByType[relType] = [];
+      }
+
+      relationshipsByType[relType].push(relationship);
+    }
+
+    return {
+      entityId,
+      ...(tenantId ? { tenantId } : {}),
+      relationshipsByType,
+      statistics: {
+        totalRelationships: records.length,
+        relationshipTypeCount: Object.keys(relationshipsByType).length,
+        perType: Object.entries(relationshipsByType).map(([type, rels]) => ({
+          type,
+          count: rels.length,
+        })),
+      },
+    };
   }
 
   // ── Generic: create any relationship between any two entities ───────────
@@ -143,6 +236,19 @@ export class RelationshipsService {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+
+  private normalizeLimit(limit: number): number {
+    if (!Number.isFinite(limit)) {
+      throw new BadRequestException('limit must be numeric');
+    }
+
+    const normalized = Math.floor(limit);
+    if (normalized < 0) {
+      throw new BadRequestException('limit must be a non-negative integer');
+    }
+
+    return normalized;
+  }
 
   private extractId(props: Record<string, any>): string {
     if (props.entity_id) return props.entity_id;

@@ -102,7 +102,7 @@ export class GenericEntityService {
     const safeField = this.neo4j.sanitizeIdentifier(filterField);
     const records = await this.neo4j.runQuery(
       `MATCH (n:\`${safeLabel}\` {\`${safeField}\`: $value}) RETURN n, labels(n) AS labels ORDER BY n.\`${config.idField}\` LIMIT $limit`,
-      { value: filterValue, limit },
+      { value: filterValue, limit: neo4j.int(limit) },
     );
 
     return Promise.all(records.map(r => this.formatResult(r)));

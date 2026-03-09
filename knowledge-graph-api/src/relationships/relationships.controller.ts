@@ -7,6 +7,26 @@ import { RelationshipsService } from './relationships.service';
 export class RelationshipsController {
   constructor(private readonly relationshipsService: RelationshipsService) {}
 
+  // ── Tenant-wide relationship listing ─────────────────────────────────────
+
+  @Get('tenant/:tenantId')
+  @ApiOperation({
+    summary: 'Get all relationships by tenant ID',
+    description: 'Returns all relationships scoped to a tenant, grouped by relationship type.',
+  })
+  @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'tenant_mit' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Maximum number of relationships', example: 10000 })
+  @ApiResponse({ status: 200, description: 'Relationships grouped by type with statistics' })
+  getRelationshipsByTenant(
+    @Param('tenantId') tenantId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.relationshipsService.getRelationshipsByTenant(
+      tenantId,
+      limit ? parseInt(limit, 10) : 10000,
+    );
+  }
+
   // ── Generic entity relationship listing ───────────────────────────────────
 
   @Get(':entityId')
@@ -19,7 +39,7 @@ export class RelationshipsController {
     @Query('tenantId') tenantId?: string,
   ) {
     return this.relationshipsService.getEntityRelationships(entityId, tenantId);
-  }I
+  }
 
   @Get(':entityType/:entityId')
   @ApiOperation({ summary: 'Get all relationships (legacy route)', description: 'Backward-compatible route. entityType is ignored and relationships are resolved by entity_id only.' })
