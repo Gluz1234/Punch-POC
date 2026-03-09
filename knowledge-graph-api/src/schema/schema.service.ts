@@ -4,6 +4,14 @@ import { getAllEntities } from '../shared/entity-config';
 import { SchemaRegistrationService } from './schema-registration.service';
 import { PromotionSchemaService } from '../promotions/promotion-schema.service';
 
+const INTERNAL_SCHEMA_LABELS = new Set([
+  'Entity',
+  'EntitySchema',
+  'SchemaProperty',
+  'PromotionSubtype',
+  'PromotionField',
+]);
+
 @Injectable()
 export class SchemaService {
   constructor(
@@ -12,11 +20,17 @@ export class SchemaService {
     private readonly promotionSchema: PromotionSchemaService,
   ) {}
 
-  async getLabels(): Promise<string[]> {
+  async getLabels(includeInternal = true): Promise<string[]> {
     const records = await this.neo4j.runQuery(
       'CALL db.labels() YIELD label RETURN label ORDER BY label',
     );
-    return records.map(r => r.get('label'));
+    const labels = records.map(r => r.get('label'));
+
+    if (includeInternal) {
+      return labels;
+    }
+
+    return labels.filter(label => !this.isInternalSchemaLabel(label));
   }
 
   async getRelationshipTypes(): Promise<string[]> {
@@ -52,10 +66,12 @@ export class SchemaService {
     // First try to get from registered entity schemas
     const registeredSchema = await this.schemaRegistration.getEntitySchema(label);
     if (registeredSchema) {
+      const normalizedProperties = this.normalizeProperties(registeredSchema.properties);
+
       return {
         label,
-        properties: registeredSchema.properties,
-        totalProperties: registeredSchema.properties.length,
+        properties: normalizedProperties,
+        totalProperties: normalizedProperties.length,
       };
     }
 
@@ -69,14 +85,14 @@ export class SchemaService {
 
       // Include the ID field first if it is typed
       if (entityConfig.idField) {
-        const idType = typeMap[entityConfig.idField] || 'Unknown';
+        const idType = this.normalizeType(typeMap[entityConfig.idField] || 'Unknown');
         props.push({ name: entityConfig.idField, type: idType });
       }
 
       // Then include configured properties in alphabetical order for stability
       const sortedKeys = Object.keys(entityConfig.properties).sort();
       for (const key of sortedKeys) {
-        const propType = typeMap[key] || 'Unknown';
+        const propType = this.normalizeType(typeMap[key] || 'Unknown');
         props.push({ name: key, type: propType });
       }
 
@@ -106,7 +122,7 @@ export class SchemaService {
         // For subtypes, return only the subtype-specific properties
         const subtypeProps = subtypeDef.properties.map(prop => ({
           name: prop,
-          type: 'String' // Default type for now
+          type: 'STRING',
         }));
 
         return {
@@ -141,13 +157,13 @@ export class SchemaService {
     // Create a map of property -> type
     const typeMap: Record<string, string> = {};
     typeRecords.forEach(r => {
-      typeMap[r.get('property')] = r.get('type');
+      typeMap[r.get('property')] = this.normalizeType(r.get('type'));
     });
 
     // Combine keys with types (use 'Unknown' for properties not found in APOC)
     const propertiesWithTypes = properties.map(prop => ({
       name: prop,
-      type: typeMap[prop] || 'Unknown'
+      type: typeMap[prop] || 'UNKNOWN',
     }));
 
     return {
@@ -179,13 +195,13 @@ export class SchemaService {
     // Create a map of property -> type
     const typeMap: Record<string, string> = {};
     typeRecords.forEach(r => {
-      typeMap[r.get('property')] = r.get('type');
+      typeMap[r.get('property')] = this.normalizeType(r.get('type'));
     });
     
     // Combine keys with types
     const propertiesWithTypes = properties.map(prop => ({
       name: prop,
-      type: typeMap[prop] || 'Unknown'
+      type: typeMap[prop] || 'UNKNOWN',
     }));
     
     return { 
@@ -195,13 +211,13 @@ export class SchemaService {
     };
   }
 
-  async getFullSchema() {
+  async getFullSchema(includeInternal = false) {
     // Ensure all schemas are registered
     await this.schemaRegistration.registerAllBaseEntities();
     await this.schemaRegistration.registerAllBuiltinSubtypes();
 
     const [labels, relTypes, constraints] = await Promise.all([
-      this.getLabels(),
+      this.getLabels(includeInternal),
       this.getRelationshipTypes(),
       this.getConstraints(),
     ]);
@@ -212,6 +228,38 @@ export class SchemaService {
     ]);
 
     return { nodeLabels: labelDetails, relationshipTypes: relDetails, constraints };
+  }
+
+  private isInternalSchemaLabel(label: string): boolean {
+    return INTERNAL_SCHEMA_LABELS.has(label);
+  }
+
+  private normalizeType(type: unknown): string {
+    const raw = typeof type === 'string' ? type : String(type ?? '');
+    const normalized = raw.trim().toUpperCase();
+    return normalized || 'UNKNOWN';
+  }
+
+  private normalizeProperties(
+    properties: Array<{ name: string; type: string }>,
+  ): Array<{ name: string; type: string }> {
+    const deduped = new Map<string, { name: string; type: string }>();
+
+    for (const property of properties ?? []) {
+      if (!property?.name) continue;
+
+      const normalized = {
+        name: property.name,
+        type: this.normalizeType(property.type),
+      };
+
+      const existing = deduped.get(normalized.name);
+      if (!existing || (existing.type === 'UNKNOWN' && normalized.type !== 'UNKNOWN')) {
+        deduped.set(normalized.name, normalized);
+      }
+    }
+
+    return Array.from(deduped.values());
   }
 
   async getCounts() {

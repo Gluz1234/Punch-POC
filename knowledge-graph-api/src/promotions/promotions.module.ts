@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { PromotionsController } from './promotions.controller';
-import { PromotionsService, PromotionProjectionService } from './promotions.service';
+import { PromotionsService } from './promotions.service';
+import { PromotionProjectionService } from './promotion-projection.service';
 import { PromotionSchemaService } from './promotion-schema.service';
 
 @Module({
   controllers: [PromotionsController],
   providers:   [PromotionsService, PromotionProjectionService, PromotionSchemaService],
-  exports:     [PromotionSchemaService], // Export for use in other modules
+  exports:     [PromotionSchemaService, PromotionProjectionService],
 })
 export class PromotionsModule {}

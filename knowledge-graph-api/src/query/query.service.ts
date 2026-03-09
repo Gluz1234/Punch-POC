@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { ENTITY_CONFIGS, getAllEntities } from '../shared/entity-config';
+import { PromotionProjectionService } from '../promotions/promotion-projection.service';
 
 @Injectable()
 export class QueryService {
-  constructor(private readonly neo4j: Neo4jService) {}
+  constructor(
+    private readonly neo4j: Neo4jService,
+    private readonly projection: PromotionProjectionService,
+  ) {}
 
   // ── Generic: find entities connected by a relationship ─────────────────
 
@@ -30,10 +34,15 @@ export class QueryService {
       ORDER BY src.\`${srcCfg.idField}\``,
       { targetId, tenantId: tenantId ?? null },
     );
-    return records.map(r => ({
-      entity: { ...this.neo4j.toPlainObject(r.get('src').properties), labels: r.get('labels') },
-      relationship: this.neo4j.toPlainObject(r.get('relProps')),
-    }));
+    return Promise.all(
+      records.map(async (r) => ({
+        entity: await this.projection.projectTypedNode(
+          this.neo4j.toPlainObject(r.get('src').properties),
+          r.get('labels') as string[],
+        ),
+        relationship: this.neo4j.toPlainObject(r.get('relProps')),
+      })),
+    );
   }
 
   // ── Generic: cross-tenant query ────────────────────────────────────────
@@ -68,11 +77,16 @@ export class QueryService {
              properties(r2) AS relPropsB, b.name AS nameB
       ORDER BY e.\`${entityCfg.idField}\``,
       { targetIdA, tenantA, targetIdB, tenantB });
-    return records.map(r => ({
-      entity: { ...this.neo4j.toPlainObject(r.get('e').properties), labels: r.get('labels') },
-      connectionA: { name: r.get('nameA'), tenant: tenantA, properties: this.neo4j.toPlainObject(r.get('relPropsA')) },
-      connectionB: { name: r.get('nameB'), tenant: tenantB, properties: this.neo4j.toPlainObject(r.get('relPropsB')) },
-    }));
+    return Promise.all(
+      records.map(async (r) => ({
+        entity: await this.projection.projectTypedNode(
+          this.neo4j.toPlainObject(r.get('e').properties),
+          r.get('labels') as string[],
+        ),
+        connectionA: { name: r.get('nameA'), tenant: tenantA, properties: this.neo4j.toPlainObject(r.get('relPropsA')) },
+        connectionB: { name: r.get('nameB'), tenant: tenantB, properties: this.neo4j.toPlainObject(r.get('relPropsB')) },
+      })),
+    );
   }
 
   // ── Generic: get tenants for any entity ─────────────────────────────────
@@ -105,10 +119,15 @@ export class QueryService {
         `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels`,
       );
     }
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('n').properties),
-      labels: r.get('labels'),
-    }));
+
+    return Promise.all(
+      records.map((r) =>
+        this.projection.projectTypedNode(
+          this.neo4j.toPlainObject(r.get('n').properties),
+          r.get('labels') as string[],
+        ),
+      ),
+    );
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────

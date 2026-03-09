@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { PromotionsService, PromotionProjectionService } from './promotions.service';
+import { PromotionsService } from './promotions.service';
+import { PromotionProjectionService } from './promotion-projection.service';
 import {
   PromotionSchemaService,
   PromotionSubtypeDefinitionDto,

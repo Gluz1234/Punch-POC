@@ -13,12 +13,19 @@ export class DynamicController {
   // ── Smart create ──────────────────────────────────────────────────────────
 
   // POST /api/dynamic/smart-create
-  // Body: { label, properties? }
+  // Body: { label, properties? } or { label, fields? }
   // Checks if the type exists; if not, registers a new schema type, then creates the node.
   @Post('smart-create')
   @ApiOperation({ summary: 'Auto-detect or register type, then create a node' })
-  @ApiBody({ schema: { example: { label: 'balls', properties: { size: 'large', taste: 'salty' } } } })
-  smartCreate(@Body() dto: { label: string; properties?: Record<string, any> }) {
+  @ApiBody({
+    schema: {
+      oneOf: [
+        { example: { label: 'Course', properties: { entity_id: 'C-3001', name: 'Distributed Systems' } } },
+        { example: { label: 'Course', fields: { entity_id: 'C-3001', name: 'Distributed Systems' } } },
+      ],
+    },
+  })
+  smartCreate(@Body() dto: { label?: string; properties?: Record<string, any>; fields?: Record<string, any> }) {
     return this.dynamicService.smartCreate(dto);
   }
 

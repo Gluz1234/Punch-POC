@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { EntityConfig, getAllEntities } from './entity-config';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
+import { PromotionProjectionService } from '../promotions/promotion-projection.service';
 
 /**
  * Generic Entity Service
@@ -17,6 +18,7 @@ export class GenericEntityService {
   constructor(
     private readonly neo4j: Neo4jService,
     private readonly schemaRegistration: SchemaRegistrationService,
+    private readonly projection: PromotionProjectionService,
   ) {}
 
   /**
@@ -64,7 +66,7 @@ export class GenericEntityService {
       `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels ORDER BY n.\`${config.idField}\` LIMIT $limit`,
       { limit: neo4j.int(limit) },
     );
-    return records.map(r => this.formatResult(r));
+    return Promise.all(records.map(r => this.formatResult(r)));
   }
 
   /**
@@ -103,7 +105,7 @@ export class GenericEntityService {
       { value: filterValue, limit },
     );
 
-    return records.map(r => this.formatResult(r));
+    return Promise.all(records.map(r => this.formatResult(r)));
   }
 
   /**
@@ -214,10 +216,9 @@ export class GenericEntityService {
   /**
    * Format a Neo4j record into a clean response object.
    */
-  private formatResult(record: any) {
-    return {
-      ...this.neo4j.toPlainObject(record.get('n').properties),
-      labels: record.get('labels'),
-    };
+  private async formatResult(record: any) {
+    const properties = this.neo4j.toPlainObject(record.get('n').properties);
+    const labels = record.get('labels') as string[];
+    return this.projection.projectTypedNode(properties, labels);
   }
 }

@@ -70,7 +70,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
         await this.upsertEntitySchema({
           key: subtype.key,
           label: subtype.label,
-          properties: subtype.properties.map(name => ({ name, type: 'String' })), // Default to String for now
+          properties: subtype.properties.map(name => ({ name, type: 'STRING' })),
         });
         console.log(`✓ Registered subtype entity: ${subtype.label}`);
       } catch (err) {
@@ -118,7 +118,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
           {
             key: entity.key,
             propName: prop.name,
-            propType: prop.type,
+            propType: this.normalizeType(prop.type),
           }
         );
       }
@@ -137,7 +137,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
       MATCH (e:EntitySchema)
       OPTIONAL MATCH (e)-[:HAS_PROPERTY]->(p:SchemaProperty)
       RETURN e.key AS key, e.label AS label,
-             collect({ name: p.name, type: p.type }) AS properties
+             collect(DISTINCT { name: p.name, type: toUpper(p.type) }) AS properties
       ORDER BY e.label
       `
     );
@@ -158,7 +158,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
       MATCH (e:EntitySchema { label: $label })
       OPTIONAL MATCH (e)-[:HAS_PROPERTY]->(p:SchemaProperty)
       RETURN e.key AS key, e.label AS label,
-             collect({ name: p.name, type: p.type }) AS properties
+             collect(DISTINCT { name: p.name, type: toUpper(p.type) }) AS properties
       `,
       { label }
     );
@@ -196,14 +196,14 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
 
     // Include the ID field first if it is typed
     if (entity.idField) {
-      const idType = typeMap[entity.idField] || 'String';
+      const idType = this.normalizeType(typeMap[entity.idField] || 'STRING');
       properties.push({ name: entity.idField, type: idType });
     }
 
     // Then include configured properties in alphabetical order for stability
     const sortedKeys = Object.keys(entity.properties).sort();
     for (const key of sortedKeys) {
-      const propType = typeMap[key] || 'String';
+      const propType = this.normalizeType(typeMap[key] || 'STRING');
       properties.push({ name: key, type: propType });
     }
 
@@ -222,7 +222,18 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
     label: string,
     properties: Array<{ name: string; type: string }>
   ): Promise<void> {
-    await this.upsertEntitySchema({ key, label, properties });
+    const normalizedProperties = properties.map((p) => ({
+      name: p.name,
+      type: this.normalizeType(p.type),
+    }));
+
+    await this.upsertEntitySchema({ key, label, properties: normalizedProperties });
     console.log(`✓ Auto-registered user-defined entity "${label}" with ${properties.length} properties`);
+  }
+
+  private normalizeType(type: unknown): string {
+    const raw = typeof type === 'string' ? type : String(type ?? '');
+    const normalized = raw.trim().toUpperCase();
+    return normalized || 'UNKNOWN';
   }
 }

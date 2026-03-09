@@ -2,12 +2,22 @@ import { Injectable } from '@nestjs/common';
 import neo4j from 'neo4j-driver';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { SchemaService } from '../schema/schema.service';
+import { PromotionProjectionService } from '../promotions/promotion-projection.service';
+
+const INTERNAL_NODE_LABELS = new Set([
+  'Entity',
+  'EntitySchema',
+  'SchemaProperty',
+  'PromotionSubtype',
+  'PromotionField',
+]);
 
 @Injectable()
 export class DataService {
   constructor(
     private readonly neo4j: Neo4jService,
     private readonly schemaService: SchemaService,
+    private readonly projection: PromotionProjectionService,
   ) {}
 
   /**
@@ -28,12 +38,17 @@ export class DataService {
     const nodesByLabel: Record<string, any[]> = {};
 
     for (const record of records) {
-      const nodeLabels: string[] = record.get('labels');
-      const node = {
-        _id: record.get('n').identity.toNumber(),
-        ...this.neo4j.toPlainObject(record.get('n').properties),
-        labels: nodeLabels,
-      };
+      const nodeLabels: string[] = (record.get('labels') as string[])
+        .filter(label => !INTERNAL_NODE_LABELS.has(label));
+
+      if (!nodeLabels.length) {
+        continue;
+      }
+
+      const node = await this.projection.projectTypedNode(
+        this.neo4j.toPlainObject(record.get('n').properties),
+        nodeLabels,
+      );
 
       for (const label of nodeLabels) {
         if (!nodesByLabel[label]) {
@@ -59,13 +74,11 @@ export class DataService {
    */
   async getAllData(limit = 10000) {
     // Get all labels and relationship types
-    const labels = await this.schemaService.getLabels();
+    const labels = await this.schemaService.getLabels(false);
     const relTypes = await this.schemaService.getRelationshipTypes();
 
     const nodesByLabel: Record<string, any[]> = {};
-    const labelSchemas: Record<string, any> = {};
     const relationships: any[] = [];
-    const relationshipSchemas: Record<string, any> = {};
 
     // Fetch all nodes by label
     for (const label of labels) {
@@ -74,7 +87,6 @@ export class DataService {
 
         // Get schema for this label first
         const schema = await this.schemaService.getPropertiesForLabel(label);
-        labelSchemas[label] = schema;
 
         const records = await this.neo4j.runQuery(`
           MATCH (n:\`${safeLabel}\`)
@@ -83,19 +95,14 @@ export class DataService {
         `, { limit: neo4j.int(limit) });
 
         if (records.length > 0) {
-          nodesByLabel[label] = records.map(r => {
-            const allProps = this.neo4j.toPlainObject(r.get('n').properties);
-            const nodeLabels = r.get('labels');
-            
-            // Filter properties based on schema for this specific label
-            const filteredProps = this._filterPropertiesBySchema(allProps, schema);
-            
-            return {
-              _id: r.get('n').identity.toNumber(),
-              ...filteredProps,
-              labels: nodeLabels,
-            };
-          });
+          nodesByLabel[label] = await Promise.all(
+            records.map((r) =>
+              this.projection.projectTypedNode(
+                this.neo4j.toPlainObject(r.get('n').properties),
+                r.get('labels') as string[],
+              ),
+            ),
+          );
         }
       } catch (error) {
         console.warn(`⚠ Failed to fetch nodes for label ${label}:`, error.message);
@@ -114,20 +121,21 @@ export class DataService {
       const relMap: Record<string, any> = {};
       for (const record of relRecords) {
         const relType = record.get('relType');
+        const fromNode = await this.projection.projectTypedNode(
+          this.neo4j.toPlainObject(record.get('a').properties),
+          record.get('aLabels') as string[],
+        );
+        const toNode = await this.projection.projectTypedNode(
+          this.neo4j.toPlainObject(record.get('b').properties),
+          record.get('bLabels') as string[],
+        );
+
         const rel = {
           _id: record.get('r').identity.toNumber(),
           type: relType,
           ...this.neo4j.toPlainObject(record.get('r').properties),
-          from: {
-            _id: record.get('a').identity.toNumber(),
-            labels: record.get('aLabels'),
-            ...this.neo4j.toPlainObject(record.get('a').properties),
-          },
-          to: {
-            _id: record.get('b').identity.toNumber(),
-            labels: record.get('bLabels'),
-            ...this.neo4j.toPlainObject(record.get('b').properties),
-          },
+          from: fromNode,
+          to: toNode,
         };
 
         if (!relMap[relType]) {
@@ -152,7 +160,6 @@ export class DataService {
     for (const relType of relTypes) {
       try {
         const schema = await this.schemaService.getPropertiesForRelType(relType);
-        relationshipSchemas[relType] = schema;
       } catch (error) {
         console.warn(`⚠ Failed to fetch schema for relationship type ${relType}:`, error.message);
       }
@@ -160,9 +167,7 @@ export class DataService {
 
     return {
       nodesByLabel,
-      labelSchemas,
       relationships,
-      relationshipSchemas,
       statistics: {
         totalLabels: labels.length,
         labelsWithData: Object.keys(nodesByLabel).length,
@@ -188,20 +193,21 @@ export class DataService {
 
     for (const record of records) {
       const relType = record.get('relType');
+      const fromNode = await this.projection.projectTypedNode(
+        this.neo4j.toPlainObject(record.get('a').properties),
+        record.get('aLabels') as string[],
+      );
+      const toNode = await this.projection.projectTypedNode(
+        this.neo4j.toPlainObject(record.get('b').properties),
+        record.get('bLabels') as string[],
+      );
+
       const rel = {
         _id: record.get('r').identity.toNumber(),
         type: relType,
         ...this.neo4j.toPlainObject(record.get('r').properties),
-        from: {
-          _id: record.get('a').identity.toNumber(),
-          labels: record.get('aLabels'),
-          ...this.neo4j.toPlainObject(record.get('a').properties),
-        },
-        to: {
-          _id: record.get('b').identity.toNumber(),
-          labels: record.get('bLabels'),
-          ...this.neo4j.toPlainObject(record.get('b').properties),
-        },
+        from: fromNode,
+        to: toNode,
       };
 
       if (!relationshipsByType[relType]) {
@@ -241,25 +247,4 @@ export class DataService {
     return idFieldMap[label] || null;
   }
 
-  /**
-   * Filter node properties to only include those defined in the label's schema.
-   * This prevents subtype properties from appearing when viewing nodes by a specific label.
-   */
-  private _filterPropertiesBySchema(properties: Record<string, any>, schema: any): Record<string, any> {
-    if (!schema || !schema.properties || schema.properties.length === 0) {
-      // If no schema available, return all properties
-      return properties;
-    }
-
-    const allowedProps = new Set(schema.properties.map((p: any) => p.name));
-    const filtered: Record<string, any> = {};
-
-    for (const [key, value] of Object.entries(properties)) {
-      if (allowedProps.has(key)) {
-        filtered[key] = value;
-      }
-    }
-
-    return filtered;
-  }
 }

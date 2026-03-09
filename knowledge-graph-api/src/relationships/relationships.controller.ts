@@ -19,7 +19,7 @@ export class RelationshipsController {
     @Query('tenantId') tenantId?: string,
   ) {
     return this.relationshipsService.getEntityRelationships(entityId, tenantId);
-  }
+  }I
 
   @Get(':entityType/:entityId')
   @ApiOperation({ summary: 'Get all relationships (legacy route)', description: 'Backward-compatible route. entityType is ignored and relationships are resolved by entity_id only.' })

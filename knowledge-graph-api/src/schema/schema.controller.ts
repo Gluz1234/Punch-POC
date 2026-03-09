@@ -1,5 +1,5 @@
-import { Controller, Get, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { SchemaService } from './schema.service';
 
 @ApiTags('Schema')
@@ -12,9 +12,15 @@ export class SchemaController {
     summary: 'Get full schema snapshot',
     description: 'Returns complete database schema including all node labels, relationship types, properties, and constraints'
   })
+  @ApiQuery({
+    name: 'includeInternal',
+    required: false,
+    type: Boolean,
+    description: 'Include internal metadata labels (Entity, EntitySchema, SchemaProperty, PromotionSubtype, PromotionField)'
+  })
   @ApiResponse({ status: 200, description: 'Full schema snapshot with typed properties' })
-  getFullSchema() {
-    return this.schemaService.getFullSchema();
+  getFullSchema(@Query('includeInternal') includeInternal?: string) {
+    return this.schemaService.getFullSchema(this.parseBooleanQuery(includeInternal));
   }
 
   @Get('labels')
@@ -79,5 +85,9 @@ export class SchemaController {
   @ApiResponse({ status: 200, description: 'Array of tenant ID strings' })
   getTenants() {
     return this.schemaService.getTenants();
+  }
+
+  private parseBooleanQuery(value?: string): boolean {
+    return value === '1' || value?.toLowerCase() === 'true';
   }
 }

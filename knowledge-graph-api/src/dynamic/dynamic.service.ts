@@ -3,12 +3,14 @@ import { int } from 'neo4j-driver';
 import { randomUUID } from 'crypto';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
+import { PromotionProjectionService } from '../promotions/promotion-projection.service';
 
 @Injectable()
 export class DynamicService {
   constructor(
     private readonly neo4j: Neo4jService,
     private readonly schemaRegistration: SchemaRegistrationService,
+    private readonly projection: PromotionProjectionService,
   ) {}
 
   // ── CREATE or UPSERT a node of any label(s) ───────────────────────────────
@@ -45,10 +47,7 @@ export class DynamicService {
       RETURN n, labels(n) AS labels`,
       params,
     );
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('n').properties),
-      labels: records[0].get('labels'),
-    };
+    return this.projectNodeRecord(records[0]);
   }
 
   // ── GET all nodes of a given label ────────────────────────────────────────
@@ -59,10 +58,7 @@ export class DynamicService {
       `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels LIMIT $limit`,
       { limit: int(limit) },
     );
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('n').properties),
-      labels: r.get('labels'),
-    }));
+    return Promise.all(records.map(r => this.projectNodeRecord(r)));
   }
 
   // ── GET a single node by label + idField + id ─────────────────────────────
@@ -76,10 +72,7 @@ export class DynamicService {
     );
     if (!records.length)
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('n').properties),
-      labels: records[0].get('labels'),
-    };
+    return this.projectNodeRecord(records[0]);
   }
 
   // ── UPDATE properties on a dynamic node ──────────────────────────────────
@@ -104,10 +97,7 @@ export class DynamicService {
     );
     if (!records.length)
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('n').properties),
-      labels: records[0].get('labels'),
-    };
+    return this.projectNodeRecord(records[0]);
   }
 
   // ── DELETE a dynamic node ─────────────────────────────────────────────────
@@ -139,10 +129,7 @@ export class DynamicService {
     );
     if (!records.length)
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('n').properties),
-      labels: records[0].get('labels'),
-    };
+    return this.projectNodeRecord(records[0]);
   }
 
   // ── CREATE a relationship between any two nodes ───────────────────────────
@@ -240,11 +227,21 @@ export class DynamicService {
 
   // ── SMART CREATE: auto-detect or register type, then create node ────────
 
-  async smartCreate(dto: { label: string; properties?: Record<string, any> }) {
-    if (!dto.label) throw new BadRequestException('label is required');
+  async smartCreate(dto: { label?: string; properties?: Record<string, any>; fields?: Record<string, any> }) {
+    if (!this.isObjectRecord(dto)) {
+      throw new BadRequestException('Request body must be an object');
+    }
 
-    const safeLabel = this.neo4j.sanitizeIdentifier(dto.label);
-    const safeProps = this.sanitizePropertyKeys(dto.properties ?? {});
+    const label = typeof dto.label === 'string' ? dto.label.trim() : '';
+    if (!label) throw new BadRequestException('label is required');
+
+    const incomingProps = dto.properties ?? dto.fields ?? {};
+    if (!this.isObjectRecord(incomingProps)) {
+      throw new BadRequestException('properties (or fields) must be an object');
+    }
+
+    const safeLabel = this.neo4j.sanitizeIdentifier(label);
+    const safeProps = this.sanitizePropertyKeys(incomingProps);
 
     // Check if this type already has a registered schema
     const existingSchema = await this.schemaRegistration.getEntitySchema(safeLabel);
@@ -254,9 +251,10 @@ export class DynamicService {
     if (!existingSchema) {
       // Register a new schema type based on the incoming data
       const schemaProps: Array<{ name: string; type: string }> = [
-        { name: idField, type: 'String' },
+        { name: idField, type: 'STRING' },
       ];
       for (const [key, value] of Object.entries(safeProps)) {
+        if (key === idField) continue;
         schemaProps.push({ name: key, type: this.inferType(value) });
       }
 
@@ -270,15 +268,22 @@ export class DynamicService {
       await this.neo4j.createConstraintForLabel(safeLabel, safeIdField);
     }
 
-    // Generate a unique id for the node
-    const nodeId = randomUUID();
+    // Use caller-provided entity_id if present; otherwise generate one.
+    const providedEntityId =
+      typeof safeProps[idField] === 'string' && safeProps[idField].trim()
+        ? safeProps[idField].trim()
+        : undefined;
+    const nodeId = providedEntityId ?? randomUUID();
+
+    // Do not SET entity_id from payload again; MERGE key already controls it.
+    const { [idField]: _ignoredEntityId, ...writableProps } = safeProps;
 
     // Build SET clause from properties
-    const setParts = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`);
+    const setParts = Object.keys(writableProps).map(k => `n.\`${k}\` = $prop_${k}`);
     const setClause = setParts.length ? `, ${setParts.join(', ')}` : '';
 
     const params: Record<string, any> = { nodeId };
-    for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
+    for (const [k, v] of Object.entries(writableProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(
       `MERGE (n:\`${safeLabel}\`:Entity {\`${safeIdField}\`: $nodeId})
@@ -288,21 +293,17 @@ export class DynamicService {
       params,
     );
 
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('n').properties),
-      labels: records[0].get('labels'),
-      schemaExisted: !!existingSchema,
-    };
+    return this.projectNodeRecord(records[0]);
   }
 
   private inferType(value: any): string {
-    if (typeof value === 'number') return Number.isInteger(value) ? 'Integer' : 'Float';
-    if (typeof value === 'boolean') return 'Boolean';
+    if (typeof value === 'number') return Number.isInteger(value) ? 'INTEGER' : 'FLOAT';
+    if (typeof value === 'boolean') return 'BOOLEAN';
     if (typeof value === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return 'Date';
-      return 'String';
+      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return 'DATE';
+      return 'STRING';
     }
-    return 'String';
+    return 'STRING';
   }
 
   // ── Sanitize property key names ───────────────────────────────────────────
@@ -313,5 +314,15 @@ export class DynamicService {
       clean[this.neo4j.sanitizeIdentifier(key)] = value;
     }
     return clean;
+  }
+
+  private isObjectRecord(value: unknown): value is Record<string, any> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  private async projectNodeRecord(record: any) {
+    const properties = this.neo4j.toPlainObject(record.get('n').properties);
+    const labels = record.get('labels') as string[];
+    return this.projection.projectTypedNode(properties, labels);
   }
 }

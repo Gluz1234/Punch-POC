@@ -3,12 +3,14 @@ import { Neo4jService } from '../neo4j/neo4j.service';
 import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from '../shared/entity-config';
 import { PromotionSchemaService } from './promotion-schema.service';
 import { BUILTIN_SUBTYPES, getSubtypeDefinitionByKey } from './subtype-config';
+import { PromotionProjectionService } from './promotion-projection.service';
 
 @Injectable()
 export class PromotionsService implements OnApplicationBootstrap {
   constructor(
     private readonly neo4j: Neo4jService,
     private readonly promotionSchema: PromotionSchemaService,
+    private readonly projection: PromotionProjectionService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -123,10 +125,10 @@ export class PromotionsService implements OnApplicationBootstrap {
     if (!records.length) {
       throw new NotFoundException(`${config.displayName} ${entityId} not found`);
     }
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('n').properties),
-      labels: records[0].get('labels'),
-    };
+
+    const nodeProperties = this.neo4j.toPlainObject(records[0].get('n').properties);
+    const labels = records[0].get('labels') as string[];
+    return this.projection.projectTypedNode(nodeProperties, labels, entityId);
   }
 
   // ── Generic listing: get all nodes with a given subtype label ───────────
@@ -154,10 +156,14 @@ export class PromotionsService implements OnApplicationBootstrap {
     }
 
     const records = await this.neo4j.runQuery(cypher, params);
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('n').properties),
-      labels: r.get('labels'),
-    }));
+    return Promise.all(
+      records.map((r) =>
+        this.projection.projectTypedNode(
+          this.neo4j.toPlainObject(r.get('n').properties),
+          r.get('labels') as string[],
+        ),
+      ),
+    );
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
@@ -197,149 +203,6 @@ export class PromotionsService implements OnApplicationBootstrap {
     const labels: string[] = records[0].get('labels');
     const config = this.resolveEntityConfigFromLabels(labels);
     return { labels, config };
-  }
-
-  private resolveEntityConfigFromLabels(labels: string[]): EntityConfig {
-    const lower = new Set(labels.map(l => l.toLowerCase()));
-    const config = getAllEntities().find(e => lower.has(e.label.toLowerCase()));
-    if (!config) {
-      throw new BadRequestException(
-        `Unable to resolve base entity type from labels: ${labels.join(', ')}`,
-      );
-    }
-    return config;
-  }
-}
-
-// ── Helper DTOs for typed property responses ─────────────────────────────────
-
-export interface TypedPropertiesResponse {
-  entityType: string;
-  entityId: string;
-  labels: string[];
-  base: {
-    label: string;
-    properties: Record<string, any>;
-  };
-  subtypes: {
-    label: string;
-    properties: Record<string, any>;
-  }[];
-  unknownProperties: Record<string, any>;
-}
-
-// ── Generic typed-property projection ────────────────────────────────────────
-
-@Injectable()
-export class PromotionProjectionService {
-  constructor(
-    private readonly neo4j: Neo4jService,
-    private readonly schema: PromotionSchemaService,
-  ) {}
-
-  /**
-   * Return any entity node with its properties grouped by:
-   * - base entity properties
-   * - each promotion subtype's properties
-   * - unknown / unclassified properties
-   */
-  async getEntityTypedProperties(entityType: string, entityId: string): Promise<TypedPropertiesResponse> {
-    const requested = this.resolveEntityConfig(entityType);
-    const response = await this.getEntityTypedPropertiesById(entityId);
-    if (response.entityType.toLowerCase() !== requested.label.toLowerCase()) {
-      throw new BadRequestException(
-        `entityType mismatch for ${entityId}: expected ${requested.label}, found ${response.entityType}`,
-      );
-    }
-    return response;
-  }
-
-  async getEntityTypedPropertiesById(entityId: string): Promise<TypedPropertiesResponse> {
-    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
-    const records = await this.neo4j.runQuery(
-      `MATCH (n:Entity {\`${safeIdField}\`: $entityId})
-       RETURN n, labels(n) AS labels`,
-      { entityId },
-    );
-
-    if (!records.length) {
-      throw new NotFoundException(`Entity ${entityId} not found`);
-    }
-
-    const node = records[0].get('n');
-    const labels: string[] = records[0].get('labels');
-    const props = this.neo4j.toPlainObject(node.properties);
-    const config = this.resolveEntityConfigFromLabels(labels);
-
-    const basePropKeys = new Set<string>([
-      config.idField,
-      ...Object.keys(config.properties),
-    ]);
-
-    // Map subtype label → set of property keys
-    const subtypePropSets = new Map<string, Set<string>>();
-    const defs = await this.schema.getSubtypeDefinitionsForBase(config.label);
-    defs.forEach((cfg) => {
-      subtypePropSets.set(cfg.label, new Set<string>(cfg.properties));
-    });
-
-    const baseProperties: Record<string, any> = {};
-    const subtypeBuckets: Record<string, Record<string, any>> = {};
-    const unknownProperties: Record<string, any> = {};
-
-    for (const [key, value] of Object.entries(props)) {
-      if (basePropKeys.has(key)) {
-        baseProperties[key] = value;
-        continue;
-      }
-
-      let assignedToSubtype = false;
-      for (const label of labels) {
-        const propSet = subtypePropSets.get(label);
-        if (propSet && propSet.has(key)) {
-          if (!subtypeBuckets[label]) subtypeBuckets[label] = {};
-          subtypeBuckets[label][key] = value;
-          assignedToSubtype = true;
-          break;
-        }
-      }
-
-      if (!assignedToSubtype) {
-        unknownProperties[key] = value;
-      }
-    }
-
-    return {
-      entityType: config.label,
-      entityId,
-      labels,
-      base: {
-        label: config.label,
-        properties: baseProperties,
-      },
-      subtypes: Object.entries(subtypeBuckets).map(([label, properties]) => ({
-        label,
-        properties,
-      })),
-      unknownProperties,
-    };
-  }
-
-  // Legacy method — still works for backward compatibility
-  async getPersonTypedProperties(strongId: string): Promise<TypedPropertiesResponse> {
-    return this.getEntityTypedProperties('person', strongId);
-  }
-
-  private resolveEntityConfig(entityType: string): EntityConfig {
-    const byKey = ENTITY_CONFIGS[entityType.toLowerCase()];
-    if (byKey) return byKey;
-    const byLabel = getAllEntities().find(
-      e => e.label.toLowerCase() === entityType.toLowerCase(),
-    );
-    if (byLabel) return byLabel;
-    throw new BadRequestException(
-      `Unknown entity type: "${entityType}". Available: ${getAllEntities().map(e => e.key).join(', ')}`,
-    );
   }
 
   private resolveEntityConfigFromLabels(labels: string[]): EntityConfig {
