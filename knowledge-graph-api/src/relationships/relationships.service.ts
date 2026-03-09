@@ -3,12 +3,14 @@ import neo4j from 'neo4j-driver';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { getAllEntities } from '../shared/entity-config';
 import { PromotionProjectionService } from '../promotions/promotion-projection.service';
+import { EntityResolutionService } from '../shared/entity-resolution.service';
 
 @Injectable()
 export class RelationshipsService {
   constructor(
     private readonly neo4j: Neo4jService,
     private readonly projection: PromotionProjectionService,
+    private readonly resolution: EntityResolutionService,
   ) {}
 
   private static readonly CANONICAL_ID_FIELD = 'entity_id';
@@ -144,6 +146,11 @@ export class RelationshipsService {
       throw new BadRequestException('sourceId and targetId are required');
     }
 
+    const requestedSourceId = dto.sourceId;
+    const requestedTargetId = dto.targetId;
+    const sourceId = await this.resolution.resolveCanonicalEntityIdIfExists(requestedSourceId);
+    const targetId = await this.resolution.resolveCanonicalEntityIdIfExists(requestedTargetId);
+
     const safeRelType = this.neo4j.sanitizeIdentifier(dto.relationshipType.toUpperCase());
     const safeIdField = this.neo4j.sanitizeIdentifier(RelationshipsService.CANONICAL_ID_FIELD);
 
@@ -165,8 +172,8 @@ export class RelationshipsService {
        ON CREATE SET r.created_at = $now${propSetClause}
        RETURN labels(src) AS srcLabels, labels(tgt) AS tgtLabels`,
       {
-        sourceId: dto.sourceId,
-        targetId: dto.targetId,
+        sourceId,
+        targetId,
         tenantId: dto.tenantId,
         now: new Date().toISOString(),
         ...propParams,
@@ -177,13 +184,28 @@ export class RelationshipsService {
       throw new NotFoundException('sourceId or targetId was not found');
     }
 
+    const identity = await this.resolution.buildMutationContextForPair(
+      requestedSourceId,
+      requestedTargetId,
+      true,
+    );
+
     return {
       created: true,
       type: safeRelType,
-      source: { labels: records[0].get('srcLabels'), id: dto.sourceId },
-      target: { labels: records[0].get('tgtLabels'), id: dto.targetId },
+      source: {
+        labels: records[0].get('srcLabels'),
+        id: sourceId,
+        requestedId: requestedSourceId,
+      },
+      target: {
+        labels: records[0].get('tgtLabels'),
+        id: targetId,
+        requestedId: requestedTargetId,
+      },
       tenantId: dto.tenantId,
       properties: extraProps,
+      _identity: identity,
     };
   }
 
@@ -197,18 +219,26 @@ export class RelationshipsService {
     sourceType?: string;
     targetType?: string;
   }) {
+    const requestedSourceId = dto.sourceId;
+    const sourceId = await this.resolution.resolveCanonicalEntityIdIfExists(requestedSourceId);
+
     const safeRelType = this.neo4j.sanitizeIdentifier(dto.relationshipType.toUpperCase());
     const safeIdField = this.neo4j.sanitizeIdentifier(RelationshipsService.CANONICAL_ID_FIELD);
 
     let targetFilter = '';
     const params: Record<string, any> = {
-      sourceId: dto.sourceId,
+      sourceId,
       tenantId: dto.tenantId,
     };
 
+    let requestedTargetId: string | undefined;
+    let targetId: string | undefined;
+
     if (dto.targetId) {
+      requestedTargetId = dto.targetId;
+      targetId = await this.resolution.resolveCanonicalEntityIdIfExists(requestedTargetId);
       targetFilter = `AND tgt.\`${safeIdField}\` = $targetId`;
-      params.targetId = dto.targetId;
+      params.targetId = targetId;
     }
 
     const records = await this.neo4j.runQuery(
@@ -226,12 +256,23 @@ export class RelationshipsService {
       throw new NotFoundException('No matching relationship found to delete');
     }
 
+    const identity: Record<string, any> = {
+      source: await this.resolution.buildMutationContextForEntity(requestedSourceId, false),
+    };
+
+    if (requestedTargetId) {
+      identity.target = await this.resolution.buildMutationContextForEntity(requestedTargetId, false);
+    }
+
     return {
       deleted: true,
       deletedCount,
       type: safeRelType,
-      sourceId: dto.sourceId,
+      sourceId,
+      requestedSourceId,
+      ...(targetId ? { targetId, requestedTargetId } : {}),
       tenantId: dto.tenantId,
+      _identity: identity,
     };
   }
 

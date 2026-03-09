@@ -5,6 +5,7 @@ import { Neo4jService } from '../neo4j/neo4j.service';
 import { EntityConfig, getAllEntities } from './entity-config';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
 import { PromotionProjectionService } from '../promotions/promotion-projection.service';
+import { EntityResolutionService } from './entity-resolution.service';
 
 /**
  * Generic Entity Service
@@ -19,6 +20,7 @@ export class GenericEntityService {
     private readonly neo4j: Neo4jService,
     private readonly schemaRegistration: SchemaRegistrationService,
     private readonly projection: PromotionProjectionService,
+    private readonly resolution: EntityResolutionService,
   ) {}
 
   /**
@@ -29,7 +31,13 @@ export class GenericEntityService {
     // Ensure entity schema is registered (fallback if app startup failed)
     await this.schemaRegistration.ensureEntitySchema(config.key);
 
-    const idValue = this.resolveIncomingEntityId(config, dto) ?? randomUUID();
+    const incomingId = this.resolveIncomingEntityId(config, dto);
+    const idValue = incomingId
+      ? await this.resolution.resolveCanonicalEntityIdIfExists(incomingId)
+      : randomUUID();
+
+    await this.ensureEntityBelongsToConfigIfExists(config, String(idValue));
+
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
     const safeProps = this.sanitizePropertyKeys(config, dto);
@@ -54,7 +62,14 @@ export class GenericEntityService {
       params,
     );
 
-    return this.formatResult(records[0]);
+    const entity = await this.formatResult(records[0]);
+    const requestedId = incomingId ?? String(idValue);
+    const identity = await this.resolution.buildMutationContextForEntity(requestedId, true);
+
+    return {
+      ...entity,
+      _identity: identity,
+    };
   }
 
   /**
@@ -115,6 +130,10 @@ export class GenericEntityService {
     // Ensure entity schema is registered (fallback if app startup failed)
     await this.schemaRegistration.ensureEntitySchema(config.key);
 
+    const resolution = await this.resolution.resolveCanonicalEntityId(id);
+    const resolvedId = resolution.canonicalEntityId;
+    await this.assertEntityHasLabel(config, resolvedId);
+
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
     const safeProps = this.sanitizePropertyKeys(config, dto);
@@ -127,7 +146,7 @@ export class GenericEntityService {
       .map(k => `n.\`${k}\` = $prop_${k}`)
       .join(', ');
 
-    const params: Record<string, any> = { id };
+    const params: Record<string, any> = { id: resolvedId };
     for (const [k, v] of Object.entries(safeProps)) {
       params[`prop_${k}`] = v;
     }
@@ -141,32 +160,79 @@ export class GenericEntityService {
 
     if (!records.length) {
       throw new NotFoundException(
-        `${config.displayName} with ${config.idField}=${id} not found`,
+        `${config.displayName} with ${config.idField}=${resolvedId} not found`,
       );
     }
 
-    return this.formatResult(records[0]);
+    const entity = await this.formatResult(records[0]);
+    const identity = await this.resolution.buildMutationContextForEntity(id, true);
+
+    return {
+      ...entity,
+      _identity: identity,
+    };
   }
 
   /**
    * Delete an entity.
    */
   async remove(config: EntityConfig, id: string) {
+    const identity = await this.resolution.buildMutationContextForEntity(id, false);
+    const resolvedId = identity.canonicalEntityId;
+    await this.assertEntityHasLabel(config, resolvedId);
+
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
     const records = await this.neo4j.runQuery(
       `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id})
        DETACH DELETE n RETURN count(n) AS deleted`,
-      { id },
+      { id: resolvedId },
     );
 
     if (!records[0].get('deleted').toNumber()) {
       throw new NotFoundException(
-        `${config.displayName} with ${config.idField}=${id} not found`,
+        `${config.displayName} with ${config.idField}=${resolvedId} not found`,
       );
     }
 
-    return { deleted: true, id, label: config.label };
+    return {
+      deleted: true,
+      id: resolvedId,
+      requestedId: id,
+      label: config.label,
+      _identity: identity,
+    };
+  }
+
+  async getPossibleDuplicates(config: EntityConfig, id: string, limit = 5) {
+    const resolution = await this.resolution.resolveCanonicalEntityId(id);
+    await this.assertEntityHasLabel(config, resolution.canonicalEntityId);
+
+    return {
+      requestedEntityId: id,
+      canonicalEntityId: resolution.canonicalEntityId,
+      suggestions: await this.resolution.getPossibleDuplicates(resolution.canonicalEntityId, limit),
+    };
+  }
+
+  async merge(config: EntityConfig, primaryId: string, duplicateId: string, reason?: string) {
+    const primaryResolution = await this.resolution.resolveCanonicalEntityId(primaryId);
+    const duplicateResolution = await this.resolution.resolveCanonicalEntityId(duplicateId);
+
+    await this.assertEntityHasLabel(config, primaryResolution.canonicalEntityId);
+    await this.assertEntityHasLabel(config, duplicateResolution.canonicalEntityId);
+
+    return this.resolution.mergeEntities(
+      primaryResolution.canonicalEntityId,
+      duplicateResolution.canonicalEntityId,
+      reason,
+    );
+  }
+
+  async unmerge(config: EntityConfig, mergeId: string) {
+    const result = await this.resolution.unmergeEntities(mergeId);
+    await this.assertEntityHasLabel(config, result.primaryEntityId);
+    return result;
   }
 
   /**
@@ -211,6 +277,46 @@ export class GenericEntityService {
     }
 
     return null;
+  }
+
+  private async assertEntityHasLabel(config: EntityConfig, entityId: string) {
+    const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
+    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
+
+    const records = await this.neo4j.runQuery(
+      `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $entityId})
+       RETURN count(n) AS foundCount`,
+      { entityId },
+    );
+
+    const foundCount = records[0]?.get('foundCount') as Integer;
+    if (!foundCount || foundCount.toNumber() === 0) {
+      throw new BadRequestException(
+        `Entity ${entityId} is not a ${config.displayName}. Use /identity/merge for cross-type workflows.`,
+      );
+    }
+  }
+
+  private async ensureEntityBelongsToConfigIfExists(config: EntityConfig, entityId: string) {
+    const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
+
+    const records = await this.neo4j.runQuery(
+      `MATCH (n:Entity {\`${safeIdField}\`: $entityId})
+       RETURN labels(n) AS labels
+       LIMIT 1`,
+      { entityId },
+    );
+
+    if (!records.length) {
+      return;
+    }
+
+    const labels = ((records[0].get('labels') as string[]) ?? []).map((label) => label.toLowerCase());
+    if (!labels.includes(config.label.toLowerCase())) {
+      throw new BadRequestException(
+        `Entity ${entityId} exists but is not a ${config.displayName}`,
+      );
+    }
   }
 
   /**

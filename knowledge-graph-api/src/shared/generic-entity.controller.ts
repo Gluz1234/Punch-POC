@@ -61,6 +61,20 @@ export function createGenericEntityController(
       return this.service.findOne(config, id);
     }
 
+      @Get(':id/possible-duplicates')
+      @ApiOperation({
+        summary: `Suggest possible duplicate ${config.displayName} entities`,
+        description: `Returns potential duplicate matches for a ${config.displayName} by ${config.idField}`,
+      })
+      @ApiParam({ name: 'id', description: config.idField })
+      @ApiQuery({ name: 'limit', required: false, description: 'Maximum suggestions', example: 5 })
+      possibleDuplicates(
+        @Param('id') id: string,
+        @Query('limit') limit?: string,
+      ) {
+        return this.service.getPossibleDuplicates(config, id, limit ? parseInt(limit, 10) : 5);
+      }
+
     @Put(':id')
     @ApiOperation({ 
       summary: `Update ${config.displayName}`,
@@ -83,6 +97,31 @@ export function createGenericEntityController(
     @ApiResponse({ status: 200, description: `${config.displayName} deleted successfully` })
     remove(@Param('id') id: string) {
       return this.service.remove(config, id);
+    }
+
+    @Post(':id/merge/:duplicateId')
+    @ApiOperation({
+      summary: `Merge duplicate ${config.displayName} entities`,
+      description: `Marks duplicate identity and points it to canonical ${config.displayName}`,
+    })
+    @ApiParam({ name: 'id', description: `Canonical ${config.idField}` })
+    @ApiParam({ name: 'duplicateId', description: `Duplicate ${config.idField}` })
+    merge(
+      @Param('id') id: string,
+      @Param('duplicateId') duplicateId: string,
+      @Body('reason') reason?: string,
+    ) {
+      return this.service.merge(config, id, duplicateId, reason);
+    }
+
+    @Post('unmerge/:mergeId')
+    @ApiOperation({
+      summary: `Unmerge a ${config.displayName} merge event`,
+      description: 'Reverts an active merge by merge_id',
+    })
+    @ApiParam({ name: 'mergeId', description: 'Merge event identifier' })
+    unmerge(@Param('mergeId') mergeId: string) {
+      return this.service.unmerge(config, mergeId);
     }
 
     @Get('by-:property/:value')

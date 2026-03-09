@@ -4,6 +4,7 @@ import { createGenericEntityController } from './generic-entity.controller';
 import { EntityConfig } from './entity-config';
 import { SchemaModule } from '../schema/schema.module';
 import { PromotionsModule } from '../promotions/promotions.module';
+import { EntityResolutionModule } from './entity-resolution.module';
 
 /**
  * Dynamic Module Factory
@@ -17,7 +18,7 @@ export class GenericEntityModule {
     const controller = createGenericEntityController(config);
 
     @Module({
-      imports: [SchemaModule, PromotionsModule],
+      imports: [SchemaModule, PromotionsModule, EntityResolutionModule],
       controllers: [controller],
       providers: [GenericEntityService],
       exports: [GenericEntityService],

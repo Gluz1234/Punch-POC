@@ -9,6 +9,7 @@ import { DynamicModule } from './dynamic/dynamic.module';
 import { SchemaModule } from './schema/schema.module';
 import { QueryModule } from './query/query.module';
 import { DataModule } from './data/data.module';
+import { EntityResolutionModule } from './shared/entity-resolution.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { DataModule } from './data/data.module';
     SchemaModule,
     QueryModule,
     DataModule,
+    EntityResolutionModule,
   ],
 })
 export class AppModule {}

@@ -130,4 +130,21 @@ export class PromotionsController {
   getAllSubtypes() {
     return this.promotionSchema.getAllSubtypeDefinitions();
   }
+
+  @Get('schema/base-types')
+  @ApiOperation({ summary: 'Get all base types', description: 'List all configured base types and any custom base labels discovered from subtype definitions.' })
+  @ApiResponse({ status: 200, description: 'Base type list with subtype counts' })
+  getAllBaseTypes() {
+    return this.promotionsService.getAllBaseTypes();
+  }
+
+  @Get('schema/tenants/:tenantId/types')
+  @ApiOperation({ summary: 'Get all types for a tenant', description: 'Returns all labels used by entities connected by tenant-scoped relationships and classifies them as base, subtype, or unknown.' })
+  @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'tenant_mit' })
+  @ApiResponse({ status: 200, description: 'Tenant type inventory' })
+  getTypesByTenant(
+    @Param('tenantId') tenantId: string,
+  ) {
+    return this.promotionsService.getTypesByTenant(tenantId);
+  }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { getAllEntities } from '../shared/entity-config';
 import { SchemaRegistrationService } from './schema-registration.service';
@@ -228,6 +228,66 @@ export class SchemaService {
     ]);
 
     return { nodeLabels: labelDetails, relationshipTypes: relDetails, constraints };
+  }
+
+  async getSchemaForTenant(tenantId: string) {
+    const normalizedTenantId = tenantId?.trim();
+    if (!normalizedTenantId) {
+      throw new BadRequestException('tenantId is required');
+    }
+
+    // Ensure configured schema metadata is present before projection.
+    await this.schemaRegistration.registerAllBaseEntities();
+    await this.schemaRegistration.registerAllBuiltinSubtypes();
+
+    const [labelRecords, relTypeRecords] = await Promise.all([
+      this.neo4j.runQuery(
+        `
+        MATCH (a)-[r {tenant_id: $tenantId}]->(b)
+        WITH collect(DISTINCT a) + collect(DISTINCT b) AS nodes
+        UNWIND nodes AS n
+        UNWIND labels(n) AS label
+        RETURN DISTINCT label
+        ORDER BY label
+        `,
+        { tenantId: normalizedTenantId },
+      ),
+      this.neo4j.runQuery(
+        `
+        MATCH ()-[r {tenant_id: $tenantId}]->()
+        RETURN DISTINCT type(r) AS relationshipType
+        ORDER BY relationshipType
+        `,
+        { tenantId: normalizedTenantId },
+      ),
+    ]);
+
+    const labels = Array.from(
+      new Set(
+        labelRecords
+          .map((record) => String(record.get('label')))
+          .filter((label) => !this.isInternalSchemaLabel(label)),
+      ),
+    );
+
+    const relationshipTypes = Array.from(
+      new Set(relTypeRecords.map((record) => String(record.get('relationshipType')))),
+    );
+
+    const [nodeLabelDetails, relationshipTypeDetails] = await Promise.all([
+      Promise.all(labels.map((label) => this.getPropertiesForLabel(label))),
+      Promise.all(relationshipTypes.map((type) => this.getPropertiesForRelType(type))),
+    ]);
+
+    return {
+      tenantId: normalizedTenantId,
+      nodeLabels: nodeLabelDetails,
+      relationshipTypes: relationshipTypeDetails,
+      statistics: {
+        totalNodeLabels: nodeLabelDetails.length,
+        totalRelationshipTypes: relationshipTypeDetails.length,
+      },
+    };
   }
 
   private isInternalSchemaLabel(label: string): boolean {

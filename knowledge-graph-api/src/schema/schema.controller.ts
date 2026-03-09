@@ -87,6 +87,14 @@ export class SchemaController {
     return this.schemaService.getTenants();
   }
 
+  @Get('tenants/:tenantId/schema')
+  @ApiOperation({ summary: 'Get schema for a tenant', description: 'Returns tenant-scoped schema details (node labels and relationship types) based on relationships with the given tenant_id.' })
+  @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'tenant_mit' })
+  @ApiResponse({ status: 200, description: 'Tenant-scoped schema snapshot' })
+  getSchemaForTenant(@Param('tenantId') tenantId: string) {
+    return this.schemaService.getSchemaForTenant(tenantId);
+  }
+
   private parseBooleanQuery(value?: string): boolean {
     return value === '1' || value?.toLowerCase() === 'true';
   }
