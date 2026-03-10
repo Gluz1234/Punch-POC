@@ -131,6 +131,8 @@ export class SchemaService {
         return {
           label,
           icon: subtypeDef.icon ?? '',
+          baseLabel: subtypeDef.baseLabel,
+          allowedBaseLabels: subtypeDef.allowedBaseLabels ?? [subtypeDef.baseLabel],
           properties: subtypeProps,
           totalProperties: subtypeProps.length,
         };
@@ -408,9 +410,17 @@ export class SchemaService {
 
   async getAllSubtypes() {
     const subtypeDefs = await this.promotionSchema.getAllSubtypeDefinitions();
-    const nodeLabels = await Promise.all(
-      subtypeDefs.map((def) => this.getPropertiesForLabel(def.label)),
-    );
+
+    // Build the node-label shapes directly from the defs so allowedBaseLabels
+    // and baseLabel are always present without a second Neo4j round-trip.
+    const nodeLabels = subtypeDefs.map((def) => ({
+      label: def.label,
+      icon: def.icon ?? '',
+      baseLabel: def.baseLabel,
+      allowedBaseLabels: def.allowedBaseLabels ?? [def.baseLabel],
+      properties: def.properties.map((prop) => ({ name: prop, type: 'STRING' })),
+      totalProperties: def.properties.length,
+    }));
 
     return {
       nodeLabels,

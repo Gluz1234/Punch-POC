@@ -7,6 +7,8 @@ export interface PromotionSubtypeDefinitionDto {
   baseLabel: string;
   properties: string[];
   icon: string;
+  /** Base type labels this subtype is allowed to be applied to. Universal per subtype. */
+  allowedBaseLabels?: string[];
 }
 
 export interface PromotionSubtypeDefinition {
@@ -15,6 +17,8 @@ export interface PromotionSubtypeDefinition {
   baseLabel: string;
   properties: string[];
   icon: string;
+  /** Base type labels this subtype is allowed to be applied to. Universal per subtype. */
+  allowedBaseLabels: string[];
 }
 
 /**
@@ -32,13 +36,18 @@ export class PromotionSchemaService {
 
   async upsertSubtypeDefinition(dto: PromotionSubtypeDefinitionDto): Promise<PromotionSubtypeDefinition> {
     const properties = Array.from(new Set(dto.properties ?? [])).filter(Boolean);
+    // Default allowedBaseLabels to [baseLabel] if not provided
+    const allowedBaseLabels = Array.from(
+      new Set((dto.allowedBaseLabels?.length ? dto.allowedBaseLabels : [dto.baseLabel]).filter(Boolean)),
+    );
 
     const records = await this.neo4j.runQuery(
       `
       MERGE (s:PromotionSubtype { key: $key })
       SET s.label = $label,
           s.base_label = $baseLabel,
-          s.icon = $icon
+          s.icon = $icon,
+          s.allowed_base_labels = $allowedBaseLabels
       WITH s
       OPTIONAL MATCH (s)-[r:HAS_FIELD]->(f:PromotionField)
       DELETE r
@@ -46,17 +55,19 @@ export class PromotionSchemaService {
       UNWIND $properties AS propName
       MERGE (f:PromotionField { name: propName })
       MERGE (s)-[:HAS_FIELD]->(f)
-      RETURN s.key        AS key,
-             s.label      AS label,
-             s.base_label AS baseLabel,
-             s.icon       AS icon,
-             $properties  AS properties
+      RETURN s.key                  AS key,
+             s.label                AS label,
+             s.base_label           AS baseLabel,
+             s.icon                 AS icon,
+             s.allowed_base_labels  AS allowedBaseLabels,
+             $properties            AS properties
       `,
       {
         key: dto.key,
         label: dto.label,
         baseLabel: dto.baseLabel,
         icon: dto.icon ?? '',
+        allowedBaseLabels,
         properties,
       },
     );
@@ -67,6 +78,7 @@ export class PromotionSchemaService {
       label: row.get('label'),
       baseLabel: row.get('baseLabel'),
       icon: row.get('icon') ?? '',
+      allowedBaseLabels: (row.get('allowedBaseLabels') ?? []) as string[],
       properties: row.get('properties'),
     };
   }
@@ -76,10 +88,11 @@ export class PromotionSchemaService {
       `
       MATCH (s:PromotionSubtype { base_label: $baseLabel })
       OPTIONAL MATCH (s)-[:HAS_FIELD]->(f:PromotionField)
-      RETURN s.key        AS key,
-             s.label      AS label,
-             s.base_label AS baseLabel,
-             s.icon       AS icon,
+      RETURN s.key                  AS key,
+             s.label                AS label,
+             s.base_label           AS baseLabel,
+             s.icon                 AS icon,
+             s.allowed_base_labels  AS allowedBaseLabels,
              collect(DISTINCT f.name) AS properties
       ORDER BY label
       `,
@@ -91,6 +104,7 @@ export class PromotionSchemaService {
       label: r.get('label'),
       baseLabel: r.get('baseLabel'),
       icon: r.get('icon') ?? '',
+      allowedBaseLabels: (r.get('allowedBaseLabels') ?? [r.get('baseLabel')]) as string[],
       properties: (r.get('properties') ?? []) as string[],
     }));
   }
@@ -100,10 +114,11 @@ export class PromotionSchemaService {
       `
       MATCH (s:PromotionSubtype)
       OPTIONAL MATCH (s)-[:HAS_FIELD]->(f:PromotionField)
-      RETURN s.key        AS key,
-             s.label      AS label,
-             s.base_label AS baseLabel,
-             s.icon       AS icon,
+      RETURN s.key                  AS key,
+             s.label                AS label,
+             s.base_label           AS baseLabel,
+             s.icon                 AS icon,
+             s.allowed_base_labels  AS allowedBaseLabels,
              collect(DISTINCT f.name) AS properties
       ORDER BY baseLabel, label
       `,
@@ -114,6 +129,7 @@ export class PromotionSchemaService {
       label: r.get('label'),
       baseLabel: r.get('baseLabel'),
       icon: r.get('icon') ?? '',
+      allowedBaseLabels: (r.get('allowedBaseLabels') ?? [r.get('baseLabel')]) as string[],
       properties: (r.get('properties') ?? []) as string[],
     }));
   }
@@ -123,10 +139,11 @@ export class PromotionSchemaService {
       `
       MATCH (s:PromotionSubtype { key: $key })
       OPTIONAL MATCH (s)-[:HAS_FIELD]->(f:PromotionField)
-      RETURN s.key        AS key,
-             s.label      AS label,
-             s.base_label AS baseLabel,
-             s.icon       AS icon,
+      RETURN s.key                  AS key,
+             s.label                AS label,
+             s.base_label           AS baseLabel,
+             s.icon                 AS icon,
+             s.allowed_base_labels  AS allowedBaseLabels,
              collect(DISTINCT f.name) AS properties
       `,
       { key },
@@ -138,6 +155,7 @@ export class PromotionSchemaService {
       label: r.get('label'),
       baseLabel: r.get('baseLabel'),
       icon: r.get('icon') ?? '',
+      allowedBaseLabels: (r.get('allowedBaseLabels') ?? [r.get('baseLabel')]) as string[],
       properties: (r.get('properties') ?? []) as string[],
     };
   }
@@ -164,23 +182,31 @@ export class PromotionSchemaService {
    * Upsert subtype definition while MERGING new properties with existing ones.
    * Unlike upsertSubtypeDefinition, this does not delete existing properties.
    * Used when registering user-defined subtypes that may accumulate properties over time.
+   * Also preserves existing allowedBaseLabels when none are supplied in the dto.
    */
   async upsertSubtypeDefinitionMerging(
     dto: PromotionSubtypeDefinitionDto,
   ): Promise<PromotionSubtypeDefinition> {
-    // Get existing properties
-    const existing = await this.getPropertiesForSubtype(dto.key);
+    // Get existing definition so we can preserve both properties and allowedBaseLabels
+    const existing = await this.getSubtypeDefinition(dto.key);
 
-    // Merge: keep all unique property names
-    const merged = Array.from(
-      new Set([...existing, ...(dto.properties ?? [])]),
+    // Merge properties: keep all unique names
+    const mergedProperties = Array.from(
+      new Set([...(existing?.properties ?? []), ...(dto.properties ?? [])]),
     ).filter(Boolean);
 
+    // Preserve existing allowedBaseLabels if caller did not supply them
+    const mergedAllowedBaseLabels =
+      dto.allowedBaseLabels?.length
+        ? dto.allowedBaseLabels
+        : (existing?.allowedBaseLabels?.length ? existing.allowedBaseLabels : undefined);
+
     // Use the standard upsert (which replaces all properties)
-    // But we pass the merged set instead
+    // But we pass the merged sets instead
     return this.upsertSubtypeDefinition({
       ...dto,
-      properties: merged,
+      properties: mergedProperties,
+      ...(mergedAllowedBaseLabels ? { allowedBaseLabels: mergedAllowedBaseLabels } : {}),
     });
   }
 

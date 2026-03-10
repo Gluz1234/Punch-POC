@@ -17,6 +17,8 @@ export interface SubtypeDefinition {
   baseLabel: string;
   properties: string[];
   icon: string;
+  /** Base type labels this subtype is allowed to be applied to. Universal per subtype. */
+  allowedBaseLabels: string[];
 }
 
 export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
@@ -25,6 +27,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     label: 'Student',
     baseLabel: 'Person',
     icon: '📝',
+    allowedBaseLabels: ['Person'],
     properties: [
       'student_id',
       'gpa',
@@ -39,6 +42,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     label: 'Employee',
     baseLabel: 'Person',
     icon: '💼',
+    allowedBaseLabels: ['Person'],
     properties: [
       'employee_number',
       'contract_type',
@@ -53,6 +57,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     label: 'Resident',
     baseLabel: 'Person',
     icon: '🏠',
+    allowedBaseLabels: ['Person'],
     properties: [
       'resident_id',
       'registration_date',
@@ -66,6 +71,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     label: 'Researcher',
     baseLabel: 'Person',
     icon: '🔬',
+    allowedBaseLabels: ['Person'],
     properties: [
       'orcid_id',
       'research_field',
@@ -79,6 +85,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     label: 'Artist',
     baseLabel: 'Person',
     icon: '🎨',
+    allowedBaseLabels: ['Person'],
     properties: [
       'artist_id',
       'primary_medium',

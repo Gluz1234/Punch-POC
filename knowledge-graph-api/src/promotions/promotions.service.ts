@@ -104,9 +104,21 @@ export class PromotionsService implements OnApplicationBootstrap {
     // Ensure built-in subtype is registered (fallback)
     await this.ensureSubtypeDefinition(safeSubtype.toLowerCase());
 
-    // Fetch the subtype's own icon (stored on the PromotionSubtype node)
+    // Fetch the subtype's own icon and allowed base labels (stored on the PromotionSubtype node)
     const subtypeDef = await this.promotionSchema.getSubtypeDefinition(safeSubtype.toLowerCase());
     const subtypeIcon = subtypeDef?.icon ?? '❓';
+
+    // Enforce allowed base types: deny promotion if the entity's base type is not in the list
+    if (subtypeDef?.allowedBaseLabels?.length) {
+      const entityBaseLabel = config.label;
+      const allowed = subtypeDef.allowedBaseLabels.map((l) => l.toLowerCase());
+      if (!allowed.includes(entityBaseLabel.toLowerCase())) {
+        throw new BadRequestException(
+          `Subtype "${safeSubtype}" cannot be applied to a "${entityBaseLabel}" entity. ` +
+          `Allowed base types: ${subtypeDef.allowedBaseLabels.join(', ')}.`,
+        );
+      }
+    }
 
     // Auto-register user-defined subtype (merging properties, preserving icon)
     const propertyKeys = Object.keys(safeProps);
