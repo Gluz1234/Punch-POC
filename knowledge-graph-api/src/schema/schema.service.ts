@@ -357,9 +357,38 @@ export class SchemaService {
       ),
     ) as string[];
 
+    const subtypeLabelSet = new Set(subtypeDefs.map((def) => def.label?.toLowerCase()));
+    const customBaseLabelSet = new Set(customBaseLabels.map((l) => l.toLowerCase()));
+
+    // Include EntitySchema-registered labels (e.g. created via smart-create)
+    const registeredSchemas = await this.schemaRegistration.getAllEntitySchemas();
+    const dynamicLabels = registeredSchemas
+      .map((s) => s.label)
+      .filter(
+        (label) =>
+          !configuredLabelSet.has(label.toLowerCase()) &&
+          !subtypeLabelSet.has(label.toLowerCase()) &&
+          !customBaseLabelSet.has(label.toLowerCase()),
+      );
+
+    // Also include any labels that exist in the graph but were never registered
+    // (e.g. created via /dynamic/nodes which skips schema registration)
+    const seenLabels = new Set([
+      ...configuredLabelSet,
+      ...subtypeLabelSet,
+      ...customBaseLabelSet,
+      ...dynamicLabels.map((l) => l.toLowerCase()),
+    ]);
+    const allGraphLabels = await this.getLabels(false); // excludes internal schema labels
+    const unregisteredLabels = allGraphLabels.filter(
+      (label) => !seenLabels.has(label.toLowerCase()) && !INTERNAL_SCHEMA_LABELS.has(label),
+    );
+
     const allBaseLabels = [
       ...configured.map((e) => e.label),
       ...customBaseLabels.sort((a, b) => a.localeCompare(b)),
+      ...dynamicLabels.sort((a, b) => a.localeCompare(b)),
+      ...unregisteredLabels.sort((a, b) => a.localeCompare(b)),
     ];
 
     const nodeLabels = await Promise.all(
