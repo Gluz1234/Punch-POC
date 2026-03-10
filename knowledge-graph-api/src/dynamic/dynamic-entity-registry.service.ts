@@ -82,6 +82,7 @@ export class DynamicEntityRegistryService implements OnApplicationBootstrap {
       idField: cfg.idField,
       displayName: cfg.label,
       route: `${cfg.label.toLowerCase()}s`,
+      icon: '❓',
       properties: cfg.properties ?? {},
       propertyTypes: cfg.propertyTypes ?? {},
     };

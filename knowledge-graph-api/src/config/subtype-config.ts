@@ -16,6 +16,7 @@ export interface SubtypeDefinition {
   label: string;
   baseLabel: string;
   properties: string[];
+  icon: string;
 }
 
 export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
@@ -23,6 +24,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     key: 'student',
     label: 'Student',
     baseLabel: 'Person',
+    icon: '📝',
     properties: [
       'student_id',
       'gpa',
@@ -36,6 +38,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     key: 'employee',
     label: 'Employee',
     baseLabel: 'Person',
+    icon: '💼',
     properties: [
       'employee_number',
       'contract_type',
@@ -49,6 +52,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     key: 'resident',
     label: 'Resident',
     baseLabel: 'Person',
+    icon: '🏠',
     properties: [
       'resident_id',
       'registration_date',
@@ -61,6 +65,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     key: 'researcher',
     label: 'Researcher',
     baseLabel: 'Person',
+    icon: '🔬',
     properties: [
       'orcid_id',
       'research_field',
@@ -73,6 +78,7 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     key: 'artist',
     label: 'Artist',
     baseLabel: 'Person',
+    icon: '🎨',
     properties: [
       'artist_id',
       'primary_medium',

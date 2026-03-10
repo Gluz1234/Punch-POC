@@ -19,6 +19,9 @@ public class Course
     public string? Level         { get; set; }              // Undergraduate / Graduate / PhD
     public string? AcademicTerm  { get; set; }              // e.g. "Fall 2023"
 
+    /// <summary>Emoji icon representing this entity type.</summary>
+    public string Icon { get; set; } = "📚";
+
     public override string ToString() => $"Course [{EntityId}]: {Name} ({Code})";
 }
 
@@ -37,6 +40,9 @@ public class Department
     public string? Code        { get; set; }
     public string? Description { get; set; }
     public string? HeadName    { get; set; }                   // dept head (denormalized for display)
+
+    /// <summary>Emoji icon representing this entity type.</summary>
+    public string Icon { get; set; } = "🏛️";
 
     public override string ToString() => $"Department [{EntityId}]: {Name}";
 }

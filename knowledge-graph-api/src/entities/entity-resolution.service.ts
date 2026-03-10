@@ -500,4 +500,40 @@ export class EntityResolutionService {
 
     return normalized;
   }
+
+  async deleteByEntityId(entityId: string) {
+    if (!entityId?.trim()) {
+      throw new BadRequestException('entityId is required');
+    }
+
+    const resolution = await this.resolveCanonicalEntityId(entityId);
+    const canonicalId = resolution.canonicalEntityId;
+    const safeIdField = this.neo4j.sanitizeIdentifier(EntityResolutionService.CANONICAL_ID_FIELD);
+
+    // Fetch labels before deletion for the response
+    const labelRecords = await this.neo4j.runQuery(
+      `MATCH (n:Entity {\`${safeIdField}\`: $id}) RETURN labels(n) AS labels LIMIT 1`,
+      { id: canonicalId },
+    );
+
+    if (!labelRecords.length) {
+      throw new NotFoundException(`Entity ${canonicalId} not found`);
+    }
+
+    const labels = (labelRecords[0].get('labels') as string[]).filter(
+      (l) => !INTERNAL_LABELS.has(l),
+    );
+
+    await this.neo4j.runQuery(
+      `MATCH (n:Entity {\`${safeIdField}\`: $id}) DETACH DELETE n`,
+      { id: canonicalId },
+    );
+
+    return {
+      deleted: true,
+      entityId: canonicalId,
+      requestedEntityId: entityId,
+      labels,
+    };
+  }
 }

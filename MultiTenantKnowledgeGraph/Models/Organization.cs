@@ -24,6 +24,9 @@ public class Organization
     public string? Website { get; set; }
     public string? Phone { get; set; }
 
+    /// <summary>Emoji icon representing this entity type.</summary>
+    public string Icon { get; set; } = "🏢";
+
     public override string ToString() =>
         $"Organization [{EntityId}]: {Name} ({OrganizationType})";
 }

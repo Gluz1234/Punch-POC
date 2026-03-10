@@ -4,11 +4,15 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { DynamicService } from './dynamic.service';
+import { EntityResolutionService } from '../entities/entity-resolution.service';
 
 @ApiTags('Dynamic')
 @Controller('dynamic')
 export class DynamicController {
-  constructor(private readonly dynamicService: DynamicService) {}
+  constructor(
+    private readonly dynamicService: DynamicService,
+    private readonly resolutionService: EntityResolutionService,
+  ) {}
 
   // ── Smart create ──────────────────────────────────────────────────────────
 
@@ -17,8 +21,8 @@ export class DynamicController {
   // Checks if the type exists; if not, registers a new schema type, then creates the node.
   @Post('smart-create')
   @ApiOperation({ summary: 'Auto-detect or register type, then create a node' })
-  @ApiBody({ schema: { example: { label: 'balls', properties: { size: 'large', taste: 'salty' } } } })
-  smartCreate(@Body() dto: { label: string; properties?: Record<string, any> }) {
+  @ApiBody({ schema: { example: { label: 'balls', icon: '⚽', properties: { size: 'large', taste: 'salty' } } } })
+  smartCreate(@Body() dto: { label: string; icon?: string; properties?: Record<string, any> }) {
     return this.dynamicService.smartCreate(dto);
   }
 
@@ -112,5 +116,20 @@ export class DynamicController {
   @HttpCode(200)
   deleteRelationship(@Body() dto: any) {
     return this.dynamicService.deleteRelationship(dto);
+  }
+
+  // DELETE /api/dynamic/entity/:entityId
+  // Deletes any entity by entity_id alone — no label or idField needed.
+  @Delete('entity/:entityId')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Delete entity by ID',
+    description: 'Permanently deletes any entity and all its relationships using entity_id alone. Resolves merged aliases to the canonical node before deletion.',
+  })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiResponse({ status: 200, description: 'Entity deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Entity not found' })
+  deleteByEntityId(@Param('entityId') entityId: string) {
+    return this.resolutionService.deleteByEntityId(entityId);
   }
 }

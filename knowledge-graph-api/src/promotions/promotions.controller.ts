@@ -110,7 +110,7 @@ export class PromotionsController {
 
   @Post('schema/subtypes')
   @ApiOperation({ summary: 'Define/update a subtype', description: 'Create or update a promotion subtype definition and its fields at runtime' })
-  @ApiBody({ schema: { example: { key: 'intern', label: 'Intern', baseLabel: 'Person', properties: ['intern_id', 'start_date', 'department'] } } })
+  @ApiBody({ schema: { example: { key: 'intern', label: 'Intern', baseLabel: 'Person', icon: '🧑‍💼', properties: ['intern_id', 'start_date', 'department'] } } })
   @ApiResponse({ status: 201, description: 'Subtype definition created/updated' })
   upsertSubtypeDefinition(@Body() dto: PromotionSubtypeDefinitionDto) {
     return this.promotionSchema.upsertSubtypeDefinition(dto);

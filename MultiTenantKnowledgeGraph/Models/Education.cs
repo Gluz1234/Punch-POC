@@ -24,6 +24,9 @@ public class Education
     public DateTime? EndDate { get; set; }
     public string? Grade { get; set; }
 
+    /// <summary>Emoji icon representing this entity type.</summary>
+    public string Icon { get; set; } = "🎓";
+
     public override string ToString() =>
         $"Education [{EntityId}]: {Title} ({EducationType})";
 }

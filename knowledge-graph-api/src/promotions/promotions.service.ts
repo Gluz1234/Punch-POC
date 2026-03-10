@@ -104,7 +104,11 @@ export class PromotionsService implements OnApplicationBootstrap {
     // Ensure built-in subtype is registered (fallback)
     await this.ensureSubtypeDefinition(safeSubtype.toLowerCase());
 
-    // Auto-register user-defined subtype
+    // Fetch the subtype's own icon (stored on the PromotionSubtype node)
+    const subtypeDef = await this.promotionSchema.getSubtypeDefinition(safeSubtype.toLowerCase());
+    const subtypeIcon = subtypeDef?.icon ?? '❓';
+
+    // Auto-register user-defined subtype (merging properties, preserving icon)
     const propertyKeys = Object.keys(safeProps);
     if (propertyKeys.length > 0) {
       try {
@@ -112,6 +116,7 @@ export class PromotionsService implements OnApplicationBootstrap {
           key: safeSubtype.toLowerCase(),
           label: safeSubtype,
           baseLabel: config.label,
+          icon: subtypeIcon,
           properties: propertyKeys,
         });
       } catch (err) {
@@ -119,11 +124,16 @@ export class PromotionsService implements OnApplicationBootstrap {
       }
     }
 
-    // Build SET clauses dynamically
-    const setParts = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`).join(', ');
-    const setClause = setParts ? `SET ${setParts}` : '';
+    // Build SET clauses: user-provided properties + namespaced subtype icon
+    // e.g. student_icon = '📝' — never overwrites the base entity's `icon` property
+    const subtypeIconProp = `${safeSubtype.toLowerCase()}_icon`;
+    const setParts = [
+      ...Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`),
+      `n.\`${subtypeIconProp}\` = $subtypeIcon`,
+    ].join(', ');
+    const setClause = `SET ${setParts}`;
 
-    const params: Record<string, any> = { entityId: canonicalEntityId };
+    const params: Record<string, any> = { entityId: canonicalEntityId, subtypeIcon };
     for (const [k, v] of Object.entries(safeProps)) {
       params[`prop_${k}`] = v;
     }
@@ -196,9 +206,8 @@ export class PromotionsService implements OnApplicationBootstrap {
     );
 
     const baseTypes = configured.map((entity) => {
-      const subtypeLabels = Array.from(
-        subtypeLabelsByBase.get(entity.label.toLowerCase()) ?? [],
-      ).sort((a, b) => a.localeCompare(b));
+      const subtypeMap = subtypeLabelsByBase.get(entity.label.toLowerCase()) ?? new Map<string, { label: string; icon: string }>();
+      const subtypes = Array.from(subtypeMap.values()).sort((a, b) => a.label.localeCompare(b.label));
 
       return {
         key: entity.key,
@@ -206,19 +215,20 @@ export class PromotionsService implements OnApplicationBootstrap {
         displayName: entity.displayName,
         route: entity.route,
         idField: entity.idField,
+        icon: entity.icon,
         isConfigured: true,
-        subtypeCount: subtypeLabels.length,
-        subtypes: subtypeLabels,
+        subtypeCount: subtypes.length,
+        subtypes,
       };
     });
 
-    for (const [baseLower, subtypeSet] of subtypeLabelsByBase.entries()) {
+    for (const [baseLower, subtypeMap] of subtypeLabelsByBase.entries()) {
       if (configuredByLabel.has(baseLower)) {
         continue;
       }
 
-      const subtypeLabels = Array.from(subtypeSet).sort((a, b) => a.localeCompare(b));
-      const displayLabel = subtypeLabels.length > 0
+      const subtypes = Array.from(subtypeMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+      const displayLabel = subtypes.length > 0
         ? subtypeDefs.find((def) => def.baseLabel.toLowerCase() === baseLower)?.baseLabel ?? baseLower
         : baseLower;
 
@@ -228,9 +238,10 @@ export class PromotionsService implements OnApplicationBootstrap {
         displayName: displayLabel,
         route: null,
         idField: 'entity_id',
+        icon: '',
         isConfigured: false,
-        subtypeCount: subtypeLabels.length,
-        subtypes: subtypeLabels,
+        subtypeCount: subtypes.length,
+        subtypes,
       });
     }
 
@@ -286,6 +297,7 @@ export class PromotionsService implements OnApplicationBootstrap {
           kind: 'base',
           key: configuredBase.key,
           route: configuredBase.route,
+          icon: configuredBase.icon,
         };
       }
 
@@ -296,6 +308,7 @@ export class PromotionsService implements OnApplicationBootstrap {
           kind: 'subtype',
           key: subtype.key,
           baseLabel: subtype.baseLabel,
+          icon: subtype.icon,
         };
       }
 
@@ -305,12 +318,14 @@ export class PromotionsService implements OnApplicationBootstrap {
           kind: 'base',
           key: null,
           route: null,
+          icon: '',
         };
       }
 
       return {
         label,
         kind: 'unknown',
+        icon: '',
       };
     });
 
@@ -339,9 +354,9 @@ export class PromotionsService implements OnApplicationBootstrap {
     return result;
   }
 
-  private buildSubtypeLookups(subtypeDefs: Array<{ key: string; label: string; baseLabel: string }>) {
-    const subtypeByLabel = new Map<string, { key: string; label: string; baseLabel: string }>();
-    const subtypeLabelsByBase = new Map<string, Set<string>>();
+  private buildSubtypeLookups(subtypeDefs: Array<{ key: string; label: string; baseLabel: string; icon: string }>) {
+    const subtypeByLabel = new Map<string, { key: string; label: string; baseLabel: string; icon: string }>();
+    const subtypeLabelsByBase = new Map<string, Map<string, { label: string; icon: string }>>();
     const baseLabelSet = new Set<string>();
 
     for (const subtypeDef of subtypeDefs) {
@@ -359,12 +374,13 @@ export class PromotionsService implements OnApplicationBootstrap {
         key: subtypeDef.key,
         label: normalizedSubtype,
         baseLabel: normalizedBase,
+        icon: subtypeDef.icon ?? '',
       });
 
       if (!subtypeLabelsByBase.has(baseLower)) {
-        subtypeLabelsByBase.set(baseLower, new Set<string>());
+        subtypeLabelsByBase.set(baseLower, new Map<string, { label: string; icon: string }>());
       }
-      subtypeLabelsByBase.get(baseLower)?.add(normalizedSubtype);
+      subtypeLabelsByBase.get(baseLower)?.set(subtypeLower, { label: normalizedSubtype, icon: subtypeDef.icon ?? '' });
       baseLabelSet.add(baseLower);
     }
 

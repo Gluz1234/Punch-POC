@@ -19,6 +19,7 @@ export interface EntitySchemaDefinition {
   key: string;
   label: string;
   properties: Array<{ name: string; type: string }>;
+  icon: string;
 }
 
 export interface RelationshipSchemaDefinition {
@@ -70,6 +71,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
         await this.upsertEntitySchema({
           key: subtype.key,
           label: subtype.label,
+          icon: subtype.icon,
           properties: subtype.properties.map(name => ({ name, type: 'STRING' })),
         });
         console.log(`✓ Registered subtype entity: ${subtype.label}`);
@@ -102,9 +104,10 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
       await this.neo4j.runQuery(
         `
         MERGE (e:EntitySchema { key: $key })
-        SET e.label = $label
+        SET e.label = $label,
+            e.icon  = $icon
         `,
-        { key: entity.key, label: entity.label }
+        { key: entity.key, label: entity.label, icon: entity.icon ?? '' }
       );
 
       // Create property nodes and relationships
@@ -136,7 +139,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
       `
       MATCH (e:EntitySchema)
       OPTIONAL MATCH (e)-[:HAS_PROPERTY]->(p:SchemaProperty)
-      RETURN e.key AS key, e.label AS label,
+      RETURN e.key AS key, e.label AS label, e.icon AS icon,
              collect(DISTINCT { name: p.name, type: toUpper(p.type) }) AS properties
       ORDER BY e.label
       `
@@ -145,6 +148,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
     return records.map(r => ({
       key: r.get('key'),
       label: r.get('label'),
+      icon: r.get('icon') ?? '',
       properties: (r.get('properties') ?? []).filter(p => p.name), // Filter out nulls
     }));
   }
@@ -157,7 +161,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
       `
       MATCH (e:EntitySchema { label: $label })
       OPTIONAL MATCH (e)-[:HAS_PROPERTY]->(p:SchemaProperty)
-      RETURN e.key AS key, e.label AS label,
+      RETURN e.key AS key, e.label AS label, e.icon AS icon,
              collect(DISTINCT { name: p.name, type: toUpper(p.type) }) AS properties
       `,
       { label }
@@ -169,6 +173,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
     return {
       key: r.get('key'),
       label: r.get('label'),
+      icon: r.get('icon') ?? '',
       properties: (r.get('properties') ?? []).filter(p => p.name),
     };
   }
@@ -210,6 +215,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
     return {
       key: entity.key,
       label: entity.label,
+      icon: entity.icon ?? '',
       properties,
     };
   }
@@ -227,7 +233,7 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
       type: this.normalizeType(p.type),
     }));
 
-    await this.upsertEntitySchema({ key, label, properties: normalizedProperties });
+    await this.upsertEntitySchema({ key, label, icon: '❓', properties: normalizedProperties });
     console.log(`✓ Auto-registered user-defined entity "${label}" with ${properties.length} properties`);
   }
 

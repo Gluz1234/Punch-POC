@@ -29,6 +29,9 @@ export interface EntityConfig {
   /** Property types for type validation and schema info */
   propertyTypes?: Record<string, string>; // key -> type (String, Integer, etc.)
   
+  /** Emoji icon representing this type */
+  icon: string;
+
   /** Special query filters (optional) */
   specialQueries?: {
     name: string;
@@ -49,6 +52,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     legacyIdFields: ['strong_id', 'strongId'],
     displayName: 'Person',
     route: 'persons',
+    icon: '🧑',
     properties: {
       first_name: 'First name',
       last_name: 'Last name',
@@ -77,6 +81,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     legacyIdFields: ['org_id', 'orgId'],
     displayName: 'Organization',
     route: 'organizations',
+    icon: '🏢',
     properties: {
       name: 'Organization name',
       organization_type: 'Type (University/Company/etc)',
@@ -97,6 +102,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     legacyIdFields: ['location_id', 'locationId'],
     displayName: 'Location',
     route: 'locations',
+    icon: '📍',
     properties: {
       name: 'Location name',
       location_type: 'Type (City/Country/etc)',
@@ -123,6 +129,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     legacyIdFields: ['skill_id', 'skillId'],
     displayName: 'Skill',
     route: 'skills',
+    icon: '⚡',
     properties: {
       name: 'Skill name',
       category: 'Skill category',
@@ -141,6 +148,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     legacyIdFields: ['education_id', 'educationId'],
     displayName: 'Education',
     route: 'education',
+    icon: '🎓',
     properties: {
       title: 'Education title',
       education_type: 'Type (Degree/Certificate)',
@@ -161,6 +169,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     legacyIdFields: ['course_id', 'courseId'],
     displayName: 'Course',
     route: 'courses',
+    icon: '📚',
     properties: {
       name: 'Course name',
       code: 'Course code',
@@ -196,6 +205,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     legacyIdFields: ['department_id', 'departmentId'],
     displayName: 'Department',
     route: 'departments',
+    icon: '🏛️',
     properties: {
       name: 'Department name',
       code: 'Department code',

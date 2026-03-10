@@ -23,6 +23,9 @@ public class Location
     public string? PostalCode { get; set; }
     public long? Population { get; set; }
 
+    /// <summary>Emoji icon representing this entity type.</summary>
+    public string Icon { get; set; } = "📍";
+
     public override string ToString() =>
         $"Location [{EntityId}]: {Name} ({LocationType})";
 }

@@ -70,6 +70,7 @@ export class SchemaService {
 
       return {
         label,
+        icon: registeredSchema.icon ?? '',
         properties: normalizedProperties,
         totalProperties: normalizedProperties.length,
       };
@@ -101,6 +102,7 @@ export class SchemaService {
         await this.schemaRegistration.upsertEntitySchema({
           key: entityConfig.key,
           label: entityConfig.label,
+          icon: entityConfig.icon ?? '',
           properties: props,
         });
       } catch (err) {
@@ -109,6 +111,7 @@ export class SchemaService {
 
       return {
         label,
+        icon: entityConfig.icon ?? '',
         properties: props,
         totalProperties: props.length,
       };
@@ -127,6 +130,7 @@ export class SchemaService {
 
         return {
           label,
+          icon: subtypeDef.icon ?? '',
           properties: subtypeProps,
           totalProperties: subtypeProps.length,
         };
@@ -168,6 +172,7 @@ export class SchemaService {
 
     return {
       label,
+      icon: '❓',
       properties: propertiesWithTypes,
       totalProperties: properties.length
     };

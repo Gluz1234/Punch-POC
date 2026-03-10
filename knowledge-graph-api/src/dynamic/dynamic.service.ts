@@ -237,7 +237,7 @@ export class DynamicService {
 
   // ── SMART CREATE: auto-detect or register type, then create node ────────
 
-  async smartCreate(dto: { label: string; properties?: Record<string, any> }) {
+  async smartCreate(dto: { label: string; icon?: string; properties?: Record<string, any> }) {
     if (!dto.label) throw new BadRequestException('label is required');
 
     const safeLabel = this.neo4j.sanitizeIdentifier(dto.label);
@@ -249,6 +249,9 @@ export class DynamicService {
     const safeIdField = this.neo4j.sanitizeIdentifier(idField);
 
     if (!existingSchema) {
+      // icon is required when registering a brand-new type
+      if (!dto.icon) throw new BadRequestException('icon is required when creating a new type');
+
       // Register a new schema type based on the incoming data
       const schemaProps: Array<{ name: string; type: string }> = [
         { name: idField, type: 'String' },
@@ -261,6 +264,7 @@ export class DynamicService {
         key: safeLabel.toLowerCase(),
         label: safeLabel,
         properties: schemaProps,
+        icon: dto.icon,
       });
 
       // Create a unique constraint on the auto-generated id field

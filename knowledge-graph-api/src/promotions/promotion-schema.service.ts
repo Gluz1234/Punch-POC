@@ -6,6 +6,7 @@ export interface PromotionSubtypeDefinitionDto {
   label: string;
   baseLabel: string;
   properties: string[];
+  icon: string;
 }
 
 export interface PromotionSubtypeDefinition {
@@ -13,6 +14,7 @@ export interface PromotionSubtypeDefinition {
   label: string;
   baseLabel: string;
   properties: string[];
+  icon: string;
 }
 
 /**
@@ -35,7 +37,8 @@ export class PromotionSchemaService {
       `
       MERGE (s:PromotionSubtype { key: $key })
       SET s.label = $label,
-          s.base_label = $baseLabel
+          s.base_label = $baseLabel,
+          s.icon = $icon
       WITH s
       OPTIONAL MATCH (s)-[r:HAS_FIELD]->(f:PromotionField)
       DELETE r
@@ -46,12 +49,14 @@ export class PromotionSchemaService {
       RETURN s.key        AS key,
              s.label      AS label,
              s.base_label AS baseLabel,
+             s.icon       AS icon,
              $properties  AS properties
       `,
       {
         key: dto.key,
         label: dto.label,
         baseLabel: dto.baseLabel,
+        icon: dto.icon ?? '',
         properties,
       },
     );
@@ -61,6 +66,7 @@ export class PromotionSchemaService {
       key: row.get('key'),
       label: row.get('label'),
       baseLabel: row.get('baseLabel'),
+      icon: row.get('icon') ?? '',
       properties: row.get('properties'),
     };
   }
@@ -73,6 +79,7 @@ export class PromotionSchemaService {
       RETURN s.key        AS key,
              s.label      AS label,
              s.base_label AS baseLabel,
+             s.icon       AS icon,
              collect(DISTINCT f.name) AS properties
       ORDER BY label
       `,
@@ -83,6 +90,7 @@ export class PromotionSchemaService {
       key: r.get('key'),
       label: r.get('label'),
       baseLabel: r.get('baseLabel'),
+      icon: r.get('icon') ?? '',
       properties: (r.get('properties') ?? []) as string[],
     }));
   }
@@ -95,6 +103,7 @@ export class PromotionSchemaService {
       RETURN s.key        AS key,
              s.label      AS label,
              s.base_label AS baseLabel,
+             s.icon       AS icon,
              collect(DISTINCT f.name) AS properties
       ORDER BY baseLabel, label
       `,
@@ -104,8 +113,33 @@ export class PromotionSchemaService {
       key: r.get('key'),
       label: r.get('label'),
       baseLabel: r.get('baseLabel'),
+      icon: r.get('icon') ?? '',
       properties: (r.get('properties') ?? []) as string[],
     }));
+  }
+
+  async getSubtypeDefinition(key: string): Promise<PromotionSubtypeDefinition | null> {
+    const records = await this.neo4j.runQuery(
+      `
+      MATCH (s:PromotionSubtype { key: $key })
+      OPTIONAL MATCH (s)-[:HAS_FIELD]->(f:PromotionField)
+      RETURN s.key        AS key,
+             s.label      AS label,
+             s.base_label AS baseLabel,
+             s.icon       AS icon,
+             collect(DISTINCT f.name) AS properties
+      `,
+      { key },
+    );
+    if (!records.length) return null;
+    const r = records[0];
+    return {
+      key: r.get('key'),
+      label: r.get('label'),
+      baseLabel: r.get('baseLabel'),
+      icon: r.get('icon') ?? '',
+      properties: (r.get('properties') ?? []) as string[],
+    };
   }
 
   /**
