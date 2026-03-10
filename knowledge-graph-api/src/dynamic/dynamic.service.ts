@@ -1,20 +1,13 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { int } from 'neo4j-driver';
-import { randomUUID } from 'crypto';
 import { Neo4jService } from '../neo4j/neo4j.service';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
-import { PromotionProjectionService } from '../promotions/promotion-projection.service';
-import { EntityResolutionService } from '../shared/entity-resolution.service';
-import { DynamicEntityRegistryService } from './dynamic-entity-registry.service';
 
 @Injectable()
 export class DynamicService {
   constructor(
     private readonly neo4j: Neo4jService,
     private readonly schemaRegistration: SchemaRegistrationService,
-    private readonly projection: PromotionProjectionService,
-    private readonly resolution: EntityResolutionService,
-    private readonly registry: DynamicEntityRegistryService,
   ) {}
 
   // ── CREATE or UPSERT a node of any label(s) ───────────────────────────────
@@ -24,17 +17,12 @@ export class DynamicService {
 
   async upsertNode(dto: any) {
     if (!dto.labels?.length)  throw new BadRequestException('At least one label is required');
+    if (!dto.idField)         throw new BadRequestException('idField is required');
+    if (dto.id === undefined) throw new BadRequestException('id is required');
 
-    const safeLabels = Array.from(new Set([...(dto.labels as string[]), 'Entity']))
-      .map(l => this.neo4j.sanitizeIdentifier(l));
-    const safeIdField = this.neo4j.sanitizeIdentifier(dto.idField ?? 'entity_id');
+    const safeLabels  = (dto.labels as string[]).map(l => this.neo4j.sanitizeIdentifier(l));
+    const safeIdField = this.neo4j.sanitizeIdentifier(dto.idField);
     const safeProps   = this.sanitizePropertyKeys(dto.properties ?? {});
-    const requestedNodeId = (dto.id !== undefined && dto.id !== null && String(dto.id).trim())
-      ? String(dto.id).trim()
-      : randomUUID();
-    const nodeId = this.isCanonicalIdField(safeIdField)
-      ? await this.resolution.resolveCanonicalEntityIdIfExists(requestedNodeId)
-      : requestedNodeId;
 
     if (dto.createConstraint) {
       await this.neo4j.createConstraintForLabel(safeLabels[0], safeIdField);
@@ -44,7 +32,7 @@ export class DynamicService {
     const setParts  = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`);
     const setClause = setParts.length ? `, ${setParts.join(', ')}` : '';
 
-    const params: Record<string, any> = { nodeId };
+    const params: Record<string, any> = { nodeId: String(dto.id) };
     for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(`
@@ -54,23 +42,9 @@ export class DynamicService {
       RETURN n, labels(n) AS labels`,
       params,
     );
-
-    const primaryLabel = safeLabels.find(l => l !== 'Entity') ?? safeLabels[0];
-    this.registry.register(
-      primaryLabel,
-      safeIdField,
-      Object.fromEntries(Object.keys(safeProps).map(k => [k, k.replace(/_/g, ' ')])),
-      Object.fromEntries(Object.entries(safeProps).map(([k, v]) => [k, this.inferType(v)])),
-    ).catch(err => console.warn(`Failed to register dynamic entity ${primaryLabel}:`, err));
-
-    const node = await this.projectNodeRecord(records[0]);
-    const identity = this.isCanonicalIdField(safeIdField)
-      ? await this.resolution.buildMutationContextForEntity(requestedNodeId, true)
-      : await this.buildDraftIdentityContext(safeLabels[0], safeProps);
-
     return {
-      ...node,
-      _identity: identity,
+      ...this.neo4j.toPlainObject(records[0].get('n').properties),
+      labels: records[0].get('labels'),
     };
   }
 
@@ -82,7 +56,10 @@ export class DynamicService {
       `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels LIMIT $limit`,
       { limit: int(limit) },
     );
-    return Promise.all(records.map(r => this.projectNodeRecord(r)));
+    return records.map(r => ({
+      ...this.neo4j.toPlainObject(r.get('n').properties),
+      labels: r.get('labels'),
+    }));
   }
 
   // ── GET a single node by label + idField + id ─────────────────────────────
@@ -96,7 +73,10 @@ export class DynamicService {
     );
     if (!records.length)
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-    return this.projectNodeRecord(records[0]);
+    return {
+      ...this.neo4j.toPlainObject(records[0].get('n').properties),
+      labels: records[0].get('labels'),
+    };
   }
 
   // ── UPDATE properties on a dynamic node ──────────────────────────────────
@@ -105,15 +85,12 @@ export class DynamicService {
     const safeLabel   = this.neo4j.sanitizeIdentifier(label);
     const safeIdField = this.neo4j.sanitizeIdentifier(idField);
     const safeProps   = this.sanitizePropertyKeys(properties);
-    const resolvedId = this.isCanonicalIdField(safeIdField)
-      ? (await this.resolution.resolveCanonicalEntityId(id)).canonicalEntityId
-      : id;
 
     if (!Object.keys(safeProps).length)
       throw new BadRequestException('No properties provided to update');
 
     const setParts = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`);
-    const params: Record<string, any> = { id: resolvedId };
+    const params: Record<string, any> = { id };
     for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(
@@ -124,15 +101,9 @@ export class DynamicService {
     );
     if (!records.length)
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-
-    const node = await this.projectNodeRecord(records[0]);
-    const identity = this.isCanonicalIdField(safeIdField)
-      ? await this.resolution.buildMutationContextForEntity(id, true)
-      : await this.buildDraftIdentityContext(safeLabel, safeProps);
-
     return {
-      ...node,
-      _identity: identity,
+      ...this.neo4j.toPlainObject(records[0].get('n').properties),
+      labels: records[0].get('labels'),
     };
   }
 
@@ -141,27 +112,14 @@ export class DynamicService {
   async deleteNode(label: string, idField: string, id: string) {
     const safeLabel   = this.neo4j.sanitizeIdentifier(label);
     const safeIdField = this.neo4j.sanitizeIdentifier(idField);
-    const identity = this.isCanonicalIdField(safeIdField)
-      ? await this.resolution.buildMutationContextForEntity(id, false)
-      : null;
-    const resolvedId = identity?.canonicalEntityId ?? id;
-
     const records     = await this.neo4j.runQuery(
       `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id})
        DETACH DELETE n RETURN count(n) AS deleted`,
-      { id: resolvedId },
+      { id },
     );
     if (!records[0].get('deleted').toNumber())
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-
-    return {
-      deleted: true,
-      label,
-      idField,
-      id: resolvedId,
-      requestedId: id,
-      ...(identity ? { _identity: identity } : {}),
-    };
+    return { deleted: true, label, idField, id };
   }
 
   // ── ADD a label to an existing node (dynamic promotion) ───────────────────
@@ -170,27 +128,17 @@ export class DynamicService {
     const safeLabel    = this.neo4j.sanitizeIdentifier(label);
     const safeIdField  = this.neo4j.sanitizeIdentifier(idField);
     const safeNewLabel = this.neo4j.sanitizeIdentifier(newLabel);
-    const resolvedId = this.isCanonicalIdField(safeIdField)
-      ? (await this.resolution.resolveCanonicalEntityId(id)).canonicalEntityId
-      : id;
-
     const records      = await this.neo4j.runQuery(
       `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id})
        SET n:\`${safeNewLabel}\`
        RETURN n, labels(n) AS labels`,
-      { id: resolvedId },
+      { id },
     );
     if (!records.length)
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-
-    const node = await this.projectNodeRecord(records[0]);
-    const identity = this.isCanonicalIdField(safeIdField)
-      ? await this.resolution.buildMutationContextForEntity(id, true)
-      : await this.buildDraftIdentityContext(safeLabel, {});
-
     return {
-      ...node,
-      _identity: identity,
+      ...this.neo4j.toPlainObject(records[0].get('n').properties),
+      labels: records[0].get('labels'),
     };
   }
 
@@ -206,21 +154,12 @@ export class DynamicService {
     const safeType        = this.neo4j.sanitizeIdentifier(dto.type);
     const safeProps       = this.sanitizePropertyKeys(dto.properties ?? {});
 
-    const requestedFromId = String(dto.fromId);
-    const requestedToId = String(dto.toId);
-    const fromId = this.isCanonicalIdField(safeFromIdField)
-      ? await this.resolution.resolveCanonicalEntityIdIfExists(requestedFromId)
-      : requestedFromId;
-    const toId = this.isCanonicalIdField(safeToIdField)
-      ? await this.resolution.resolveCanonicalEntityIdIfExists(requestedToId)
-      : requestedToId;
-
     const setParts  = Object.keys(safeProps).map(k => `r.\`${k}\` = $prop_${k}`);
     const setClause = setParts.length ? `SET ${setParts.join(', ')}` : '';
 
     const params: Record<string, any> = {
-      fromId,
-      toId,
+      fromId:    String(dto.fromId),
+      toId:      String(dto.toId),
       createdAt: new Date().toISOString(),
     };
     for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
@@ -240,29 +179,11 @@ export class DynamicService {
     if (!records.length)
       throw new NotFoundException('One or both nodes not found — relationship not created');
 
-    const identityEntries = await Promise.all([
-      this.isCanonicalIdField(safeFromIdField)
-        ? this.resolution.buildMutationContextForEntity(requestedFromId, true)
-        : Promise.resolve(null),
-      this.isCanonicalIdField(safeToIdField)
-        ? this.resolution.buildMutationContextForEntity(requestedToId, true)
-        : Promise.resolve(null),
-    ]);
-
-    const identity: Record<string, any> = {};
-    if (identityEntries[0]) {
-      identity.source = identityEntries[0];
-    }
-    if (identityEntries[1]) {
-      identity.target = identityEntries[1];
-    }
-
     return {
       type:       records[0].get('relType'),
       properties: this.neo4j.toPlainObject(records[0].get('relProps')),
-      from:       { labels: records[0].get('fromLabels'), id: fromId, requestedId: requestedFromId },
-      to:         { labels: records[0].get('toLabels'),   id: toId, requestedId: requestedToId },
-      ...(Object.keys(identity).length ? { _identity: identity } : {}),
+      from:       { labels: records[0].get('fromLabels'), id: dto.fromId },
+      to:         { labels: records[0].get('toLabels'),   id: dto.toId },
     };
   }
 
@@ -283,7 +204,7 @@ export class DynamicService {
       RETURN type(r)        AS relType,
              properties(r)  AS relProps,
              labels(m)      AS otherLabels,
-             COALESCE(m.entity_id, m.name, m.strong_id, m.org_id, m.skill_id,
+             COALESCE(m.name, m.strong_id, m.org_id, m.skill_id,
                       m.location_id, m.education_id, m.course_id,
                       m.department_id, m.id) AS otherId`,
       { id },
@@ -304,81 +225,35 @@ export class DynamicService {
     const safeToIdField   = this.neo4j.sanitizeIdentifier(dto.toIdField);
     const safeType        = this.neo4j.sanitizeIdentifier(dto.type);
 
-    const requestedFromId = String(dto.fromId);
-    const requestedToId = String(dto.toId);
-    const fromId = this.isCanonicalIdField(safeFromIdField)
-      ? await this.resolution.resolveCanonicalEntityIdIfExists(requestedFromId)
-      : requestedFromId;
-    const toId = this.isCanonicalIdField(safeToIdField)
-      ? await this.resolution.resolveCanonicalEntityIdIfExists(requestedToId)
-      : requestedToId;
-
     await this.neo4j.runQuery(`
       MATCH (from:\`${safeFromLabel}\` {\`${safeFromIdField}\`: $fromId})
             -[r:\`${safeType}\`]->
             (to:\`${safeToLabel}\`   {\`${safeToIdField}\`:   $toId})
       DELETE r`,
-      { fromId, toId },
+      { fromId: String(dto.fromId), toId: String(dto.toId) },
     );
-
-    const identityEntries = await Promise.all([
-      this.isCanonicalIdField(safeFromIdField)
-        ? this.resolution.buildMutationContextForEntity(requestedFromId, false)
-        : Promise.resolve(null),
-      this.isCanonicalIdField(safeToIdField)
-        ? this.resolution.buildMutationContextForEntity(requestedToId, false)
-        : Promise.resolve(null),
-    ]);
-
-    const identity: Record<string, any> = {};
-    if (identityEntries[0]) {
-      identity.source = identityEntries[0];
-    }
-    if (identityEntries[1]) {
-      identity.target = identityEntries[1];
-    }
-
-    return {
-      deleted: true,
-      type: dto.type,
-      fromId,
-      toId,
-      requestedFromId,
-      requestedToId,
-      ...(Object.keys(identity).length ? { _identity: identity } : {}),
-    };
+    return { deleted: true, type: dto.type, fromId: dto.fromId, toId: dto.toId };
   }
 
   // ── SMART CREATE: auto-detect or register type, then create node ────────
 
-  async smartCreate(dto: { label?: string; properties?: Record<string, any>; fields?: Record<string, any> }) {
-    if (!this.isObjectRecord(dto)) {
-      throw new BadRequestException('Request body must be an object');
-    }
+  async smartCreate(dto: { label: string; properties?: Record<string, any> }) {
+    if (!dto.label) throw new BadRequestException('label is required');
 
-    const label = typeof dto.label === 'string' ? dto.label.trim() : '';
-    if (!label) throw new BadRequestException('label is required');
-
-    const incomingProps = dto.properties ?? dto.fields ?? {};
-    if (!this.isObjectRecord(incomingProps)) {
-      throw new BadRequestException('properties (or fields) must be an object');
-    }
-
-    const safeLabel = this.neo4j.sanitizeIdentifier(label);
-    const safeProps = this.sanitizePropertyKeys(incomingProps);
+    const safeLabel = this.neo4j.sanitizeIdentifier(dto.label);
+    const safeProps = this.sanitizePropertyKeys(dto.properties ?? {});
 
     // Check if this type already has a registered schema
     const existingSchema = await this.schemaRegistration.getEntitySchema(safeLabel);
-    const idField = 'entity_id';
+    const idField = `${safeLabel.toLowerCase()}_id`;
     const safeIdField = this.neo4j.sanitizeIdentifier(idField);
 
     if (!existingSchema) {
       // Register a new schema type based on the incoming data
       const schemaProps: Array<{ name: string; type: string }> = [
-        { name: idField, type: 'STRING' },
+        { name: idField, type: 'String' },
       ];
       for (const [key, value] of Object.entries(safeProps)) {
-        if (key === idField) continue;
         schemaProps.push({ name: key, type: this.inferType(value) });
       }
 
@@ -390,60 +265,41 @@ export class DynamicService {
 
       // Create a unique constraint on the auto-generated id field
       await this.neo4j.createConstraintForLabel(safeLabel, safeIdField);
-
-      await this.registry.register(
-        safeLabel,
-        idField,
-        Object.fromEntries(
-          schemaProps.filter(p => p.name !== idField).map(p => [p.name, p.name.replace(/_/g, ' ')]),
-        ),
-        Object.fromEntries(schemaProps.map(p => [p.name, p.type])),
-      ).catch(err => console.warn(`Failed to register dynamic entity config for ${safeLabel}:`, err));
     }
 
-    // Use caller-provided entity_id if present; otherwise generate one.
-    const providedEntityId =
-      typeof safeProps[idField] === 'string' && safeProps[idField].trim()
-        ? safeProps[idField].trim()
-        : undefined;
-    const requestedNodeId = providedEntityId ?? randomUUID();
-    const nodeId = await this.resolution.resolveCanonicalEntityIdIfExists(requestedNodeId);
-
-    // Do not SET entity_id from payload again; MERGE key already controls it.
-    const { [idField]: _ignoredEntityId, ...writableProps } = safeProps;
+    // Generate a unique id for the node
+    const nodeId = `${safeLabel.toLowerCase()}_${Date.now()}`;
 
     // Build SET clause from properties
-    const setParts = Object.keys(writableProps).map(k => `n.\`${k}\` = $prop_${k}`);
+    const setParts = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`);
     const setClause = setParts.length ? `, ${setParts.join(', ')}` : '';
 
     const params: Record<string, any> = { nodeId };
-    for (const [k, v] of Object.entries(writableProps)) params[`prop_${k}`] = v;
+    for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(
-      `MERGE (n:\`${safeLabel}\`:Entity {\`${safeIdField}\`: $nodeId})
+      `MERGE (n:\`${safeLabel}\` {\`${safeIdField}\`: $nodeId})
        ON CREATE SET n.\`${safeIdField}\` = $nodeId${setClause}
        ON MATCH  SET n.\`${safeIdField}\` = $nodeId${setClause}
        RETURN n, labels(n) AS labels`,
       params,
     );
 
-    const node = await this.projectNodeRecord(records[0]);
-    const identity = await this.resolution.buildMutationContextForEntity(requestedNodeId, true);
-
     return {
-      ...node,
-      _identity: identity,
+      ...this.neo4j.toPlainObject(records[0].get('n').properties),
+      labels: records[0].get('labels'),
+      schemaExisted: !!existingSchema,
     };
   }
 
   private inferType(value: any): string {
-    if (typeof value === 'number') return Number.isInteger(value) ? 'INTEGER' : 'FLOAT';
-    if (typeof value === 'boolean') return 'BOOLEAN';
+    if (typeof value === 'number') return Number.isInteger(value) ? 'Integer' : 'Float';
+    if (typeof value === 'boolean') return 'Boolean';
     if (typeof value === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return 'DATE';
-      return 'STRING';
+      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return 'Date';
+      return 'String';
     }
-    return 'STRING';
+    return 'String';
   }
 
   // ── Sanitize property key names ───────────────────────────────────────────
@@ -454,37 +310,5 @@ export class DynamicService {
       clean[this.neo4j.sanitizeIdentifier(key)] = value;
     }
     return clean;
-  }
-
-  private isCanonicalIdField(idField: string): boolean {
-    return idField.toLowerCase() === 'entity_id';
-  }
-
-  private async buildDraftIdentityContext(label: string, properties: Record<string, any>) {
-    const possibleDuplicates = await this.resolution.getPossibleDuplicatesForDraft(
-      label,
-      properties,
-      undefined,
-      5,
-    );
-
-    return {
-      requestedEntityId: null,
-      canonicalEntityId: null,
-      wasMergedAlias: false,
-      mergePath: [],
-      possibleDuplicates,
-      duplicateCount: possibleDuplicates.length,
-    };
-  }
-
-  private isObjectRecord(value: unknown): value is Record<string, any> {
-    return !!value && typeof value === 'object' && !Array.isArray(value);
-  }
-
-  private async projectNodeRecord(record: any) {
-    const properties = this.neo4j.toPlainObject(record.get('n').properties);
-    const labels = record.get('labels') as string[];
-    return this.projection.projectTypedNode(properties, labels);
   }
 }
