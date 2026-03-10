@@ -28,7 +28,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"entity_id\": \"person-sarah-chen\",\n  \"first_name\": \"Sarah\",\n  \"last_name\": \"Chen\",\n  \"email\": \"sarah.chen@gmail.com\",\n  \"nationality\": \"American\",\n  \"status\": \"Active\"\n}"
+                                                                   "raw":  "{\n  \"first_name\": \"Sarah\",\n  \"last_name\": \"Chen\",\n  \"email\": \"sarah.chen@gmail.com\",\n  \"nationality\": \"American\",\n  \"status\": \"Active\"\n}"
                                                                }
                                                   }
                                   },
@@ -162,7 +162,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"entity_id\": \"org-mit\",\n  \"name\": \"MIT\",\n  \"organization_type\": \"University\",\n  \"industry\": \"Education\"\n}"
+                                                                   "raw":  "{\n  \"name\": \"MIT\",\n  \"organization_type\": \"University\",\n  \"industry\": \"Education\"\n}"
                                                                }
                                                   }
                                   },
@@ -205,7 +205,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"entity_id\": \"loc-amsterdam\",\n  \"name\": \"Amsterdam\",\n  \"location_type\": \"City\",\n  \"latitude\": 52.3676,\n  \"longitude\": 4.9041\n}"
+                                                                   "raw":  "{\n  \"name\": \"Amsterdam\",\n  \"location_type\": \"City\",\n  \"latitude\": 52.3676,\n  \"longitude\": 4.9041\n}"
                                                                }
                                                   }
                                   },
@@ -241,7 +241,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"entity_id\": \"skill-python\",\n  \"name\": \"Python\",\n  \"category\": \"Programming Language\"\n}"
+                                                                   "raw":  "{\n  \"name\": \"Python\",\n  \"category\": \"Programming Language\"\n}"
                                                                }
                                                   }
                                   },
@@ -277,7 +277,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"entity_id\": \"edu-cs-mit\",\n  \"title\": \"BSc Computer Science\",\n  \"education_type\": \"Degree\",\n  \"field_of_study\": \"Computer Science\"\n}"
+                                                                   "raw":  "{\n  \"title\": \"BSc Computer Science\",\n  \"education_type\": \"Degree\",\n  \"field_of_study\": \"Computer Science\"\n}"
                                                                }
                                                   }
                                   },
@@ -306,7 +306,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"entity_id\": \"course-6006\",\n  \"org_id\": \"org-mit\",\n  \"name\": \"Introduction to Algorithms\",\n  \"code\": \"6.006\",\n  \"credits\": 12,\n  \"level\": \"Undergraduate\"\n}"
+                                                                   "raw":  "{\n  \"org_id\": \"org-mit\",\n  \"name\": \"Introduction to Algorithms\",\n  \"code\": \"6.006\",\n  \"credits\": 12,\n  \"level\": \"Undergraduate\"\n}"
                                                                }
                                                   }
                                   },
@@ -342,7 +342,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"entity_id\": \"dept-mit-cs\",\n  \"org_id\": \"org-mit\",\n  \"name\": \"Dept. of EECS\",\n  \"code\": \"EECS\"\n}"
+                                                                   "raw":  "{\n  \"org_id\": \"org-mit\",\n  \"name\": \"Dept. of EECS\",\n  \"code\": \"EECS\"\n}"
                                                                }
                                                   }
                                   },
