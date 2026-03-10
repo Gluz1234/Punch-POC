@@ -42,8 +42,7 @@ public class PromotionRepository
                 p.gpa              = $gpa,
                 p.enrollment_year  = $enrollmentYear,
                 p.enrollment_status= $enrollmentStatus,
-                p.study_mode       = $studyMode,
-                p.student_icon     = $icon
+                p.study_mode       = $studyMode
             RETURN p";
 
         await using var session = _neo4j.OpenSession();
@@ -55,7 +54,6 @@ public class PromotionRepository
             enrollmentYear   = profile.EnrollmentYear,
             enrollmentStatus = profile.EnrollmentStatus,
             studyMode        = profile.StudyMode,
-            icon             = profile.Icon
         });
         await result.ConsumeAsync();
     }
@@ -72,8 +70,7 @@ public class PromotionRepository
                 p.contract_type   = $contractType,
                 p.salary_band     = $salaryBand,
                 p.department      = $department,
-                p.hire_date       = $hireDate,
-                p.employee_icon   = $icon
+                p.hire_date       = $hireDate
             RETURN p";
 
         await using var session = _neo4j.OpenSession();
@@ -85,7 +82,6 @@ public class PromotionRepository
             salaryBand     = profile.SalaryBand,
             department     = profile.Department,
             hireDate       = profile.HireDate?.ToString("o"),
-            icon           = profile.Icon
         });
         await result.ConsumeAsync();
     }
@@ -101,8 +97,7 @@ public class PromotionRepository
             SET p.resident_id        = $residentId,
                 p.registration_date  = $registrationDate,
                 p.residency_type     = $residencyType,
-                p.marital_status     = $maritalStatus,
-                p.resident_icon      = $icon
+                p.marital_status     = $maritalStatus
             RETURN p";
 
         await using var session = _neo4j.OpenSession();
@@ -113,7 +108,6 @@ public class PromotionRepository
             registrationDate = profile.RegistrationDate?.ToString("o"),
             residencyType    = profile.ResidencyType,
             maritalStatus    = profile.MaritalStatus,
-            icon             = profile.Icon
         });
         await result.ConsumeAsync();
     }
@@ -130,8 +124,7 @@ public class PromotionRepository
             SET p.orcid_id          = $orcidId,
                 p.research_field    = $researchField,
                 p.h_index           = $hIndex,
-                p.researcher_type   = $researcherType,
-                p.researcher_icon   = $icon
+                p.researcher_type   = $researcherType
             RETURN p";
 
         await using var session = _neo4j.OpenSession();
@@ -142,7 +135,6 @@ public class PromotionRepository
             researchField  = profile.ResearchField,
             hIndex         = profile.HIndex,
             researcherType = profile.ResearcherType,
-            icon           = profile.Icon
         });
         await result.ConsumeAsync();
     }

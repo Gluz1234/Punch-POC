@@ -174,6 +174,9 @@ public abstract class GenericEntityRepository<T> where T : class, new()
             var value = prop.GetValue(entity);
             if (value == null) continue;
 
+            // Icon is a type-level property — never stored per-node in Neo4j
+            if (prop.Name == "Icon") continue;
+
             var snakeCaseName = GetSnakeCasePropertyName(prop.Name);
             result[snakeCaseName] = ConvertPropertyValue(value);
         }

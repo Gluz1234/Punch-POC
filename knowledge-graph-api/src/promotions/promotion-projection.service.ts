@@ -2,9 +2,11 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
 import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from '../config/entity-config';
 import { PromotionSchemaService } from './promotion-schema.service';
+import { SchemaRegistrationService } from '../schema/schema-registration.service';
 
 export interface TypedPropertiesResponse {
   entityType: string;
+  icon?: string;
   entityId: string;
   labels: string[];
   base: {
@@ -13,6 +15,7 @@ export interface TypedPropertiesResponse {
   };
   subtypes: {
     label: string;
+    icon?: string;
     properties: Record<string, any>;
   }[];
   unknownProperties: Record<string, any>;
@@ -23,6 +26,7 @@ export class PromotionProjectionService {
   constructor(
     private readonly neo4j: Neo4jService,
     private readonly schema: PromotionSchemaService,
+    private readonly schemaRegistration: SchemaRegistrationService,
   ) {}
 
   async getEntityTypedProperties(entityType: string, entityId: string): Promise<TypedPropertiesResponse> {
@@ -60,22 +64,62 @@ export class PromotionProjectionService {
     explicitEntityId?: string,
   ): Promise<TypedPropertiesResponse> {
     const normalizedLabels = this.normalizeLabels(labels);
-    const props = this.neo4j.toPlainObject(properties ?? {});
+    // Strip legacy per-node icon props (e.g. employee_icon, student_icon) — icons are now type-level only
+    const rawProps = this.neo4j.toPlainObject(properties ?? {});
+    const props = Object.fromEntries(Object.entries(rawProps).filter(([k]) => !k.endsWith('_icon')));
     const entityId = explicitEntityId ?? this.extractEntityId(props);
     const config = this.tryResolveEntityConfigFromLabels(normalizedLabels);
 
     if (!config) {
       const fallbackLabel = this.resolveFallbackLabel(normalizedLabels);
+
+      // Look up icon and subtypes from Neo4j EntitySchema / PromotionSubtype
+      // so dynamic types created via smart-create also carry the right icon.
+      const [entitySchema, dynamicSubtypeDefs] = await Promise.all([
+        this.schemaRegistration.getEntitySchema(fallbackLabel),
+        this.schema.getSubtypeDefinitionsForBase(fallbackLabel),
+      ]);
+
+      const dynamicIcon = entitySchema?.icon ?? undefined;
+
+      // Bucket any properties that belong to dynamic subtypes present on this node
+      const subtypeBuckets: Record<string, Record<string, any>> = {};
+      const dynamicSubtypePropSets = new Map<string, Set<string>>();
+      for (const def of dynamicSubtypeDefs) {
+        dynamicSubtypePropSets.set(def.label, new Set<string>(def.properties));
+      }
+
+      const baseProps: Record<string, any> = {};
+      const unknownProps: Record<string, any> = {};
+
+      for (const [key, value] of Object.entries(props)) {
+        let assigned = false;
+        for (const label of normalizedLabels) {
+          const propSet = dynamicSubtypePropSets.get(label);
+          if (propSet && propSet.has(key)) {
+            if (!subtypeBuckets[label]) subtypeBuckets[label] = {};
+            subtypeBuckets[label][key] = value;
+            assigned = true;
+            break;
+          }
+        }
+        if (!assigned) baseProps[key] = value;
+      }
+
       return {
         entityType: fallbackLabel,
+        icon: dynamicIcon,
         entityId,
         labels: normalizedLabels,
         base: {
           label: fallbackLabel,
-          properties: props,
+          properties: baseProps,
         },
-        subtypes: [],
-        unknownProperties: {},
+        subtypes: Object.entries(subtypeBuckets).map(([label, bucketProperties]) => {
+          const subtypeDef = dynamicSubtypeDefs.find(d => d.label === label);
+          return { label, icon: subtypeDef?.icon ?? undefined, properties: bucketProperties };
+        }),
+        unknownProperties: unknownProps,
       };
     }
 
@@ -118,16 +162,21 @@ export class PromotionProjectionService {
 
     return {
       entityType: config.label,
+      icon: config.icon,
       entityId,
       labels: normalizedLabels,
       base: {
         label: config.label,
         properties: baseProperties,
       },
-      subtypes: Object.entries(subtypeBuckets).map(([label, bucketProperties]) => ({
-        label,
-        properties: bucketProperties,
-      })),
+      subtypes: Object.entries(subtypeBuckets).map(([label, bucketProperties]) => {
+        const subtypeDef = defs.find(d => d.label === label);
+        return {
+          label,
+          icon: subtypeDef?.icon ?? '❓',
+          properties: bucketProperties,
+        };
+      }),
       unknownProperties,
     };
   }

@@ -501,6 +501,65 @@ export class EntityResolutionService {
     return normalized;
   }
 
+  async getAllDuplicateGroups() {
+    const safeIdField = this.neo4j.sanitizeIdentifier(EntityResolutionService.CANONICAL_ID_FIELD);
+
+    const records = await this.neo4j.runQuery(
+      `
+      MATCH (duplicate:Entity)-[m:MERGED_INTO]->(primary:Entity)
+      WHERE EXISTS {
+        MATCH (event:MergeEvent {merge_id: m.merge_id})
+        WHERE coalesce(event.status, 'ACTIVE') = 'ACTIVE'
+      }
+      WITH primary, duplicate, m
+      RETURN primary.\`${safeIdField}\` AS canonicalEntityId,
+             labels(primary)               AS canonicalLabels,
+             properties(primary)           AS canonicalProps,
+             collect({
+               entityId:  duplicate.\`${safeIdField}\`,
+               labels:    labels(duplicate),
+               mergeId:   m.merge_id,
+               mergedAt:  duplicate.merged_at,
+               reason:    m.reason
+             })                            AS duplicates
+      ORDER BY canonicalEntityId
+      `,
+    );
+
+    const groups = records.map((r) => {
+      const canonicalProps = this.neo4j.toPlainObject(r.get('canonicalProps'));
+      const canonicalLabels = (r.get('canonicalLabels') as string[]).filter(
+        (l) => !INTERNAL_LABELS.has(l),
+      );
+      const duplicates = (r.get('duplicates') as any[]).map((d) => ({
+        entityId: d.entityId,
+        labels: (d.labels as string[]).filter((l) => !INTERNAL_LABELS.has(l)),
+        mergeId: d.mergeId,
+        mergedAt: d.mergedAt,
+        reason: d.reason ?? null,
+      }));
+
+      return {
+        canonicalEntityId: r.get('canonicalEntityId') as string,
+        canonicalLabels,
+        canonicalPreview: {
+          name: canonicalProps['name'],
+          first_name: canonicalProps['first_name'],
+          last_name: canonicalProps['last_name'],
+          email: canonicalProps['email'],
+        },
+        duplicateCount: duplicates.length,
+        duplicates,
+      };
+    });
+
+    return {
+      groups,
+      totalGroups: groups.length,
+      totalDuplicates: groups.reduce((sum, g) => sum + g.duplicateCount, 0),
+    };
+  }
+
   async deleteByEntityId(entityId: string) {
     if (!entityId?.trim()) {
       throw new BadRequestException('entityId is required');

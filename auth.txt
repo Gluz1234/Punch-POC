@@ -1,0 +1,214 @@
+Part 2 — Neo4j service implementation
+
+This service receives:
+
+{
+  "authz": {
+    "userId": "...",
+    "roles": ["read", "security-level-2"],
+    "environments": ["prod"],
+    "securityLevel": 2,
+    "permissions": {
+      "read": true,
+      "write": false
+    },
+    "isGuest": false,
+    "isAdmin": false
+  },
+  "request": {
+    "environment": "prod",
+    "fields": ["hostname", "ip", "salary"],
+    "connectionTypes": ["DEPENDS_ON", "OWNS"],
+    "action": "read"
+  }
+}
+
+We’ll enforce:
+
+environment allowed
+
+action allowed
+
+entity securityLevel <= authz.securityLevel
+
+Example Express Neo4j service
+
+If your Neo4j service is Node/Express, here is a full example.
+
+server.js
+const express = require('express');
+const neo4j = require('neo4j-driver');
+
+const app = express();
+app.use(express.json());
+
+const driver = neo4j.driver(
+  process.env.NEO4J_URI || 'bolt://localhost:7687',
+  neo4j.auth.basic(
+    process.env.NEO4J_USER || 'neo4j',
+    process.env.NEO4J_PASSWORD || 'password',
+  ),
+);
+
+app.post('/graph/query', async (req, res) => {
+  const { authz, request } = req.body;
+
+  if (!authz || !request) {
+    return res.status(400).json({ message: 'Missing authz or request' });
+  }
+
+  if (!authz.isAdmin) {
+    if (!authz.permissions?.[request.action]) {
+      return res.status(403).json({ message: 'Action not allowed' });
+    }
+
+    if (!authz.environments.includes(request.environment)) {
+      return res.status(403).json({ message: 'Environment not allowed' });
+    }
+  }
+
+  const requestedFields = Array.isArray(request.fields) ? request.fields : [];
+  const requestedConnectionTypes = Array.isArray(request.connectionTypes)
+    ? request.connectionTypes
+    : [];
+
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (e:Environment {name: $environment})-[:HAS_ENTITY]->(n)
+      WHERE $isAdmin = true
+         OR (
+              coalesce(n.securityLevel, 0) <= $securityLevel
+            )
+
+      OPTIONAL MATCH (n)-[r]->(m)
+      WHERE size($connectionTypes) = 0 OR type(r) IN $connectionTypes
+
+      RETURN n, r, m
+      `,
+      {
+        environment: request.environment,
+        securityLevel: authz.securityLevel,
+        connectionTypes: requestedConnectionTypes,
+        isAdmin: authz.isAdmin,
+      },
+    );
+
+    const entities = result.records.map((record) => {
+      const n = record.get('n');
+      const r = record.get('r');
+      const m = record.get('m');
+
+      const sourceProps = n?.properties ?? {};
+      const targetProps = m?.properties ?? {};
+
+      const filteredSource = filterFields(
+        sourceProps,
+        requestedFields,
+        authz.securityLevel,
+        authz.isAdmin,
+      );
+
+      const filteredTarget = filterFields(
+        targetProps,
+        requestedFields,
+        authz.securityLevel,
+        authz.isAdmin,
+      );
+
+      return {
+        source: {
+          labels: n?.labels ?? [],
+          properties: filteredSource,
+        },
+        connection: r
+          ? {
+              type: r.type,
+              properties: r.properties ?? {},
+            }
+          : null,
+        target: m
+          ? {
+              labels: m.labels ?? [],
+              properties: filteredTarget,
+            }
+          : null,
+      };
+    });
+
+    return res.json({ ok: true, data: entities });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Neo4j query failed' });
+  } finally {
+    await session.close();
+  }
+});
+
+function filterFields(properties, requestedFields, userSecurityLevel, isAdmin) {
+  const out = {};
+
+  for (const [key, value] of Object.entries(properties)) {
+    if (key === 'securityLevel' || key === 'environment') {
+      out[key] = value;
+      continue;
+    }
+
+    if (requestedFields.length > 0 && !requestedFields.includes(key)) {
+      continue;
+    }
+
+    if (isAdmin) {
+      out[key] = value;
+      continue;
+    }
+
+    // convention:
+    // for a field `salary`, store `salary_securityLevel`
+    const fieldSecKey = `${key}_securityLevel`;
+    const fieldSecurityLevel =
+      typeof properties[fieldSecKey] === 'number' ? properties[fieldSecKey] : 0;
+
+    if (fieldSecurityLevel <= userSecurityLevel) {
+      out[key] = value;
+    }
+  }
+
+  return out;
+}
+
+const port = process.env.PORT || 4000;
+app.listen(port, () => {
+  console.log(`Neo4j service listening on ${port}`);
+});
+Recommended graph data model
+
+For the filtering above, nodes should carry:
+
+environment
+
+securityLevel
+
+And fields can carry their own field-specific clearance as companion props:
+
+{
+  "hostname": "srv-01",
+  "hostname_securityLevel": 1,
+  "ip": "10.0.0.1",
+  "ip_securityLevel": 2,
+  "salary": 10000,
+  "salary_securityLevel": 3,
+  "securityLevel": 2
+}
+
+So if user clearance is 2:
+
+hostname visible
+
+ip visible
+
+salary hidden
+
+That matches your requirement exactly.

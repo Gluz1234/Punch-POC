@@ -252,6 +252,7 @@ export class GenericEntityService {
     }
 
     skipFields.add('id');
+    skipFields.add('icon'); // icon is a type-level property, never stored per-node
 
     const result: Record<string, any> = {};
     for (const [k, v] of Object.entries(dto || {})) {

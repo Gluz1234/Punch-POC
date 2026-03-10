@@ -107,6 +107,14 @@
                      "name":  "Identity Resolution",
                      "item":  [
                                   {
+                                      "name":  "Get all duplicate groups",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/identity/duplicates",
+                                                      "description":  "List all active merged duplicate groups with their canonical nodes"
+                                                  }
+                                  },
+                                  {
                                       "name":  "Resolve canonical entity ID",
                                       "request":  {
                                                       "method":  "GET",
@@ -749,7 +757,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"key\": \"alumni\",\n  \"label\": \"Alumni\",\n  \"baseLabel\": \"Person\",\n  \"properties\": [\n    \"alumni_id\",\n    \"graduation_year\",\n    \"degree_type\"\n  ]\n}"
+                                                                   "raw":  "{\n  \"key\": \"alumni\",\n  \"label\": \"Alumni\",\n  \"baseLabel\": \"Person\",\n  \"icon\": \"🎓\",\n  \"properties\": [\n    \"alumni_id\",\n    \"graduation_year\",\n    \"degree_type\"\n  ]\n}"
                                                                }
                                                   }
                                   },
@@ -772,6 +780,23 @@
                  {
                      "name":  "Dynamic (New Types)",
                      "item":  [
+                                  {
+                                      "name":  "Smart Create node",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{base}}/dynamic/smart-create",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"label\": \"Volunteer\",\n  \"icon\": \"\ud83d\ude4b\",\n  \"properties\": {\n    \"name\": \"Community Helper\",\n    \"area\": \"Education\",\n    \"hours_committed\": 40,\n    \"tenant_id\": \"tenant_ngo\"\n  }\n}"
+                                                               }
+                                                  }
+                                  },
                                   {
                                       "name":  "Create Volunteer node",
                                       "request":  {
@@ -934,6 +959,14 @@
                                                                    "mode":  "raw",
                                                                    "raw":  "{\n  \"fromLabel\": \"Person\",\n  \"fromIdField\": \"strong_id\",\n  \"fromId\": \"person-sarah-chen\",\n  \"toLabel\": \"Volunteer\",\n  \"toIdField\": \"volunteer_id\",\n  \"toId\": \"vol-001\",\n  \"type\": \"IS_VOLUNTEER\"\n}"
                                                                }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete entity by entity_id",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{base}}/dynamic/entity/entity-id-here",
+                                                      "description":  "Delete any entity by its entity_id (resolves canonical automatically)"
                                                   }
                                   }
                               ]
@@ -1173,6 +1206,13 @@
                                       "request":  {
                                                       "method":  "GET",
                                                       "url":  "{{base}}/schema/constraints"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "All indexes",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/indexes"
                                                   }
                                   },
                                   {

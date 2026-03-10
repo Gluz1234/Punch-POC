@@ -7,6 +7,16 @@ import { EntityResolutionService } from './entity-resolution.service';
 export class EntityResolutionController {
   constructor(private readonly resolutionService: EntityResolutionService) {}
 
+  @Get('duplicates')
+  @ApiOperation({
+    summary: 'Get all duplicate groups',
+    description: 'Returns all canonical entities that have active duplicates merged into them, grouped with their duplicate aliases.',
+  })
+  @ApiResponse({ status: 200, description: 'Duplicate groups with totals' })
+  getAllDuplicateGroups() {
+    return this.resolutionService.getAllDuplicateGroups();
+  }
+
   @Get(':entityId/canonical')
   @ApiOperation({ summary: 'Resolve canonical entity_id', description: 'Follow MERGED_INTO links and return the canonical entity_id for any entity alias.' })
   @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)' })

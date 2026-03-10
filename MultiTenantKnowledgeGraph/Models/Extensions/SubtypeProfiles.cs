@@ -24,7 +24,7 @@ public class StudentProfile
     public string? EnrollmentStatus { get; set; }            // Active / Graduated / On Leave
     public string? StudyMode { get; set; }                   // Full-time / Part-time
 
-    /// <summary>Emoji icon for the Student subtype (stored as student_icon, never overwrites base icon).</summary>
+    /// <summary>Emoji icon for the Student subtype. Type-level constant — not stored in Neo4j.</summary>
     public string Icon { get; set; } = "📝";
 }
 
@@ -42,7 +42,7 @@ public class EmployeeProfile
     public string? Department { get; set; }
     public DateTime? HireDate { get; set; }
 
-    /// <summary>Emoji icon for the Employee subtype (stored as employee_icon, never overwrites base icon).</summary>
+    /// <summary>Emoji icon for the Employee subtype. Type-level constant — not stored in Neo4j.</summary>
     public string Icon { get; set; } = "💼";
 }
 
@@ -59,7 +59,7 @@ public class ResidentProfile
     public string? ResidencyType { get; set; }               // Citizen / Expat / Temporary
     public string? MaritalStatus { get; set; }
 
-    /// <summary>Emoji icon for the Resident subtype (stored as resident_icon, never overwrites base icon).</summary>
+    /// <summary>Emoji icon for the Resident subtype. Type-level constant — not stored in Neo4j.</summary>
     public string Icon { get; set; } = "🏠";
 }
 
@@ -76,6 +76,6 @@ public class ResearcherProfile
     public int?    HIndex { get; set; }
     public string? ResearcherType { get; set; }              // PhD / PostDoc / Faculty
 
-    /// <summary>Emoji icon for the Researcher subtype (stored as researcher_icon, never overwrites base icon).</summary>
+    /// <summary>Emoji icon for the Researcher subtype. Type-level constant — not stored in Neo4j.</summary>
     public string Icon { get; set; } = "🔬";
 }
