@@ -74,8 +74,18 @@ export class DataService {
    */
   async getAllData(limit = 10000) {
     // Get all labels and relationship types
-    const labels = await this.schemaService.getLabels(false);
-    const relTypes = await this.schemaService.getRelationshipTypes();
+    const [allLabels, relTypes, subtypesResult] = await Promise.all([
+      this.schemaService.getLabels(false),
+      this.schemaService.getRelationshipTypes(),
+      this.schemaService.getAllSubtypes(),
+    ]);
+
+    // Build a set of subtype labels so they are not fetched as top-level buckets.
+    // Promoted nodes (e.g. Person:Student) already appear under their base type label.
+    const subtypeLabelSet = new Set(
+      subtypesResult.nodeLabels.map((s: any) => s.label as string),
+    );
+    const labels = allLabels.filter(l => !subtypeLabelSet.has(l));
 
     const nodesByLabel: Record<string, any[]> = {};
     const relationships: any[] = [];
@@ -154,15 +164,6 @@ export class DataService {
       }
     } catch (error) {
       console.warn(`⚠ Failed to fetch relationships:`, error.message);
-    }
-
-    // Get schemas for relationship types
-    for (const relType of relTypes) {
-      try {
-        const schema = await this.schemaService.getPropertiesForRelType(relType);
-      } catch (error) {
-        console.warn(`⚠ Failed to fetch schema for relationship type ${relType}:`, error.message);
-      }
     }
 
     return {
