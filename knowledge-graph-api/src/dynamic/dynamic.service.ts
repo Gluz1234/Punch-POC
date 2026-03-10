@@ -5,6 +5,7 @@ import { Neo4jService } from '../neo4j/neo4j.service';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
 import { PromotionProjectionService } from '../promotions/promotion-projection.service';
 import { EntityResolutionService } from '../shared/entity-resolution.service';
+import { DynamicEntityRegistryService } from './dynamic-entity-registry.service';
 
 @Injectable()
 export class DynamicService {
@@ -13,6 +14,7 @@ export class DynamicService {
     private readonly schemaRegistration: SchemaRegistrationService,
     private readonly projection: PromotionProjectionService,
     private readonly resolution: EntityResolutionService,
+    private readonly registry: DynamicEntityRegistryService,
   ) {}
 
   // ── CREATE or UPSERT a node of any label(s) ───────────────────────────────
@@ -52,6 +54,14 @@ export class DynamicService {
       RETURN n, labels(n) AS labels`,
       params,
     );
+
+    const primaryLabel = safeLabels.find(l => l !== 'Entity') ?? safeLabels[0];
+    this.registry.register(
+      primaryLabel,
+      safeIdField,
+      Object.fromEntries(Object.keys(safeProps).map(k => [k, k.replace(/_/g, ' ')])),
+      Object.fromEntries(Object.entries(safeProps).map(([k, v]) => [k, this.inferType(v)])),
+    ).catch(err => console.warn(`Failed to register dynamic entity ${primaryLabel}:`, err));
 
     const node = await this.projectNodeRecord(records[0]);
     const identity = this.isCanonicalIdField(safeIdField)
@@ -380,6 +390,15 @@ export class DynamicService {
 
       // Create a unique constraint on the auto-generated id field
       await this.neo4j.createConstraintForLabel(safeLabel, safeIdField);
+
+      await this.registry.register(
+        safeLabel,
+        idField,
+        Object.fromEntries(
+          schemaProps.filter(p => p.name !== idField).map(p => [p.name, p.name.replace(/_/g, ' ')]),
+        ),
+        Object.fromEntries(schemaProps.map(p => [p.name, p.type])),
+      ).catch(err => console.warn(`Failed to register dynamic entity config for ${safeLabel}:`, err));
     }
 
     // Use caller-provided entity_id if present; otherwise generate one.
