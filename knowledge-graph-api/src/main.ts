@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule }   from './app.module';
-import { FullTextSearchService } from './shared/full-text-search.service';
+import { FullTextSearchService } from './query/full-text-search.service';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {

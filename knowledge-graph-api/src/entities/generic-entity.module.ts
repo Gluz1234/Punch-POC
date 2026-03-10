@@ -1,7 +1,7 @@
 import { Module, DynamicModule } from '@nestjs/common';
 import { GenericEntityService } from './generic-entity.service';
 import { createGenericEntityController } from './generic-entity.controller';
-import { EntityConfig } from './entity-config';
+import { EntityConfig } from '../config/entity-config';
 import { SchemaModule } from '../schema/schema.module';
 import { PromotionsModule } from '../promotions/promotions.module';
 import { EntityResolutionModule } from './entity-resolution.module';

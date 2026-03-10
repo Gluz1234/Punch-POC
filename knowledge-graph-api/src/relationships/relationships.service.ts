@@ -1,9 +1,9 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import neo4j from 'neo4j-driver';
-import { Neo4jService } from '../neo4j/neo4j.service';
-import { getAllEntities } from '../shared/entity-config';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
+import { getAllEntities } from '../config/entity-config';
 import { PromotionProjectionService } from '../promotions/promotion-projection.service';
-import { EntityResolutionService } from '../shared/entity-resolution.service';
+import { EntityResolutionService } from '../entities/entity-resolution.service';
 
 @Injectable()
 export class RelationshipsService {

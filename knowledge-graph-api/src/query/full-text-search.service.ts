@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import neo4j from 'neo4j-driver';
-import { Neo4jService } from '../neo4j/neo4j.service';
-import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from './entity-config';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
+import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from '../config/entity-config';
 
 export interface FullTextSearchResult {
   entity: string;

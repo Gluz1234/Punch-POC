@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException, OnApplicationBootstrap } from '@nestjs/common';
-import { Neo4jService } from '../neo4j/neo4j.service';
-import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from '../shared/entity-config';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
+import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from '../config/entity-config';
 import { PromotionSchemaService } from './promotion-schema.service';
-import { BUILTIN_SUBTYPES, getSubtypeDefinitionByKey } from './subtype-config';
+import { BUILTIN_SUBTYPES, getSubtypeDefinitionByKey } from '../config/subtype-config';
 import { PromotionProjectionService } from './promotion-projection.service';
-import { EntityResolutionService } from '../shared/entity-resolution.service';
+import { EntityResolutionService } from '../entities/entity-resolution.service';
 
 const INTERNAL_PROMOTION_LABELS = new Set([
   'Entity',

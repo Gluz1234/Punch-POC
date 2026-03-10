@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { GenericQueryService, QueryBuilderConfig, EntityReference } from './generic-query.service';
-import { ENTITY_CONFIGS } from './entity-config';
+import { ENTITY_CONFIGS } from '../config/entity-config';
 
 /**
  * Simplified Query Service

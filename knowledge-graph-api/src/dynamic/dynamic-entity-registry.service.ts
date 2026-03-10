@@ -1,6 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { Neo4jService } from '../neo4j/neo4j.service';
-import { ENTITY_CONFIGS, EntityConfig } from '../shared/entity-config';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
+import { ENTITY_CONFIGS, EntityConfig } from '../config/entity-config';
 
 // Snapshot of hardcoded keys at import time - these are never overwritten.
 const HARDCODED_KEYS = new Set(Object.keys(ENTITY_CONFIGS));

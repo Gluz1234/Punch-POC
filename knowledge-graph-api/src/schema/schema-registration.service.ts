@@ -11,9 +11,9 @@
  */
 
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { Neo4jService } from '../neo4j/neo4j.service';
-import { ENTITY_CONFIGS, getAllEntities } from '../shared/entity-config';
-import { BUILTIN_SUBTYPES } from '../promotions/subtype-config';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
+import { ENTITY_CONFIGS, getAllEntities } from '../config/entity-config';
+import { BUILTIN_SUBTYPES } from '../config/subtype-config';
 
 export interface EntitySchemaDefinition {
   key: string;

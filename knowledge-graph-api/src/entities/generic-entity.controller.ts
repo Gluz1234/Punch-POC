@@ -10,8 +10,8 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiBody, ApiResponse } from '@nestjs/swagger';
-import { GenericEntityService } from '../shared/generic-entity.service';
-import { EntityConfig } from '../shared/entity-config';
+import { GenericEntityService } from './generic-entity.service';
+import { EntityConfig } from '../config/entity-config';
 
 /**
  * Generic Entity Controller

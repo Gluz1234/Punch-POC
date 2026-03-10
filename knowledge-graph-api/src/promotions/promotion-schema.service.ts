@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Neo4jService } from '../neo4j/neo4j.service';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
 
 export interface PromotionSubtypeDefinitionDto {
   key: string;

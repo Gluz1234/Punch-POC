@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import neo4j, { Integer } from 'neo4j-driver';
 import { randomUUID } from 'crypto';
-import { Neo4jService } from '../neo4j/neo4j.service';
-import { EntityConfig, getAllEntities } from './entity-config';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
+import { EntityConfig, getAllEntities } from '../config/entity-config';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
 import { PromotionProjectionService } from '../promotions/promotion-projection.service';
 import { EntityResolutionService } from './entity-resolution.service';

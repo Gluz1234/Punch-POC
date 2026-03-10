@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { Neo4jService } from '../neo4j/neo4j.service';
-import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from '../shared/entity-config';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
+import { ENTITY_CONFIGS, EntityConfig, getAllEntities } from '../config/entity-config';
 import { PromotionSchemaService } from './promotion-schema.service';
 
 export interface TypedPropertiesResponse {

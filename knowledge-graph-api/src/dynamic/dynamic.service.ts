@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { int } from 'neo4j-driver';
-import { Neo4jService } from '../neo4j/neo4j.service';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
 
 @Injectable()

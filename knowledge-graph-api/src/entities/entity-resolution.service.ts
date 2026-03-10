@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import neo4j from 'neo4j-driver';
 import { randomUUID } from 'crypto';
-import { Neo4jService } from '../neo4j/neo4j.service';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
 
 const INTERNAL_LABELS = new Set([
   'Entity',

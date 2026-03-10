@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Neo4jService } from '../neo4j/neo4j.service';
-import { getAllEntities } from '../shared/entity-config';
+import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
+import { getAllEntities } from '../config/entity-config';
 import { SchemaRegistrationService } from './schema-registration.service';
 import { PromotionSchemaService } from '../promotions/promotion-schema.service';
 
