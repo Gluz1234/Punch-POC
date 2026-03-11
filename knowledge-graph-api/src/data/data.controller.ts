@@ -1,5 +1,5 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { DataService } from './data.service';
 
 @ApiTags('Data')
@@ -49,5 +49,47 @@ export class DataController {
   getAllData(@Query('limit') limit?: string) {
     const limitNum = limit ? parseInt(limit, 10) : 10000;
     return this.dataService.getAllData(limitNum);
+  }
+
+  @Post('restore')
+  @ApiOperation({
+    summary: 'Restore graph from snapshot',
+    description: 'Accepts the same payload shape returned by GET /api/data/all and upserts nodes/relationships. Intended for disaster recovery restore from source-of-truth exports.'
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        nodesByLabel: {
+          Person: [
+            {
+              entityType: 'Person',
+              entityId: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea',
+              labels: ['Person', 'Student'],
+              base: { label: 'Person', properties: { entity_id: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea', first_name: 'Sarah', last_name: 'Chen' } },
+              subtypes: [{ label: 'Student', properties: { student_id: 'MIT-2019-001', gpa: 3.9 } }],
+              unknownProperties: {},
+            },
+          ],
+        },
+        relationships: [
+          {
+            type: 'ENROLLED_IN',
+            count: 1,
+            relationships: [
+              {
+                type: 'ENROLLED_IN',
+                tenant_id: 'tenant_mit',
+                from: { entityId: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' },
+                to: { entityId: '8a9e24f4-c0d1-4c33-a4e5-b1e0f839d919' },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Snapshot restore completed with import statistics' })
+  restoreAllData(@Body() payload: any) {
+    return this.dataService.restoreAllData(payload);
   }
 }

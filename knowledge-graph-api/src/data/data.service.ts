@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import neo4j from 'neo4j-driver';
 import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
 import { SchemaService } from '../schema/schema.service';
@@ -232,6 +232,129 @@ export class DataService {
   }
 
   /**
+   * Restore snapshot exported from GET /api/data/all.
+   * Upserts nodes by entity_id and upserts relationships by (from, type, to).
+   */
+  async restoreAllData(payload: any) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new BadRequestException('Payload must be an object in the same shape as GET /api/data/all');
+    }
+
+    const nodesByLabel = payload.nodesByLabel;
+    const relationshipGroups = payload.relationships;
+
+    if (!nodesByLabel || typeof nodesByLabel !== 'object' || Array.isArray(nodesByLabel)) {
+      throw new BadRequestException('Payload.nodesByLabel must be an object');
+    }
+    if (relationshipGroups !== undefined && !Array.isArray(relationshipGroups)) {
+      throw new BadRequestException('Payload.relationships must be an array when provided');
+    }
+
+    const safeEntityIdField = this.neo4j.sanitizeIdentifier('entity_id');
+    const aggregatedNodes = this.collectSnapshotNodes(nodesByLabel);
+
+    let nodesUpserted = 0;
+    let nodesSkipped = 0;
+
+    for (const node of aggregatedNodes.values()) {
+      if (!node.entityId) {
+        nodesSkipped += 1;
+        continue;
+      }
+
+      const safeLabels = Array.from(node.labels)
+        .filter((label) => !INTERNAL_NODE_LABELS.has(label))
+        .map((label) => this.neo4j.sanitizeIdentifier(label));
+
+      if (!safeLabels.length) {
+        nodesSkipped += 1;
+        continue;
+      }
+
+      const labelClause = safeLabels.map((label) => `:\`${label}\``).join('');
+      const properties = {
+        ...node.properties,
+        entity_id: node.entityId,
+      };
+
+      await this.neo4j.runQuery(
+        `
+        MERGE (n:Entity {\`${safeEntityIdField}\`: $entityId})
+        SET n += $properties
+        SET n${labelClause}
+        RETURN n
+        `,
+        {
+          entityId: node.entityId,
+          properties,
+        },
+      );
+
+      nodesUpserted += 1;
+    }
+
+    const relationshipEntries = this.flattenRelationshipEntries(relationshipGroups ?? []);
+    let relationshipsUpserted = 0;
+    let relationshipsSkipped = 0;
+
+    for (const entry of relationshipEntries) {
+      const relationshipType = typeof entry.relationship?.type === 'string' && entry.relationship.type.trim()
+        ? entry.relationship.type.trim()
+        : entry.groupType;
+
+      if (!relationshipType) {
+        relationshipsSkipped += 1;
+        continue;
+      }
+
+      const safeType = this.neo4j.sanitizeIdentifier(relationshipType);
+      const fromId = this.extractEntityIdFromProjection(entry.relationship?.from);
+      const toId = this.extractEntityIdFromProjection(entry.relationship?.to);
+
+      if (!fromId || !toId) {
+        relationshipsSkipped += 1;
+        continue;
+      }
+
+      const relationshipProps = this.extractRelationshipProperties(entry.relationship);
+
+      const relResult = await this.neo4j.runQuery(
+        `
+        MATCH (a:Entity {\`${safeEntityIdField}\`: $fromId})
+        MATCH (b:Entity {\`${safeEntityIdField}\`: $toId})
+        MERGE (a)-[r:\`${safeType}\`]->(b)
+        SET r += $props
+        RETURN r
+        `,
+        {
+          fromId,
+          toId,
+          props: relationshipProps,
+        },
+      );
+
+      if (!relResult.length) {
+        relationshipsSkipped += 1;
+        continue;
+      }
+
+      relationshipsUpserted += 1;
+    }
+
+    return {
+      restored: true,
+      statistics: {
+        inputLabels: Object.keys(nodesByLabel).length,
+        inputRelationshipGroups: Array.isArray(relationshipGroups) ? relationshipGroups.length : 0,
+        nodesUpserted,
+        nodesSkipped,
+        relationshipsUpserted,
+        relationshipsSkipped,
+      },
+    };
+  }
+
+  /**
    * Helper to get the ID field name for a label.
    * Returns the first matching ID field from entity config.
    */
@@ -246,6 +369,226 @@ export class DataService {
       Department: 'entity_id',
     };
     return idFieldMap[label] || null;
+  }
+
+  private collectSnapshotNodes(nodesByLabel: Record<string, any>): Map<string, { entityId: string | null; labels: Set<string>; properties: Record<string, any> }> {
+    const out = new Map<string, { entityId: string | null; labels: Set<string>; properties: Record<string, any> }>();
+
+    for (const [bucketLabel, nodes] of Object.entries(nodesByLabel ?? {})) {
+      if (!Array.isArray(nodes)) {
+        continue;
+      }
+
+      for (const node of nodes) {
+        const normalized = this.normalizeSnapshotNode(node, bucketLabel);
+        if (!normalized) {
+          continue;
+        }
+
+        if (!normalized.entityId) {
+          continue;
+        }
+
+        const existing = out.get(normalized.entityId);
+        if (!existing) {
+          out.set(normalized.entityId, {
+            entityId: normalized.entityId,
+            labels: new Set(normalized.labels),
+            properties: { ...normalized.properties },
+          });
+          continue;
+        }
+
+        for (const label of normalized.labels) {
+          existing.labels.add(label);
+        }
+        Object.assign(existing.properties, normalized.properties);
+      }
+    }
+
+    return out;
+  }
+
+  private normalizeSnapshotNode(node: any, bucketLabel: string): { entityId: string | null; labels: string[]; properties: Record<string, any> } | null {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) {
+      return null;
+    }
+
+    const labels = new Set<string>();
+    if (typeof bucketLabel === 'string' && bucketLabel.trim()) {
+      labels.add(bucketLabel.trim());
+    }
+    if (typeof node.entityType === 'string' && node.entityType.trim()) {
+      labels.add(node.entityType.trim());
+    }
+    if (Array.isArray(node.labels)) {
+      for (const label of node.labels) {
+        if (typeof label === 'string' && label.trim()) {
+          labels.add(label.trim());
+        }
+      }
+    }
+    if (typeof node.base?.label === 'string' && node.base.label.trim()) {
+      labels.add(node.base.label.trim());
+    }
+
+    const properties: Record<string, any> = {};
+
+    const mergeProps = (obj: any) => {
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+        return;
+      }
+      for (const [key, value] of Object.entries(obj)) {
+        if (value === undefined) {
+          continue;
+        }
+        properties[key] = value;
+      }
+    };
+
+    if (node.base?.properties) {
+      mergeProps(node.base.properties);
+    }
+
+    if (Array.isArray(node.subtypes)) {
+      for (const subtype of node.subtypes) {
+        if (typeof subtype?.label === 'string' && subtype.label.trim()) {
+          labels.add(subtype.label.trim());
+        }
+        mergeProps(subtype?.properties);
+      }
+    }
+
+    mergeProps(node.unknownProperties);
+
+    // Support plain-node snapshots by keeping non-envelope keys
+    const reserved = new Set([
+      '_id',
+      'entityType',
+      'entityId',
+      'labels',
+      'icon',
+      'base',
+      'subtypes',
+      'unknownProperties',
+      'from',
+      'to',
+      'type',
+      'count',
+      'relationships',
+    ]);
+
+    for (const [key, value] of Object.entries(node)) {
+      if (reserved.has(key) || value === undefined) {
+        continue;
+      }
+      properties[key] = value;
+    }
+
+    const entityId = this.extractEntityIdFromProjection({
+      ...node,
+      base: { ...(node.base ?? {}), properties: { ...(node.base?.properties ?? {}), ...properties } },
+      labels: Array.from(labels),
+    });
+
+    return {
+      entityId,
+      labels: Array.from(labels),
+      properties,
+    };
+  }
+
+  private flattenRelationshipEntries(groups: any[]): Array<{ groupType: string | null; relationship: any }> {
+    const out: Array<{ groupType: string | null; relationship: any }> = [];
+
+    for (const group of Array.isArray(groups) ? groups : []) {
+      const groupType = typeof group?.type === 'string' && group.type.trim() ? group.type.trim() : null;
+
+      if (Array.isArray(group?.relationships)) {
+        for (const relationship of group.relationships) {
+          out.push({ groupType, relationship });
+        }
+        continue;
+      }
+
+      // Also allow flat relationship arrays for flexibility
+      if (group && typeof group === 'object' && (group.from || group.to)) {
+        out.push({ groupType, relationship: group });
+      }
+    }
+
+    return out;
+  }
+
+  private extractRelationshipProperties(relationship: any): Record<string, any> {
+    const props: Record<string, any> = {};
+    if (!relationship || typeof relationship !== 'object' || Array.isArray(relationship)) {
+      return props;
+    }
+
+    const reserved = new Set(['_id', 'type', 'from', 'to']);
+    for (const [key, value] of Object.entries(relationship)) {
+      if (reserved.has(key) || value === undefined) {
+        continue;
+      }
+      props[key] = value;
+    }
+
+    return props;
+  }
+
+  private extractEntityIdFromProjection(node: any): string | null {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) {
+      return null;
+    }
+
+    const tryValue = (value: any): string | null => {
+      if (value === undefined || value === null) {
+        return null;
+      }
+      const str = String(value).trim();
+      return str.length ? str : null;
+    };
+
+    const direct = tryValue(node.entityId);
+    if (direct) {
+      return direct;
+    }
+
+    const baseProps = node.base?.properties;
+    const baseEntityId = tryValue(baseProps?.entity_id);
+    if (baseEntityId) {
+      return baseEntityId;
+    }
+
+    const baseId = tryValue(baseProps?.id);
+    if (baseId) {
+      return baseId;
+    }
+
+    const merged: Record<string, any> = {
+      ...(baseProps && typeof baseProps === 'object' && !Array.isArray(baseProps) ? baseProps : {}),
+      ...(node.unknownProperties && typeof node.unknownProperties === 'object' && !Array.isArray(node.unknownProperties) ? node.unknownProperties : {}),
+    };
+
+    if (Array.isArray(node.subtypes)) {
+      for (const subtype of node.subtypes) {
+        if (subtype?.properties && typeof subtype.properties === 'object' && !Array.isArray(subtype.properties)) {
+          Object.assign(merged, subtype.properties);
+        }
+      }
+    }
+
+    const idLikeKey = Object.keys(merged).find((key) => /_id$/i.test(key));
+    if (idLikeKey) {
+      const idLikeValue = tryValue(merged[idLikeKey]);
+      if (idLikeValue) {
+        const firstLabel = Array.isArray(node.labels) && node.labels.length ? String(node.labels[0]) : String(node.entityType ?? node.base?.label ?? 'Entity');
+        return `${firstLabel}|${idLikeKey}|${idLikeValue}`;
+      }
+    }
+
+    return null;
   }
 
 }
