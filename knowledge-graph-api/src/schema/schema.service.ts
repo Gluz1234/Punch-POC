@@ -68,6 +68,28 @@ export class SchemaService {
     if (registeredSchema) {
       const normalizedProperties = this.normalizeProperties(registeredSchema.properties);
 
+      // EntitySchema also stores subtype labels. Enrich those with promotion metadata
+      // so /schema responses consistently expose baseLabel + allowedBaseLabels.
+      try {
+        const allDefs = await this.promotionSchema.getAllSubtypeDefinitions();
+        const subtypeDef = allDefs.find(
+          (st) => st.label.toLowerCase() === label.toLowerCase(),
+        );
+
+        if (subtypeDef) {
+          return {
+            label,
+            icon: subtypeDef.icon ?? registeredSchema.icon ?? '',
+            baseLabel: subtypeDef.baseLabel,
+            allowedBaseLabels: subtypeDef.allowedBaseLabels ?? [subtypeDef.baseLabel],
+            properties: normalizedProperties,
+            totalProperties: normalizedProperties.length,
+          };
+        }
+      } catch (err) {
+        console.warn(`⚠ Failed to enrich subtype schema for ${label}:`, err);
+      }
+
       return {
         label,
         icon: registeredSchema.icon ?? '',
@@ -120,7 +142,9 @@ export class SchemaService {
     // Check if this is a promotion subtype for any base label
     try {
       const allDefs = await this.promotionSchema.getAllSubtypeDefinitions();
-      const subtypeDef = allDefs.find(st => st.label === label);
+      const subtypeDef = allDefs.find(
+        (st) => st.label.toLowerCase() === label.toLowerCase(),
+      );
       if (subtypeDef) {
         // For subtypes, return only the subtype-specific properties
         const subtypeProps = subtypeDef.properties.map(prop => ({

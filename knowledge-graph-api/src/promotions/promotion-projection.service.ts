@@ -16,6 +16,8 @@ export interface TypedPropertiesResponse {
   subtypes: {
     label: string;
     icon?: string;
+    baseLabel: string;
+    allowedBaseLabels: string[];
     properties: Record<string, any>;
   }[];
   unknownProperties: Record<string, any>;
@@ -117,7 +119,14 @@ export class PromotionProjectionService {
         },
         subtypes: Object.entries(subtypeBuckets).map(([label, bucketProperties]) => {
           const subtypeDef = dynamicSubtypeDefs.find(d => d.label === label);
-          return { label, icon: subtypeDef?.icon ?? undefined, properties: bucketProperties };
+          const baseLabel = subtypeDef?.baseLabel ?? fallbackLabel;
+          return {
+            label,
+            icon: subtypeDef?.icon ?? undefined,
+            baseLabel,
+            allowedBaseLabels: subtypeDef?.allowedBaseLabels ?? [baseLabel],
+            properties: bucketProperties,
+          };
         }),
         unknownProperties: unknownProps,
       };
@@ -171,9 +180,12 @@ export class PromotionProjectionService {
       },
       subtypes: Object.entries(subtypeBuckets).map(([label, bucketProperties]) => {
         const subtypeDef = defs.find(d => d.label === label);
+        const baseLabel = subtypeDef?.baseLabel ?? config.label;
         return {
           label,
           icon: subtypeDef?.icon ?? '❓',
+          baseLabel,
+          allowedBaseLabels: subtypeDef?.allowedBaseLabels ?? [baseLabel],
           properties: bucketProperties,
         };
       }),

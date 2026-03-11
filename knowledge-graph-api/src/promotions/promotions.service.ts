@@ -218,7 +218,7 @@ export class PromotionsService implements OnApplicationBootstrap {
     );
 
     const baseTypes = configured.map((entity) => {
-      const subtypeMap = subtypeLabelsByBase.get(entity.label.toLowerCase()) ?? new Map<string, { label: string; icon: string }>();
+      const subtypeMap = subtypeLabelsByBase.get(entity.label.toLowerCase()) ?? new Map<string, { label: string; icon: string; baseLabel: string; allowedBaseLabels: string[] }>();
       const subtypes = Array.from(subtypeMap.values()).sort((a, b) => a.label.localeCompare(b.label));
 
       return {
@@ -320,6 +320,7 @@ export class PromotionsService implements OnApplicationBootstrap {
           kind: 'subtype',
           key: subtype.key,
           baseLabel: subtype.baseLabel,
+          allowedBaseLabels: subtype.allowedBaseLabels,
           icon: subtype.icon,
         };
       }
@@ -366,9 +367,9 @@ export class PromotionsService implements OnApplicationBootstrap {
     return result;
   }
 
-  private buildSubtypeLookups(subtypeDefs: Array<{ key: string; label: string; baseLabel: string; icon: string }>) {
-    const subtypeByLabel = new Map<string, { key: string; label: string; baseLabel: string; icon: string }>();
-    const subtypeLabelsByBase = new Map<string, Map<string, { label: string; icon: string }>>();
+  private buildSubtypeLookups(subtypeDefs: Array<{ key: string; label: string; baseLabel: string; icon: string; allowedBaseLabels?: string[] }>) {
+    const subtypeByLabel = new Map<string, { key: string; label: string; baseLabel: string; icon: string; allowedBaseLabels: string[] }>();
+    const subtypeLabelsByBase = new Map<string, Map<string, { label: string; icon: string; baseLabel: string; allowedBaseLabels: string[] }>>();
     const baseLabelSet = new Set<string>();
 
     for (const subtypeDef of subtypeDefs) {
@@ -381,18 +382,27 @@ export class PromotionsService implements OnApplicationBootstrap {
 
       const subtypeLower = normalizedSubtype.toLowerCase();
       const baseLower = normalizedBase.toLowerCase();
+      const allowedBaseLabels = Array.from(
+        new Set((subtypeDef.allowedBaseLabels?.length ? subtypeDef.allowedBaseLabels : [normalizedBase]).filter(Boolean)),
+      );
 
       subtypeByLabel.set(subtypeLower, {
         key: subtypeDef.key,
         label: normalizedSubtype,
         baseLabel: normalizedBase,
         icon: subtypeDef.icon ?? '',
+        allowedBaseLabels,
       });
 
       if (!subtypeLabelsByBase.has(baseLower)) {
-        subtypeLabelsByBase.set(baseLower, new Map<string, { label: string; icon: string }>());
+        subtypeLabelsByBase.set(baseLower, new Map<string, { label: string; icon: string; baseLabel: string; allowedBaseLabels: string[] }>());
       }
-      subtypeLabelsByBase.get(baseLower)?.set(subtypeLower, { label: normalizedSubtype, icon: subtypeDef.icon ?? '' });
+      subtypeLabelsByBase.get(baseLower)?.set(subtypeLower, {
+        label: normalizedSubtype,
+        icon: subtypeDef.icon ?? '',
+        baseLabel: normalizedBase,
+        allowedBaseLabels,
+      });
       baseLabelSet.add(baseLower);
     }
 

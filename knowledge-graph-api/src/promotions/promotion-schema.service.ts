@@ -189,6 +189,7 @@ export class PromotionSchemaService {
   ): Promise<PromotionSubtypeDefinition> {
     // Get existing definition so we can preserve both properties and allowedBaseLabels
     const existing = await this.getSubtypeDefinition(dto.key);
+    const mergedBaseLabel = existing?.baseLabel ?? dto.baseLabel;
 
     // Merge properties: keep all unique names
     const mergedProperties = Array.from(
@@ -205,6 +206,7 @@ export class PromotionSchemaService {
     // But we pass the merged sets instead
     return this.upsertSubtypeDefinition({
       ...dto,
+      baseLabel: mergedBaseLabel,
       properties: mergedProperties,
       ...(mergedAllowedBaseLabels ? { allowedBaseLabels: mergedAllowedBaseLabels } : {}),
     });
