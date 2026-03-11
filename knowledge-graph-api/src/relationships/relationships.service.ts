@@ -276,6 +276,57 @@ export class RelationshipsService {
     };
   }
 
+  // ── Delete all tenant-scoped relationships on an entity ─────────────────
+
+  async deleteAllEntityRelationshipsForTenant(
+    entityId: string,
+    tenantId: string,
+  ) {
+    if (!entityId?.trim()) {
+      throw new BadRequestException('entityId is required');
+    }
+    if (!tenantId?.trim()) {
+      throw new BadRequestException('tenantId is required');
+    }
+
+    const canonicalEntityId =
+      await this.resolution.resolveCanonicalEntityIdIfExists(entityId);
+    const safeIdField = this.neo4j.sanitizeIdentifier(
+      RelationshipsService.CANONICAL_ID_FIELD,
+    );
+
+    // Delete both outgoing AND incoming relationships on this entity
+    // that carry the given tenant_id.
+    const records = await this.neo4j.runQuery(
+      `
+      MATCH (n:Entity {\`${safeIdField}\`: $entityId})
+      OPTIONAL MATCH (n)-[r1 {tenant_id: $tenantId}]->()
+      OPTIONAL MATCH ()-[r2 {tenant_id: $tenantId}]->(n)
+      WITH n, collect(r1) + collect(r2) AS rels
+      FOREACH (r IN rels | DELETE r)
+      RETURN size(rels) AS deletedCount
+      `,
+      { entityId: canonicalEntityId, tenantId },
+    );
+
+    const deletedCount =
+      records[0]?.get('deletedCount')?.toNumber?.() ?? 0;
+
+    const identity = await this.resolution.buildMutationContextForEntity(
+      entityId,
+      false,
+    );
+
+    return {
+      deleted: true,
+      deletedCount,
+      entityId: canonicalEntityId,
+      requestedEntityId: entityId,
+      tenantId,
+      _identity: identity,
+    };
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   private normalizeLimit(limit: number): number {

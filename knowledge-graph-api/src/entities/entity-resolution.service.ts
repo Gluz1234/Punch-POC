@@ -560,6 +560,95 @@ export class EntityResolutionService {
     };
   }
 
+  async updateByEntityId(entityId: string, properties: Record<string, any>) {
+    if (!entityId?.trim()) {
+      throw new BadRequestException('entityId is required');
+    }
+
+    const safeProps = this.sanitizeUpdateProperties(properties);
+    if (!Object.keys(safeProps).length) {
+      throw new BadRequestException('No properties provided to update');
+    }
+
+    const resolution = await this.resolveCanonicalEntityId(entityId);
+    const canonicalId = resolution.canonicalEntityId;
+    const safeIdField = this.neo4j.sanitizeIdentifier(EntityResolutionService.CANONICAL_ID_FIELD);
+
+    const currentRecords = await this.neo4j.runQuery(
+      `MATCH (n:Entity {\`${safeIdField}\`: $id}) RETURN n, labels(n) AS labels LIMIT 1`,
+      { id: canonicalId },
+    );
+
+    if (!currentRecords.length) {
+      throw new NotFoundException(`Entity ${canonicalId} not found`);
+    }
+
+    const currentProps = this.neo4j.toPlainObject(currentRecords[0].get('n').properties ?? {});
+    const existingKeys = new Set(Object.keys(currentProps));
+    const immutableKeys = new Set<string>([
+      EntityResolutionService.CANONICAL_ID_FIELD,
+      'canonical_entity_id',
+      'is_merged',
+      'merged_at',
+    ]);
+
+    const inputKeys = Object.keys(safeProps);
+    const updatableKeys = inputKeys.filter(
+      (key) => existingKeys.has(key) && !immutableKeys.has(key),
+    );
+    const updatableKeySet = new Set(updatableKeys);
+    const skippedKeys = inputKeys.filter((key) => !updatableKeySet.has(key));
+
+    if (!updatableKeys.length) {
+      throw new BadRequestException('None of the provided properties exist on the entity node');
+    }
+
+    const setParts = updatableKeys.map((key) => `n.\`${key}\` = $prop_${key}`);
+    const params: Record<string, any> = { id: canonicalId };
+    for (const key of updatableKeys) {
+      params[`prop_${key}`] = safeProps[key];
+    }
+
+    const records = await this.neo4j.runQuery(
+      `MATCH (n:Entity {\`${safeIdField}\`: $id})
+       SET ${setParts.join(', ')}
+       RETURN n, labels(n) AS labels`,
+      params,
+    );
+
+    const labels = ((records[0].get('labels') as string[]) ?? []).filter(
+      (label) => !INTERNAL_LABELS.has(label),
+    );
+
+    return {
+      ...this.neo4j.toPlainObject(records[0].get('n').properties),
+      labels,
+      entityId: canonicalId,
+      requestedEntityId: entityId,
+      updatedProperties: updatableKeys,
+      skippedProperties: skippedKeys,
+      _identity: await this.buildMutationContextForEntity(entityId, true),
+    };
+  }
+
+  private sanitizeUpdateProperties(properties: Record<string, any>): Record<string, any> {
+    if (!properties || typeof properties !== 'object' || Array.isArray(properties)) {
+      throw new BadRequestException('properties must be an object');
+    }
+
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(properties)) {
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      const safeKey = this.neo4j.sanitizeIdentifier(String(key).trim());
+      result[safeKey] = value;
+    }
+
+    return result;
+  }
+
   async deleteByEntityId(entityId: string) {
     if (!entityId?.trim()) {
       throw new BadRequestException('entityId is required');

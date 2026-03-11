@@ -19,6 +19,8 @@ export interface SubtypeDefinition {
   icon: string;
   /** Base type labels this subtype is allowed to be applied to. Universal per subtype. */
   allowedBaseLabels: string[];
+  /** Explicit type per property name (STRING / INTEGER / FLOAT / BOOLEAN / DATE). Defaults to STRING. */
+  propertyTypes?: Record<string, string>;
 }
 
 export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
@@ -28,13 +30,14 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     baseLabel: 'Person',
     icon: '📝',
     allowedBaseLabels: ['Person'],
-    properties: [
-      'student_id',
-      'gpa',
-      'enrollment_year',
-      'enrollment_status',
-      'study_mode',
-    ],
+    properties: ['student_id', 'gpa', 'enrollment_year', 'enrollment_status', 'study_mode'],
+    propertyTypes: {
+      student_id: 'STRING',
+      gpa: 'FLOAT',
+      enrollment_year: 'INTEGER',
+      enrollment_status: 'STRING',
+      study_mode: 'STRING',
+    },
   },
 
   {
@@ -43,13 +46,14 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     baseLabel: 'Person',
     icon: '💼',
     allowedBaseLabels: ['Person'],
-    properties: [
-      'employee_number',
-      'contract_type',
-      'salary_band',
-      'department',
-      'hire_date',
-    ],
+    properties: ['employee_number', 'contract_type', 'salary_band', 'department', 'hire_date'],
+    propertyTypes: {
+      employee_number: 'STRING',
+      contract_type: 'STRING',
+      salary_band: 'STRING',
+      department: 'STRING',
+      hire_date: 'DATE',
+    },
   },
 
   {
@@ -58,12 +62,13 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     baseLabel: 'Person',
     icon: '🏠',
     allowedBaseLabels: ['Person'],
-    properties: [
-      'resident_id',
-      'registration_date',
-      'residency_type',
-      'marital_status',
-    ],
+    properties: ['resident_id', 'registration_date', 'residency_type', 'marital_status'],
+    propertyTypes: {
+      resident_id: 'STRING',
+      registration_date: 'DATE',
+      residency_type: 'STRING',
+      marital_status: 'STRING',
+    },
   },
 
   {
@@ -72,12 +77,13 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     baseLabel: 'Person',
     icon: '🔬',
     allowedBaseLabels: ['Person'],
-    properties: [
-      'orcid_id',
-      'research_field',
-      'h_index',
-      'researcher_type',
-    ],
+    properties: ['orcid_id', 'research_field', 'h_index', 'researcher_type'],
+    propertyTypes: {
+      orcid_id: 'STRING',
+      research_field: 'STRING',
+      h_index: 'INTEGER',
+      researcher_type: 'STRING',
+    },
   },
 
   {
@@ -86,13 +92,14 @@ export const BUILTIN_SUBTYPES: SubtypeDefinition[] = [
     baseLabel: 'Person',
     icon: '🎨',
     allowedBaseLabels: ['Person'],
-    properties: [
-      'artist_id',
-      'primary_medium',
-      'years_active_start',
-      'years_active_end',
-      'style',
-    ],
+    properties: ['artist_id', 'primary_medium', 'years_active_start', 'years_active_end', 'style'],
+    propertyTypes: {
+      artist_id: 'STRING',
+      primary_medium: 'STRING',
+      years_active_start: 'INTEGER',
+      years_active_end: 'INTEGER',
+      style: 'STRING',
+    },
   },
 ];
 

@@ -77,13 +77,19 @@ export class SchemaService {
         );
 
         if (subtypeDef) {
+          // For subtypes, return only the subtype-specific properties with their real types
+          const subtypeProps = subtypeDef.properties.map((prop) => ({
+            name: prop,
+            type: subtypeDef.propertyTypes?.[prop] ?? 'STRING',
+          }));
+
           return {
             label,
             icon: subtypeDef.icon ?? registeredSchema.icon ?? '',
             baseLabel: subtypeDef.baseLabel,
             allowedBaseLabels: subtypeDef.allowedBaseLabels ?? [subtypeDef.baseLabel],
-            properties: normalizedProperties,
-            totalProperties: normalizedProperties.length,
+            properties: subtypeProps,
+            totalProperties: subtypeProps.length,
           };
         }
       } catch (err) {
@@ -146,10 +152,10 @@ export class SchemaService {
         (st) => st.label.toLowerCase() === label.toLowerCase(),
       );
       if (subtypeDef) {
-        // For subtypes, return only the subtype-specific properties
-        const subtypeProps = subtypeDef.properties.map(prop => ({
+        // For subtypes, return only the subtype-specific properties with their real types
+        const subtypeProps = subtypeDef.properties.map((prop) => ({
           name: prop,
-          type: 'STRING',
+          type: subtypeDef.propertyTypes?.[prop] ?? 'STRING',
         }));
 
         return {
@@ -442,7 +448,10 @@ export class SchemaService {
       icon: def.icon ?? '',
       baseLabel: def.baseLabel,
       allowedBaseLabels: def.allowedBaseLabels ?? [def.baseLabel],
-      properties: def.properties.map((prop) => ({ name: prop, type: 'STRING' })),
+      properties: def.properties.map((prop) => ({
+        name: prop,
+        type: def.propertyTypes?.[prop] ?? 'STRING',
+      })),
       totalProperties: def.properties.length,
     }));
 

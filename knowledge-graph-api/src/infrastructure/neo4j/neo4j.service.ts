@@ -41,11 +41,11 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   private async applyConstraints() {
     const migrationQueries = [
       `MATCH (n)
-       WHERE n:Person OR n:Organization OR n:Location OR n:Skill OR n:Education OR n:Course OR n:Department
+       WHERE NOT n:Entity
+         AND NONE(label IN labels(n) WHERE label IN ['EntitySchema', 'SchemaProperty', 'PromotionSubtype', 'PromotionField', 'MergeEvent', 'DynamicEntityConfig'])
        SET n:Entity`,
-      `MATCH (n)
-       WHERE (n:Person OR n:Organization OR n:Location OR n:Skill OR n:Education OR n:Course OR n:Department)
-         AND n.entity_id IS NULL
+      `MATCH (n:Entity)
+       WHERE n.entity_id IS NULL
        SET n.entity_id = COALESCE(
          n.strong_id,
          n.org_id,

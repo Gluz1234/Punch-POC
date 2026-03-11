@@ -99,6 +99,39 @@ export class RelationshipsController {
     });
   }
 
+  // ── Delete ALL tenant-scoped relationships on an entity ─────────────────
+
+  @Delete(':entityId/tenant/:tenantId/all')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Delete all tenant relationships for an entity',
+    description:
+      'Deletes every relationship (incoming and outgoing) on the given entity that belongs to the specified tenant.',
+  })
+  @ApiParam({
+    name: 'entityId',
+    description: 'Entity UUID (entity_id)',
+    example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea',
+  })
+  @ApiParam({
+    name: 'tenantId',
+    description: 'Tenant ID whose relationships should be deleted',
+    example: 'tenant_mit',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All tenant-scoped relationships for the entity deleted',
+  })
+  deleteAllEntityRelationshipsForTenant(
+    @Param('entityId') entityId: string,
+    @Param('tenantId') tenantId: string,
+  ) {
+    return this.relationshipsService.deleteAllEntityRelationshipsForTenant(
+      entityId,
+      tenantId,
+    );
+  }
+
   @Delete(':sourceType/:sourceId/:relationshipType/:tenantId')
   @HttpCode(200)
   @ApiOperation({ summary: 'Delete a relationship (legacy route)', description: 'Backward-compatible route. sourceType/targetType are ignored and deletion is resolved by entity_id.' })

@@ -21,7 +21,7 @@ export class DynamicController {
   // Checks if the type exists; if not, registers a new schema type, then creates the node.
   @Post('smart-create')
   @ApiOperation({ summary: 'Auto-detect or register type, then create a node' })
-  @ApiBody({ schema: { example: { label: 'balls', icon: '⚽', properties: { size: 'large', taste: 'salty' } } } })
+  @ApiBody({ schema: { example: { label: 'Course', icon: '📚', properties: { title: 'AI Fundamentals', credits: 3, active: true }, propertyTypes: { title: 'STRING', credits: 'INTEGER', active: 'BOOLEAN' } } } })
   smartCreate(@Body() dto: { label: string; icon?: string; properties?: Record<string, any> }) {
     return this.dynamicService.smartCreate(dto);
   }
@@ -64,6 +64,27 @@ export class DynamicController {
     @Body('properties') properties: Record<string, any>,
   ) {
     return this.dynamicService.updateNode(label, idField, id, properties ?? {});
+  }
+
+  // PUT /api/dynamic/entity/:entityId
+  // Body: { properties: { key: value, ... } }
+  // Updates by canonical entity_id only (no type in URL).
+  // Only keys that already exist on the node are updated.
+  @Put('entity/:entityId')
+  @ApiOperation({
+    summary: 'Update entity by ID',
+    description: 'Updates any entity using entity_id only. Only properties that already exist on the node are updated.',
+  })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiBody({ schema: { example: { properties: { gpa: 4.0, enrollment_year: 2020 } } } })
+  @ApiResponse({ status: 200, description: 'Entity updated successfully' })
+  @ApiResponse({ status: 400, description: 'No valid existing properties were provided' })
+  @ApiResponse({ status: 404, description: 'Entity not found' })
+  updateByEntityId(
+    @Param('entityId') entityId: string,
+    @Body('properties') properties: Record<string, any>,
+  ) {
+    return this.resolutionService.updateByEntityId(entityId, properties ?? {});
   }
 
   // DELETE /api/dynamic/nodes/:label/:idField/:id

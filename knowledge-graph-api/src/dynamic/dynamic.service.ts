@@ -22,6 +22,7 @@ export class DynamicService {
 
     const safeLabels  = (dto.labels as string[]).map(l => this.neo4j.sanitizeIdentifier(l));
     const safeIdField = this.neo4j.sanitizeIdentifier(dto.idField);
+    const safeEntityIdField = this.neo4j.sanitizeIdentifier('entity_id');
     const safeProps   = this.sanitizePropertyKeys(dto.properties ?? {});
 
     if (dto.createConstraint) {
@@ -32,13 +33,18 @@ export class DynamicService {
     const setParts  = Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`);
     const setClause = setParts.length ? `, ${setParts.join(', ')}` : '';
 
-    const params: Record<string, any> = { nodeId: String(dto.id) };
+    const params: Record<string, any> = {
+      nodeId: String(dto.id),
+      entityIdValue: safeIdField === safeEntityIdField ? String(dto.id) : null,
+    };
     for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(`
-      MERGE (n:${labelStr} {\`${safeIdField}\`: $nodeId})
-      ON CREATE SET n.\`${safeIdField}\` = $nodeId${setClause}
-      ON MATCH  SET n.\`${safeIdField}\` = $nodeId${setClause}
+      MERGE (n:${labelStr}:Entity {\`${safeIdField}\`: $nodeId})
+      ON CREATE SET n.\`${safeIdField}\` = $nodeId,
+                    n.\`${safeEntityIdField}\` = coalesce(n.\`${safeEntityIdField}\`, $entityIdValue, randomUUID())${setClause}
+      ON MATCH  SET n.\`${safeIdField}\` = $nodeId,
+                    n.\`${safeEntityIdField}\` = coalesce(n.\`${safeEntityIdField}\`, $entityIdValue, randomUUID())${setClause}
       RETURN n, labels(n) AS labels`,
       params,
     );
@@ -237,7 +243,7 @@ export class DynamicService {
 
   // ── SMART CREATE: auto-detect or register type, then create node ────────
 
-  async smartCreate(dto: { label: string; icon?: string; properties?: Record<string, any> }) {
+  async smartCreate(dto: { label: string; icon?: string; properties?: Record<string, any>; propertyTypes?: Record<string, string> }) {
     if (!dto.label) throw new BadRequestException('label is required');
 
     const safeLabel = this.neo4j.sanitizeIdentifier(dto.label);
@@ -247,17 +253,24 @@ export class DynamicService {
     const existingSchema = await this.schemaRegistration.getEntitySchema(safeLabel);
     const idField = `${safeLabel.toLowerCase()}_id`;
     const safeIdField = this.neo4j.sanitizeIdentifier(idField);
+    const safeEntityIdField = this.neo4j.sanitizeIdentifier('entity_id');
 
     if (!existingSchema) {
       // icon is required when registering a brand-new type
       if (!dto.icon) throw new BadRequestException('icon is required when creating a new type');
 
-      // Register a new schema type based on the incoming data
+      // Register a new schema type based on the incoming data.
+      // Explicit propertyTypes override value-inferred types.
       const schemaProps: Array<{ name: string; type: string }> = [
-        { name: idField, type: 'String' },
+        { name: 'entity_id', type: 'STRING' },
+        { name: idField, type: 'STRING' },
       ];
       for (const [key, value] of Object.entries(safeProps)) {
-        schemaProps.push({ name: key, type: this.inferType(value) });
+        const explicitType = dto.propertyTypes?.[key];
+        schemaProps.push({
+          name: key,
+          type: explicitType ? this.normalizeExplicitType(explicitType) : this.inferType(value),
+        });
       }
 
       await this.schemaRegistration.upsertEntitySchema({
@@ -282,9 +295,11 @@ export class DynamicService {
     for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(
-      `MERGE (n:\`${safeLabel}\` {\`${safeIdField}\`: $nodeId})
-       ON CREATE SET n.\`${safeIdField}\` = $nodeId${setClause}
-       ON MATCH  SET n.\`${safeIdField}\` = $nodeId${setClause}
+      `MERGE (n:\`${safeLabel}\`:Entity {\`${safeIdField}\`: $nodeId})
+       ON CREATE SET n.\`${safeIdField}\` = $nodeId,
+                     n.\`${safeEntityIdField}\` = coalesce(n.\`${safeEntityIdField}\`, randomUUID())${setClause}
+       ON MATCH  SET n.\`${safeIdField}\` = $nodeId,
+                     n.\`${safeEntityIdField}\` = coalesce(n.\`${safeEntityIdField}\`, randomUUID())${setClause}
        RETURN n, labels(n) AS labels`,
       params,
     );
@@ -297,13 +312,19 @@ export class DynamicService {
   }
 
   private inferType(value: any): string {
-    if (typeof value === 'number') return Number.isInteger(value) ? 'Integer' : 'Float';
-    if (typeof value === 'boolean') return 'Boolean';
+    if (typeof value === 'number') return Number.isInteger(value) ? 'INTEGER' : 'FLOAT';
+    if (typeof value === 'boolean') return 'BOOLEAN';
     if (typeof value === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return 'Date';
-      return 'String';
+      if (/^\d{4}-\d{2}-\d{2}/.test(value)) return 'DATE';
+      return 'STRING';
     }
-    return 'String';
+    return 'STRING';
+  }
+
+  private normalizeExplicitType(type: string): string {
+    const raw = type.trim().toUpperCase();
+    const valid = new Set(['STRING', 'INTEGER', 'FLOAT', 'BOOLEAN', 'DATE', 'DATETIME']);
+    return valid.has(raw) ? raw : 'STRING';
   }
 
   // ── Sanitize property key names ───────────────────────────────────────────
