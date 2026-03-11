@@ -235,10 +235,12 @@ export class DataService {
    * Restore snapshot exported from GET /api/data/all.
    * Upserts nodes by entity_id and upserts relationships by (from, type, to).
    */
-  async restoreAllData(payload: any) {
+  async restoreAllData(payload: any, options: { replace?: boolean } = {}) {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
       throw new BadRequestException('Payload must be an object in the same shape as GET /api/data/all');
     }
+
+    const replace = !!options.replace;
 
     const nodesByLabel = payload.nodesByLabel;
     const relationshipGroups = payload.relationships;
@@ -252,6 +254,7 @@ export class DataService {
 
     const safeEntityIdField = this.neo4j.sanitizeIdentifier('entity_id');
     const aggregatedNodes = this.collectSnapshotNodes(nodesByLabel);
+    const keepEntityIds = Array.from(aggregatedNodes.keys());
 
     let nodesUpserted = 0;
     let nodesSkipped = 0;
@@ -294,6 +297,7 @@ export class DataService {
     }
 
     const relationshipEntries = this.flattenRelationshipEntries(relationshipGroups ?? []);
+  const keepRelationshipKeys = new Set<string>();
     let relationshipsUpserted = 0;
     let relationshipsSkipped = 0;
 
@@ -315,6 +319,8 @@ export class DataService {
         relationshipsSkipped += 1;
         continue;
       }
+
+      keepRelationshipKeys.add(this.buildRelationshipKey(fromId, safeType, toId));
 
       const relationshipProps = this.extractRelationshipProperties(entry.relationship);
 
@@ -341,15 +347,50 @@ export class DataService {
       relationshipsUpserted += 1;
     }
 
+    let deletedNodes = 0;
+    let deletedRelationships = 0;
+
+    if (replace) {
+      const deletedNodeRecords = await this.neo4j.runQuery(
+        `
+        MATCH (n:Entity)
+        WHERE n.\`${safeEntityIdField}\` IS NULL
+           OR NOT n.\`${safeEntityIdField}\` IN $keepEntityIds
+        DETACH DELETE n
+        RETURN count(n) AS deletedNodes
+        `,
+        { keepEntityIds },
+      );
+
+      deletedNodes = deletedNodeRecords[0]?.get('deletedNodes')?.toNumber?.() ?? 0;
+
+      const deletedRelationshipRecords = await this.neo4j.runQuery(
+        `
+        MATCH (a:Entity)-[r]->(b:Entity)
+        WITH a, b, r, type(r) AS relType,
+             toString(a.\`${safeEntityIdField}\`) + '|' + relType + '|' + toString(b.\`${safeEntityIdField}\`) AS relKey
+        WHERE NOT relKey IN $keepRelationshipKeys
+        DELETE r
+        RETURN count(r) AS deletedRelationships
+        `,
+        { keepRelationshipKeys: Array.from(keepRelationshipKeys) },
+      );
+
+      deletedRelationships = deletedRelationshipRecords[0]?.get('deletedRelationships')?.toNumber?.() ?? 0;
+    }
+
     return {
       restored: true,
       statistics: {
+        replaceMode: replace,
         inputLabels: Object.keys(nodesByLabel).length,
         inputRelationshipGroups: Array.isArray(relationshipGroups) ? relationshipGroups.length : 0,
         nodesUpserted,
         nodesSkipped,
         relationshipsUpserted,
         relationshipsSkipped,
+        deletedNodes,
+        deletedRelationships,
       },
     };
   }
@@ -589,6 +630,10 @@ export class DataService {
     }
 
     return null;
+  }
+
+  private buildRelationshipKey(fromId: string, type: string, toId: string): string {
+    return `${fromId}|${type}|${toId}`;
   }
 
 }

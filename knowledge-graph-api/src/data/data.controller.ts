@@ -54,8 +54,9 @@ export class DataController {
   @Post('restore')
   @ApiOperation({
     summary: 'Restore graph from snapshot',
-    description: 'Accepts the same payload shape returned by GET /api/data/all and upserts nodes/relationships. Intended for disaster recovery restore from source-of-truth exports.'
+    description: 'Accepts the same payload shape returned by GET /api/data/all and upserts nodes/relationships. Use replace=true to delete any existing Entity nodes/relationships that are not present in the snapshot.'
   })
+  @ApiQuery({ name: 'replace', required: false, description: 'When true, makes snapshot authoritative by deleting Entity nodes/relationships missing from the snapshot.', example: true })
   @ApiBody({
     schema: {
       example: {
@@ -89,7 +90,16 @@ export class DataController {
     },
   })
   @ApiResponse({ status: 201, description: 'Snapshot restore completed with import statistics' })
-  restoreAllData(@Body() payload: any) {
-    return this.dataService.restoreAllData(payload);
+  restoreAllData(
+    @Body() payload: any,
+    @Query('replace') replace?: string,
+  ) {
+    return this.dataService.restoreAllData(payload, {
+      replace: this.parseBooleanQuery(replace),
+    });
+  }
+
+  private parseBooleanQuery(value?: string): boolean {
+    return value === '1' || value?.toLowerCase() === 'true';
   }
 }
