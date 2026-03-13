@@ -17,6 +17,108 @@ import { TenantId } from '../auth/tenant.decorator';
 export class FullTextSearchController {
   constructor(private readonly searchService: FullTextSearchService) {}
 
+  @Get('autocomplete')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Autocomplete across all entity types',
+    description: 'Returns ranked suggestions across all configured entities when entityType is omitted. Optionally restrict to specific entities with ?entities=person,organization.',
+  })
+  @ApiQuery({ name: 'q', description: 'Autocomplete prefix', example: 'jo', required: true })
+  @ApiQuery({ name: 'field', description: 'Optional single field', required: false, example: 'first_name' })
+  @ApiQuery({ name: 'fields', description: 'Optional comma-separated fields', required: false, example: 'first_name,last_name' })
+  @ApiQuery({ name: 'entities', description: 'Optional comma-separated entity keys/labels', required: false, example: 'person,organization' })
+  @ApiQuery({ name: 'limit', description: 'Max suggestions (1-100)', required: false, example: 10 })
+  async autocompleteAllEntities(
+    @Query('q') query?: string,
+    @Query('field') field?: string,
+    @Query('fields') fields?: string,
+    @Query('entities') entities?: string,
+    @TenantId() tenantId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!query) {
+      throw new BadRequestException('Search query (q) is required');
+    }
+
+    return this.searchService.autocompleteAll(
+      {
+        query,
+        field,
+        fields: this.parseCsv(fields),
+        tenantId,
+        limit: this.parseLimit(limit, 10, 100),
+      },
+      this.parseCsv(entities),
+    );
+  }
+
+  @Post('query')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Run advanced search across entity types',
+    description: 'When entityType is omitted, performs cross-entity search. For advanced field/range/relationship/facet/aggregation filters, use /search/:entityType/query.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        q: { type: 'string', example: 'john' },
+        fields: { type: 'array', items: { type: 'string' }, example: ['first_name', 'name'] },
+        tenantId: { type: 'string', example: 'tenant_mit' },
+        explain: { type: 'boolean', example: true },
+        limit: { type: 'number', example: 25 },
+        entities: {
+          oneOf: [
+            { type: 'array', items: { type: 'string' } },
+            { type: 'string' },
+          ],
+          example: ['person', 'organization'],
+        },
+      },
+    },
+  })
+  async advancedSearchAllEntities(
+    @Body() request: AdvancedSearchRequest & { entities?: string[] | string; entityTypes?: string[] | string; entityType?: string },
+  ) {
+    const selectedEntities = this.mergeEntitySelectors(
+      request?.entities,
+      request?.entityTypes,
+      request?.entityType,
+    );
+
+    return this.searchService.searchAdvancedAll(request ?? {}, selectedEntities);
+  }
+
+  @Get()
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Search across all entity types',
+    description: 'Simple full-text search across all configured entity types when entityType is omitted. Optionally restrict to specific entities with ?entities=person,organization.',
+  })
+  @ApiQuery({ name: 'q', description: 'Search query with operators (*, ~, AND, OR, "phrase")', example: 'john*', required: true })
+  @ApiQuery({ name: 'fields', description: 'Optional comma-separated fields to search within', required: false, example: 'first_name,name' })
+  @ApiQuery({ name: 'entities', description: 'Optional comma-separated entity keys/labels', required: false, example: 'person,organization' })
+  @ApiQuery({ name: 'limit', description: 'Max results (1-1000)', required: false, example: 50 })
+  async searchAllEntities(
+    @Query('q') query?: string,
+    @Query('fields') fields?: string,
+    @Query('entities') entities?: string,
+    @TenantId() tenantId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!query) {
+      throw new BadRequestException('Search query (q) is required');
+    }
+
+    return this.searchService.searchAll({
+      query,
+      fields: this.parseCsv(fields),
+      entities: this.parseCsv(entities),
+      tenantId,
+      limit: this.parseLimit(limit, 50, 1000),
+    });
+  }
+
   @Get(':entityType/autocomplete')
   @HttpCode(200)
   @ApiOperation({
@@ -361,5 +463,32 @@ export class FullTextSearchController {
     }
 
     return parsed;
+  }
+
+  private parseCsvOrArray(value?: string | string[]): string[] | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      const normalized = value
+        .map(item => String(item).trim())
+        .filter(Boolean);
+      return normalized.length ? normalized : undefined;
+    }
+
+    return this.parseCsv(value);
+  }
+
+  private mergeEntitySelectors(...selectors: Array<string | string[] | undefined>): string[] | undefined {
+    const merged = new Set<string>();
+
+    for (const selector of selectors) {
+      for (const item of this.parseCsvOrArray(selector) ?? []) {
+        merged.add(item);
+      }
+    }
+
+    return merged.size ? Array.from(merged) : undefined;
   }
 }

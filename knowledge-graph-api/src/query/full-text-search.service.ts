@@ -75,6 +75,7 @@ export interface AdvancedSearchResponse {
   aggregations?: Record<string, unknown>;
   meta: {
     entity: string;
+    entities?: string[];
     resultCount: number;
     requestedLimit: number;
     explain: boolean;
@@ -145,6 +146,124 @@ export class FullTextSearchService {
       limit: config.limit,
     });
     return response.results;
+  }
+
+  async searchAll(config: {
+    query: string;
+    fields?: string[];
+    tenantId?: string;
+    limit?: number;
+    entities?: string[];
+  }): Promise<FullTextSearchResult[]> {
+    const queryText = config.query?.trim();
+    if (!queryText) {
+      throw new BadRequestException('Search query is required');
+    }
+
+    const limit = this.normalizeLimit(config.limit ?? 50);
+    const entityConfigs = this.resolveEntityConfigs(config.entities);
+    const requestedFields = config.fields?.length ? config.fields : undefined;
+
+    const perEntityResults = await Promise.all(
+      entityConfigs.map(async (entityConfig) => {
+        const scopedFields = requestedFields
+          ? this.getValidRequestedFields(entityConfig, requestedFields)
+          : undefined;
+
+        // If caller requested specific fields and none exist on this entity,
+        // skip this entity instead of failing the whole search.
+        if (requestedFields && (!scopedFields || scopedFields.length === 0)) {
+          return [] as FullTextSearchResult[];
+        }
+
+        return this.search({
+          entity: entityConfig.key,
+          query: queryText,
+          fields: scopedFields,
+          tenantId: config.tenantId,
+          limit,
+        });
+      }),
+    );
+
+    return perEntityResults
+      .flat()
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const entityCompare = a.entity.localeCompare(b.entity);
+        if (entityCompare !== 0) return entityCompare;
+        return String(a.id ?? '').localeCompare(String(b.id ?? ''));
+      })
+      .slice(0, limit);
+  }
+
+  async searchAdvancedAll(
+    request: AdvancedSearchRequest,
+    entities?: string[],
+  ): Promise<AdvancedSearchResponse> {
+    const queryText = request?.q?.trim();
+    if (!queryText) {
+      throw new BadRequestException('Search query (q) is required');
+    }
+
+    const hasEntitySpecificFilters =
+      Boolean(request?.fieldQueries?.length) ||
+      Boolean(request?.ranges?.length) ||
+      Boolean(request?.relationships?.length) ||
+      Boolean(request?.facets?.length) ||
+      Boolean(request?.aggregations?.length);
+
+    if (hasEntitySpecificFilters) {
+      throw new BadRequestException(
+        'When entityType is omitted, only q, fields, tenantId, explain, and limit are supported. Use /search/:entityType/query for field/range/relationship/facet/aggregation filters.',
+      );
+    }
+
+    const limit = this.normalizeLimit(request?.limit ?? 50);
+    const entityConfigs = this.resolveEntityConfigs(entities);
+    const requestedFields = request?.fields?.length ? request.fields : undefined;
+
+    const perEntityResponses = await Promise.all(
+      entityConfigs.map(async (entityConfig) => {
+        const scopedFields = requestedFields
+          ? this.getValidRequestedFields(entityConfig, requestedFields)
+          : undefined;
+
+        if (requestedFields && (!scopedFields || scopedFields.length === 0)) {
+          return null;
+        }
+
+        return this.searchAdvanced(entityConfig.key, {
+          q: queryText,
+          fields: scopedFields,
+          tenantId: request?.tenantId,
+          explain: request?.explain,
+          limit,
+        });
+      }),
+    );
+
+    const results = perEntityResponses
+      .filter((response): response is AdvancedSearchResponse => Boolean(response))
+      .flatMap(response => response.results)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const entityCompare = a.entity.localeCompare(b.entity);
+        if (entityCompare !== 0) return entityCompare;
+        return String(a.id ?? '').localeCompare(String(b.id ?? ''));
+      })
+      .slice(0, limit);
+
+    return {
+      results,
+      meta: {
+        entity: '*',
+        entities: entityConfigs.map(cfg => cfg.key),
+        resultCount: results.length,
+        requestedLimit: limit,
+        explain: Boolean(request?.explain),
+      },
+    };
   }
 
   async searchAdvanced(
@@ -260,6 +379,59 @@ export class FullTextSearchService {
       value: record.get('value'),
       score: this.normalizeValue(record.get('score')) ?? 0,
     }));
+  }
+
+  async autocompleteAll(
+    request: AutocompleteRequest,
+    entities?: string[],
+  ): Promise<AutocompleteResult[]> {
+    const queryText = request?.query?.trim();
+    if (!queryText) {
+      throw new BadRequestException('Autocomplete query is required');
+    }
+
+    const limit = this.normalizeLimit(request?.limit ?? 10, 100);
+    const entityConfigs = this.resolveEntityConfigs(entities);
+    const requestedFields = request?.field ? [request.field] : request?.fields;
+
+    const perEntityResults = await Promise.all(
+      entityConfigs.map(async (entityConfig) => {
+        const scopedFields = requestedFields
+          ? this.getValidRequestedFields(entityConfig, requestedFields)
+          : undefined;
+
+        if (requestedFields && (!scopedFields || scopedFields.length === 0)) {
+          return [] as AutocompleteResult[];
+        }
+
+        return this.autocomplete(entityConfig.key, {
+          query: queryText,
+          fields: scopedFields,
+          tenantId: request?.tenantId,
+          limit,
+        });
+      }),
+    );
+
+    const dedup = new Map<string, AutocompleteResult>();
+    for (const suggestion of perEntityResults.flat()) {
+      const key = `${suggestion.entity}|${suggestion.field}|${suggestion.value.toLowerCase()}`;
+      const existing = dedup.get(key);
+      if (!existing || suggestion.score > existing.score) {
+        dedup.set(key, suggestion);
+      }
+    }
+
+    return Array.from(dedup.values())
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const entityCompare = a.entity.localeCompare(b.entity);
+        if (entityCompare !== 0) return entityCompare;
+        const fieldCompare = a.field.localeCompare(b.field);
+        if (fieldCompare !== 0) return fieldCompare;
+        return a.value.localeCompare(b.value);
+      })
+      .slice(0, limit);
   }
 
   async searchPersons(query: string, tenantId?: string, limit = 50) {
@@ -1053,6 +1225,44 @@ export class FullTextSearchService {
       return byLabel;
     }
     throw new BadRequestException(`Unknown entity: ${entity}`);
+  }
+
+  private resolveEntityConfigs(entities?: string[]): EntityConfig[] {
+    if (!entities?.length) {
+      return getAllEntities();
+    }
+
+    const unique = new Map<string, EntityConfig>();
+    for (const entity of entities) {
+      const normalized = entity?.trim();
+      if (!normalized) {
+        continue;
+      }
+      const config = this.resolveEntityConfig(normalized);
+      unique.set(config.key, config);
+    }
+
+    if (!unique.size) {
+      throw new BadRequestException('At least one valid entity is required');
+    }
+
+    return Array.from(unique.values());
+  }
+
+  private getValidRequestedFields(
+    config: EntityConfig,
+    requestedFields: string[],
+  ): string[] | undefined {
+    const knownFields = new Set<string>([
+      config.idField,
+      ...Object.keys(config.properties),
+    ]);
+
+    const valid = requestedFields
+      .map(field => this.neo4j.sanitizeIdentifier(field))
+      .filter(field => knownFields.has(field));
+
+    return valid.length ? valid : undefined;
   }
 
   private resolveSearchFields(config: EntityConfig, requested?: string[]): string[] {
