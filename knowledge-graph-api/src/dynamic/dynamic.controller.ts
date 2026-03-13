@@ -5,6 +5,7 @@ import {
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { DynamicService } from './dynamic.service';
 import { EntityResolutionService } from '../entities/entity-resolution.service';
+import { TenantId } from '../auth/tenant.decorator';
 
 @ApiTags('Dynamic')
 @Controller('dynamic')
@@ -40,8 +41,9 @@ export class DynamicController {
   findByLabel(
     @Param('label')   label:  string,
     @Query('limit')   limit?: string,
+    @TenantId()       tenantId?: string,
   ) {
-    return this.dynamicService.findByLabel(label, limit ? parseInt(limit, 10) : 100);
+    return this.dynamicService.findByLabel(label, limit ? parseInt(limit, 10) : 100, tenantId);
   }
 
   // GET /api/dynamic/nodes/:label/:idField/:id
@@ -50,8 +52,9 @@ export class DynamicController {
     @Param('label')   label:   string,
     @Param('idField') idField: string,
     @Param('id')      id:      string,
+    @TenantId()       tenantId?: string,
   ) {
-    return this.dynamicService.findOne(label, idField, id);
+    return this.dynamicService.findOne(label, idField, id, tenantId);
   }
 
   // PUT /api/dynamic/nodes/:label/:idField/:id
@@ -62,8 +65,9 @@ export class DynamicController {
     @Param('idField') idField: string,
     @Param('id')      id:      string,
     @Body('properties') properties: Record<string, any>,
+    @TenantId()       tenantId?: string,
   ) {
-    return this.dynamicService.updateNode(label, idField, id, properties ?? {});
+    return this.dynamicService.updateNode(label, idField, id, properties ?? {}, tenantId);
   }
 
   // PUT /api/dynamic/entity/:entityId

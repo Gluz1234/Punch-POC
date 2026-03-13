@@ -2,12 +2,14 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { int } from 'neo4j-driver';
 import { Neo4jService } from '../infrastructure/neo4j/neo4j.service';
 import { SchemaRegistrationService } from '../schema/schema-registration.service';
+import { PromotionProjectionService } from '../promotions/promotion-projection.service';
 
 @Injectable()
 export class DynamicService {
   constructor(
     private readonly neo4j: Neo4jService,
     private readonly schemaRegistration: SchemaRegistrationService,
+    private readonly projection: PromotionProjectionService,
   ) {}
 
   // ── CREATE or UPSERT a node of any label(s) ───────────────────────────────
@@ -56,38 +58,49 @@ export class DynamicService {
 
   // ── GET all nodes of a given label ────────────────────────────────────────
 
-  async findByLabel(label: string, limit = 100) {
+  async findByLabel(label: string, limit = 100, tenantId?: string) {
     const safeLabel = this.neo4j.sanitizeIdentifier(label);
-    const records   = await this.neo4j.runQuery(
-      `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels LIMIT $limit`,
-      { limit: int(limit) },
+    const records = await this.neo4j.runQuery(
+      tenantId
+        ? `MATCH (n:\`${safeLabel}\`)
+           WITH n LIMIT $limit
+           WITH n, labels(n) AS labels
+           OPTIONAL MATCH (n)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance)
+           RETURN n, labels, collect(DISTINCT { labels: labels(si), props: properties(si) }) AS subtypeInstances`
+        : `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels LIMIT $limit`,
+      tenantId ? { limit: int(limit), tenantId } : { limit: int(limit) },
     );
-    return records.map(r => ({
-      ...this.neo4j.toPlainObject(r.get('n').properties),
-      labels: r.get('labels'),
-    }));
+    return Promise.all(records.map(r => this.projectDynamicResult(r, tenantId)));
   }
 
   // ── GET a single node by label + idField + id ─────────────────────────────
 
-  async findOne(label: string, idField: string, id: string) {
+  async findOne(label: string, idField: string, id: string, tenantId?: string) {
     const safeLabel   = this.neo4j.sanitizeIdentifier(label);
     const safeIdField = this.neo4j.sanitizeIdentifier(idField);
-    const records     = await this.neo4j.runQuery(
-      `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id}) RETURN n, labels(n) AS labels`,
-      { id },
+    const records = await this.neo4j.runQuery(
+      tenantId
+        ? `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id})
+           WITH n, labels(n) AS labels
+           OPTIONAL MATCH (n)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance)
+           RETURN n, labels, collect(DISTINCT { labels: labels(si), props: properties(si) }) AS subtypeInstances`
+        : `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id}) RETURN n, labels(n) AS labels`,
+      tenantId ? { id, tenantId } : { id },
     );
     if (!records.length)
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('n').properties),
-      labels: records[0].get('labels'),
-    };
+    return this.projectDynamicResult(records[0], tenantId);
   }
 
   // ── UPDATE properties on a dynamic node ──────────────────────────────────
 
-  async updateNode(label: string, idField: string, id: string, properties: Record<string, any>) {
+  async updateNode(
+    label: string,
+    idField: string,
+    id: string,
+    properties: Record<string, any>,
+    tenantId?: string,
+  ) {
     const safeLabel   = this.neo4j.sanitizeIdentifier(label);
     const safeIdField = this.neo4j.sanitizeIdentifier(idField);
     const safeProps   = this.sanitizePropertyKeys(properties);
@@ -100,17 +113,20 @@ export class DynamicService {
     for (const [k, v] of Object.entries(safeProps)) params[`prop_${k}`] = v;
 
     const records = await this.neo4j.runQuery(
-      `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id})
-       SET ${setParts.join(', ')}
-       RETURN n, labels(n) AS labels`,
-      params,
+      tenantId
+        ? `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id})
+           SET ${setParts.join(', ')}
+           WITH n, labels(n) AS labels
+           OPTIONAL MATCH (n)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance)
+           RETURN n, labels, collect(DISTINCT { labels: labels(si), props: properties(si) }) AS subtypeInstances`
+        : `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id})
+           SET ${setParts.join(', ')}
+           RETURN n, labels(n) AS labels`,
+      tenantId ? { ...params, tenantId } : params,
     );
     if (!records.length)
       throw new NotFoundException(`${label} where ${idField}=${id} not found`);
-    return {
-      ...this.neo4j.toPlainObject(records[0].get('n').properties),
-      labels: records[0].get('labels'),
-    };
+    return this.projectDynamicResult(records[0], tenantId);
   }
 
   // ── DELETE a dynamic node ─────────────────────────────────────────────────
@@ -325,6 +341,20 @@ export class DynamicService {
     const raw = type.trim().toUpperCase();
     const valid = new Set(['STRING', 'INTEGER', 'FLOAT', 'BOOLEAN', 'DATE', 'DATETIME']);
     return valid.has(raw) ? raw : 'STRING';
+  }
+
+  private async projectDynamicResult(record: any, tenantId?: string) {
+    const properties = this.neo4j.toPlainObject(record.get('n').properties);
+    const labels = (record.get('labels') as string[]) ?? [];
+
+    if (tenantId && record.has('subtypeInstances')) {
+      const subtypeInstances =
+        (record.get('subtypeInstances') as Array<{ labels: string[]; props: Record<string, any> }>) ?? [];
+      const entityId = typeof properties.entity_id === 'string' ? properties.entity_id : undefined;
+      return this.projection.projectTypedNodeWithInstances(properties, labels, subtypeInstances, entityId);
+    }
+
+    return this.projection.projectTypedNode(properties, labels);
   }
 
   // ── Sanitize property key names ───────────────────────────────────────────

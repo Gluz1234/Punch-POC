@@ -75,24 +75,43 @@ export class GenericEntityService {
   /**
    * Find all entities of this type.
    */
-  async findAll(config: EntityConfig, limit = 1000) {
+  async findAll(config: EntityConfig, limit = 1000, tenantId?: string) {
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
-    const records = await this.neo4j.runQuery(
-      `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels ORDER BY n.\`${config.idField}\` LIMIT $limit`,
-      { limit: neo4j.int(limit) },
-    );
-    return Promise.all(records.map(r => this.formatResult(r)));
+
+    let records: any[];
+    if (tenantId) {
+      records = await this.neo4j.runQuery(
+        `MATCH (n:\`${safeLabel}\`)
+         WITH n ORDER BY n.\`${config.idField}\` LIMIT $limit
+         WITH n, labels(n) AS labels
+         OPTIONAL MATCH (n)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance)
+         RETURN n, labels, collect(DISTINCT { labels: labels(si), props: properties(si) }) AS subtypeInstances`,
+        { limit: neo4j.int(limit), tenantId },
+      );
+    } else {
+      records = await this.neo4j.runQuery(
+        `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels ORDER BY n.\`${config.idField}\` LIMIT $limit`,
+        { limit: neo4j.int(limit) },
+      );
+    }
+
+    return Promise.all(records.map(r => this.formatResult(r, tenantId)));
   }
 
   /**
    * Find a single entity by ID.
    */
-  async findOne(config: EntityConfig, id: string) {
+  async findOne(config: EntityConfig, id: string, tenantId?: string) {
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const safeIdField = this.neo4j.sanitizeIdentifier(config.idField);
     const records = await this.neo4j.runQuery(
-      `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id}) RETURN n, labels(n) AS labels`,
-      { id },
+      tenantId
+        ? `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id})
+           WITH n, labels(n) AS labels
+           OPTIONAL MATCH (n)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance)
+           RETURN n, labels, collect(DISTINCT { labels: labels(si), props: properties(si) }) AS subtypeInstances`
+        : `MATCH (n:\`${safeLabel}\` {\`${safeIdField}\`: $id}) RETURN n, labels(n) AS labels`,
+      tenantId ? { id, tenantId } : { id },
     );
 
     if (!records.length) {
@@ -101,7 +120,7 @@ export class GenericEntityService {
       );
     }
 
-    return this.formatResult(records[0]);
+    return this.formatResult(records[0], tenantId);
   }
 
   /**
@@ -112,15 +131,24 @@ export class GenericEntityService {
     filterField: string,
     filterValue: string,
     limit = 1000,
+    tenantId?: string,
   ) {
     const safeLabel = this.neo4j.sanitizeIdentifier(config.label);
     const safeField = this.neo4j.sanitizeIdentifier(filterField);
     const records = await this.neo4j.runQuery(
-      `MATCH (n:\`${safeLabel}\` {\`${safeField}\`: $value}) RETURN n, labels(n) AS labels ORDER BY n.\`${config.idField}\` LIMIT $limit`,
-      { value: filterValue, limit: neo4j.int(limit) },
+      tenantId
+        ? `MATCH (n:\`${safeLabel}\` {\`${safeField}\`: $value})
+           WITH n ORDER BY n.\`${config.idField}\` LIMIT $limit
+           WITH n, labels(n) AS labels
+           OPTIONAL MATCH (n)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance)
+           RETURN n, labels, collect(DISTINCT { labels: labels(si), props: properties(si) }) AS subtypeInstances`
+        : `MATCH (n:\`${safeLabel}\` {\`${safeField}\`: $value}) RETURN n, labels(n) AS labels ORDER BY n.\`${config.idField}\` LIMIT $limit`,
+      tenantId
+        ? { value: filterValue, limit: neo4j.int(limit), tenantId }
+        : { value: filterValue, limit: neo4j.int(limit) },
     );
 
-    return Promise.all(records.map(r => this.formatResult(r)));
+    return Promise.all(records.map(r => this.formatResult(r, tenantId)));
   }
 
   /**
@@ -323,9 +351,20 @@ export class GenericEntityService {
   /**
    * Format a Neo4j record into a clean response object.
    */
-  private async formatResult(record: any) {
+  private async formatResult(record: any, tenantId?: string) {
     const properties = this.neo4j.toPlainObject(record.get('n').properties);
     const labels = record.get('labels') as string[];
+
+    if (tenantId) {
+      const subtypeInstances = record.has('subtypeInstances')
+        ? (record.get('subtypeInstances') as Array<{ labels: string[]; props: Record<string, any> }> | null)
+        : null;
+      if (subtypeInstances) {
+        const entityId = typeof properties.entity_id === 'string' ? properties.entity_id : undefined;
+        return this.projection.projectTypedNodeWithInstances(properties, labels, subtypeInstances, entityId);
+      }
+    }
+
     return this.projection.projectTypedNode(properties, labels);
   }
 }

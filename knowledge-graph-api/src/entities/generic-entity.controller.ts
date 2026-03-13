@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { GenericEntityService } from './generic-entity.service';
 import { EntityConfig } from '../config/entity-config';
+import { TenantId } from '../auth/tenant.decorator';
 
 /**
  * Generic Entity Controller
@@ -45,8 +46,11 @@ export function createGenericEntityController(
     })
     @ApiQuery({ name: 'limit', required: false, description: 'Maximum number of results', example: 1000 })
     @ApiResponse({ status: 200, description: `List of ${config.displayName}s` })
-    findAll(@Query('limit') limit?: string) {
-      return this.service.findAll(config, limit ? parseInt(limit, 10) : 1000);
+    findAll(
+      @Query('limit') limit?: string,
+      @TenantId() tenantId?: string,
+    ) {
+      return this.service.findAll(config, limit ? parseInt(limit, 10) : 1000, tenantId);
     }
 
     @Get(':id')
@@ -57,8 +61,11 @@ export function createGenericEntityController(
     @ApiParam({ name: 'id', description: config.idField })
     @ApiResponse({ status: 200, description: `${config.displayName} found` })
     @ApiResponse({ status: 404, description: `${config.displayName} not found` })
-    findOne(@Param('id') id: string) {
-      return this.service.findOne(config, id);
+    findOne(
+      @Param('id') id: string,
+      @TenantId() tenantId?: string,
+    ) {
+      return this.service.findOne(config, id, tenantId);
     }
 
       @Get(':id/possible-duplicates')
@@ -133,6 +140,7 @@ export function createGenericEntityController(
       @Param('property') property: string,
       @Param('value') value: string,
       @Query('limit') limit?: string,
+      @TenantId() tenantId?: string,
     ) {
       // Check if this property is defined in special queries
       const specialQuery = config.specialQueries?.find(
@@ -151,6 +159,7 @@ export function createGenericEntityController(
         specialQuery.cypherParam,
         value,
         limit ? parseInt(limit, 10) : 1000,
+        tenantId,
       );
     }
   }

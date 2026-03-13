@@ -388,13 +388,13 @@
                                      "type":  "text/javascript",
                                      "exec":  [
                                                   "var tenant = pm.collectionVariables.get(\u0027x_tenant_id\u0027) || \u0027tenant_mit\u0027;",
+                                                  "pm.request.headers.upsert({ key: \u0027x-tenant-id\u0027,        value: tenant });",
                                                   "pm.request.headers.upsert({ key: \u0027x-authz-user-id\u0027,    value: pm.collectionVariables.get(\u0027authz_user_id\u0027)    || \u0027014d58c0-e788-4e53-bfa3-7986f242e7e1\u0027 });",
                                                   "pm.request.headers.upsert({ key: \u0027x-authz-username\u0027,   value: pm.collectionVariables.get(\u0027authz_username\u0027)   || \u0027testing@example.com\u0027 });",
                                                   "pm.request.headers.upsert({ key: \u0027x-authz-read\u0027,       value: pm.collectionVariables.get(\u0027authz_read\u0027)       || \u0027true\u0027 });",
                                                   "pm.request.headers.upsert({ key: \u0027x-authz-write\u0027,      value: pm.collectionVariables.get(\u0027authz_write\u0027)      || \u0027true\u0027 });",
                                                   "pm.request.headers.upsert({ key: \u0027x-authz-is-admin\u0027,   value: pm.collectionVariables.get(\u0027authz_is_admin\u0027)   || \u0027false\u0027 });",
-                                                  "pm.request.headers.upsert({ key: \u0027x-authz-env-\u0027 + tenant, value: pm.collectionVariables.get(\u0027authz_env_level\u0027) || \u00276\u0027 });",
-                                                  "pm.request.headers.upsert({ key: \u0027x-tenant-id\u0027,        value: tenant });"
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-env-\u0027 + tenant, value: pm.collectionVariables.get(\u0027authz_env_level\u0027) || \u00276\u0027 });"
                                               ]
                                  }
                   }
