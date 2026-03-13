@@ -259,6 +259,7 @@ public static class DemoSeeder
         await promotionService.PromoteToResearcherAsync(new ResearcherProfile
         {
             EntityId = ProfessorId,
+            TenantId       = TenantMit,
             OrcidId        = "0000-0001-2345-6789",
             ResearchField  = "Algorithms & Distributed Systems",
             HIndex         = 42,
@@ -269,6 +270,7 @@ public static class DemoSeeder
         await promotionService.PromoteToEmployeeAsync(new EmployeeProfile
         {
             EntityId = ProfessorId,
+            TenantId       = TenantMit,
             EmployeeNumber = "MIT-FAC-001",
             ContractType   = "Permanent",
             SalaryBand     = "Faculty",
@@ -297,9 +299,9 @@ public static class DemoSeeder
         // MIT context → Student + Researcher
         await relService.AddEnrolledInAsync(new EnrolledInRelationship { PersonStrongId = PersonSarah,
             OrgId = OrgMit, TenantId = TenantMit, Program = "BSc Computer Science", StartDate = new DateTime(2019,9,1) });
-        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonSarah, StudentId = "MIT-2019-001", Gpa = 3.9,
+        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonSarah, TenantId = TenantMit, StudentId = "MIT-2019-001", Gpa = 3.9,
               EnrollmentYear = 2019, EnrollmentStatus = "Graduated", StudyMode = "Full-time" });
-        await promotionService.PromoteToResearcherAsync(new ResearcherProfile { EntityId = PersonSarah, OrcidId = "0000-0002-1111-2222",
+        await promotionService.PromoteToResearcherAsync(new ResearcherProfile { EntityId = PersonSarah, TenantId = TenantMit, OrcidId = "0000-0002-1111-2222",
               ResearchField = "Machine Learning", HIndex = 3, ResearcherType = "PhD" });
         await promotionService.AssignAdvisorAsync(new HasAdvisorRelationship
             { StudentStrongId = PersonSarah, AdvisorStrongId = ProfessorId,
@@ -318,7 +320,7 @@ public static class DemoSeeder
         // Google context → Employee
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonSarah,
             OrgId = OrgGoogle, TenantId = TenantGoogle, JobTitle = "Software Engineer L4", StartDate = new DateTime(2023,8,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonSarah, EmployeeNumber = "G-44001",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonSarah, TenantId = TenantGoogle, EmployeeNumber = "G-44001",
               ContractType = "Permanent", SalaryBand = "L4", Department = "Cloud", HireDate = new DateTime(2023,8,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonSarah, DepartmentId = DeptGoogleCloud,
@@ -344,7 +346,7 @@ public static class DemoSeeder
 
         await relService.AddEnrolledInAsync(new EnrolledInRelationship { PersonStrongId = PersonJames,
             OrgId = OrgMit, TenantId = TenantMit, Program = "BSc Computer Science", StartDate = new DateTime(2020,9,1) });
-        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonJames, StudentId = "MIT-2020-014", Gpa = 3.7,
+        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonJames, TenantId = TenantMit, StudentId = "MIT-2020-014", Gpa = 3.7,
               EnrollmentYear = 2020, EnrollmentStatus = "Active", StudyMode = "Full-time" });
         await promotionService.AssignAdvisorAsync(new HasAdvisorRelationship
             { StudentStrongId = PersonJames, AdvisorStrongId = ProfessorId,
@@ -357,7 +359,7 @@ public static class DemoSeeder
 
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonJames,
             OrgId = OrgMicrosoft, TenantId = TenantMicrosoft, JobTitle = "Cloud Solutions Engineer", StartDate = new DateTime(2023,6,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonJames, EmployeeNumber = "MS-88201",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonJames, TenantId = TenantMicrosoft, EmployeeNumber = "MS-88201",
               ContractType = "Permanent", SalaryBand = "SDE2", Department = "Azure", HireDate = new DateTime(2023,6,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonJames, DepartmentId = DeptMSAzure,
@@ -385,9 +387,9 @@ public static class DemoSeeder
 
         await relService.AddEnrolledInAsync(new EnrolledInRelationship { PersonStrongId = PersonMia,
             OrgId = OrgDelft, TenantId = TenantDelft, Program = "MSc Data Science & AI", StartDate = new DateTime(2021,9,1) });
-        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonMia, StudentId = "DELFT-2021-033", Gpa = 4.0,
+        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonMia, TenantId = TenantDelft, StudentId = "DELFT-2021-033", Gpa = 4.0,
               EnrollmentYear = 2021, EnrollmentStatus = "Graduated", StudyMode = "Full-time" });
-        await promotionService.PromoteToResearcherAsync(new ResearcherProfile { EntityId = PersonMia, OrcidId = "0000-0003-5555-6666",
+        await promotionService.PromoteToResearcherAsync(new ResearcherProfile { EntityId = PersonMia, TenantId = TenantDelft, OrcidId = "0000-0003-5555-6666",
               ResearchField = "Deep Learning & Computer Vision", HIndex = 5, ResearcherType = "PostDoc" });
         await promotionService.RegisterForCourseAsync(new RegisteredForRelationship
             { StudentStrongId = PersonMia, CourseId = CourseDataSciDel,
@@ -402,7 +404,7 @@ public static class DemoSeeder
 
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonMia,
             OrgId = OrgGoogle, TenantId = TenantGoogle, JobTitle = "ML Research Engineer", StartDate = new DateTime(2023,10,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonMia, EmployeeNumber = "G-55789",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonMia, TenantId = TenantGoogle, EmployeeNumber = "G-55789",
               ContractType = "Permanent", SalaryBand = "L5", Department = "AI Research", HireDate = new DateTime(2023,10,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonMia, DepartmentId = DeptGoogleCloud,
@@ -430,7 +432,7 @@ public static class DemoSeeder
 
         await relService.AddEnrolledInAsync(new EnrolledInRelationship { PersonStrongId = PersonLeon,
             OrgId = OrgDelft, TenantId = TenantDelft, Program = "MSc Data Science & AI", StartDate = new DateTime(2022,9,1) });
-        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonLeon, StudentId = "DELFT-2022-077", Gpa = 3.5,
+        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonLeon, TenantId = TenantDelft, StudentId = "DELFT-2022-077", Gpa = 3.5,
               EnrollmentYear = 2022, EnrollmentStatus = "Active", StudyMode = "Part-time" });
         await promotionService.RegisterForCourseAsync(new RegisteredForRelationship
             { StudentStrongId = PersonLeon, CourseId = CourseDataSciDel,
@@ -438,14 +440,14 @@ public static class DemoSeeder
 
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonLeon,
             OrgId = OrgCityAmst, TenantId = TenantCityNL, JobTitle = "Data Analyst", StartDate = new DateTime(2023,3,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonLeon, EmployeeNumber = "AMS-DA-009",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonLeon, TenantId = TenantCityNL, EmployeeNumber = "AMS-DA-009",
               ContractType = "Permanent", SalaryBand = "Scale 8", Department = "Data & Analytics", HireDate = new DateTime(2023,3,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonLeon, DepartmentId = DeptCityData,
               TenantId = TenantCityNL, Role = "Data Analyst" });
 
         // Municipality registers Leon as a resident
-        await promotionService.PromoteToResidentAsync(new ResidentProfile { EntityId = PersonLeon, ResidentId = "NL-AMS-001234",
+        await promotionService.PromoteToResidentAsync(new ResidentProfile { EntityId = PersonLeon, TenantId = TenantCityNL, ResidentId = "NL-AMS-001234",
               RegistrationDate = new DateTime(2022,1,15), ResidencyType = "Expat", MaritalStatus = "Single" });
         await promotionService.RegisterAtLocationAsync(new RegisteredAtRelationship
             { ResidentStrongId = PersonLeon, LocationId = LocAmsterdam,
@@ -473,7 +475,7 @@ public static class DemoSeeder
             OrgId = OrgGoogle, TenantId = TenantGoogle, JobTitle = "UX Engineer", StartDate = new DateTime(2021,5,1) });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonAnna,
             OrgId = OrgMicrosoft, TenantId = TenantMicrosoft, JobTitle = "Design Consultant", StartDate = new DateTime(2023,1,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonAnna, EmployeeNumber = "G-22341",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonAnna, TenantId = TenantGoogle, EmployeeNumber = "G-22341",
               ContractType = "Permanent", SalaryBand = "L4", Department = "UX", HireDate = new DateTime(2021,5,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonAnna, DepartmentId = DeptGoogleCloud,
@@ -497,7 +499,7 @@ public static class DemoSeeder
             Nationality = "Moroccan", Status = "Active" });
         await relService.AddEnrolledInAsync(new EnrolledInRelationship { PersonStrongId = PersonKarim,
             OrgId = OrgMit, TenantId = TenantMit, Program = "BSc Computer Science", StartDate = new DateTime(2021,9,1) });
-        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonKarim, StudentId = "MIT-2021-099", Gpa = 3.6,
+        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonKarim, TenantId = TenantMit, StudentId = "MIT-2021-099", Gpa = 3.6,
               EnrollmentYear = 2021, EnrollmentStatus = "Active", StudyMode = "Full-time" });
         await promotionService.AssignAdvisorAsync(new HasAdvisorRelationship
             { StudentStrongId = PersonKarim, AdvisorStrongId = ProfessorId,
@@ -524,7 +526,7 @@ public static class DemoSeeder
             Nationality = "Japanese", Status = "Active" });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonYuki,
             OrgId = OrgGoogle, TenantId = TenantGoogle, JobTitle = "Site Reliability Engineer", StartDate = new DateTime(2022,3,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonYuki, EmployeeNumber = "G-11033",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonYuki, TenantId = TenantGoogle, EmployeeNumber = "G-11033",
               ContractType = "Permanent", SalaryBand = "L5", Department = "Cloud", HireDate = new DateTime(2022,3,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonYuki, DepartmentId = DeptGoogleCloud,
@@ -553,7 +555,7 @@ public static class DemoSeeder
             Nationality = "Russian", Status = "Active" });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonElena,
             OrgId = OrgMicrosoft, TenantId = TenantMicrosoft, JobTitle = "Principal Engineer", StartDate = new DateTime(2019,7,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonElena, EmployeeNumber = "MS-10001",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonElena, TenantId = TenantMicrosoft, EmployeeNumber = "MS-10001",
               ContractType = "Permanent", SalaryBand = "Principal", Department = "Azure", HireDate = new DateTime(2019,7,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonElena, DepartmentId = DeptMSAzure,
@@ -581,7 +583,7 @@ public static class DemoSeeder
             Nationality = "British", Status = "Active" });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonNoah,
             OrgId = OrgStartupX, TenantId = TenantGoogle, JobTitle = "Full Stack Developer", StartDate = new DateTime(2023,2,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonNoah, EmployeeNumber = "SX-007",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonNoah, TenantId = TenantGoogle, EmployeeNumber = "SX-007",
               ContractType = "Permanent", SalaryBand = "Senior", HireDate = new DateTime(2023,2,1) });
         await relService.AddLivesInAsync(new LivesInRelationship { PersonStrongId = PersonNoah,
             LocationId = LocLondon, TenantId = TenantGoogle });
@@ -601,12 +603,12 @@ public static class DemoSeeder
             Nationality = "Brazilian", Status = "Active" });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonSofia,
             OrgId = OrgCityAmst, TenantId = TenantCityNL, JobTitle = "Urban Data Scientist", StartDate = new DateTime(2022,1,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonSofia, EmployeeNumber = "AMS-DS-001",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonSofia, TenantId = TenantCityNL, EmployeeNumber = "AMS-DS-001",
               ContractType = "Permanent", SalaryBand = "Scale 10", Department = "Data & Analytics", HireDate = new DateTime(2022,1,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonSofia, DepartmentId = DeptCityData,
               TenantId = TenantCityNL, Role = "Lead Data Scientist" });
-        await promotionService.PromoteToResidentAsync(new ResidentProfile { EntityId = PersonSofia, ResidentId = "NL-AMS-005678",
+        await promotionService.PromoteToResidentAsync(new ResidentProfile { EntityId = PersonSofia, TenantId = TenantCityNL, ResidentId = "NL-AMS-005678",
               RegistrationDate = new DateTime(2021,8,1), ResidencyType = "Expat", MaritalStatus = "Married" });
         await promotionService.RegisterAtLocationAsync(new RegisteredAtRelationship
             { ResidentStrongId = PersonSofia, LocationId = LocAmsterdam,
@@ -631,14 +633,14 @@ public static class DemoSeeder
             Nationality = "American", Status = "Active" });
         await relService.AddEnrolledInAsync(new EnrolledInRelationship { PersonStrongId = PersonMarcus,
             OrgId = OrgDelft, TenantId = TenantDelft, Program = "MSc Data Science & AI", StartDate = new DateTime(2022,9,1) });
-        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonMarcus, StudentId = "DELFT-2022-055", Gpa = 3.3,
+        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonMarcus, TenantId = TenantDelft, StudentId = "DELFT-2022-055", Gpa = 3.3,
               EnrollmentYear = 2022, EnrollmentStatus = "Active", StudyMode = "Part-time" });
         await promotionService.RegisterForCourseAsync(new RegisteredForRelationship
             { StudentStrongId = PersonMarcus, CourseId = CourseAI,
               TenantId = TenantDelft, Status = "Enrolled", AcademicTerm = "Q2 2023" });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonMarcus,
             OrgId = OrgCityAmst, TenantId = TenantCityNL, JobTitle = "Smart City Intern", StartDate = new DateTime(2023,6,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonMarcus, EmployeeNumber = "AMS-INT-012",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonMarcus, TenantId = TenantCityNL, EmployeeNumber = "AMS-INT-012",
               ContractType = "Contract", SalaryBand = "Intern", HireDate = new DateTime(2023,6,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonMarcus, DepartmentId = DeptCityData,
@@ -659,7 +661,7 @@ public static class DemoSeeder
             Nationality = "Ukrainian", Status = "Active" });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonIrina,
             OrgId = OrgMicrosoft, TenantId = TenantMicrosoft, JobTitle = "Security Engineer", StartDate = new DateTime(2021,11,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonIrina, EmployeeNumber = "MS-33098",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonIrina, TenantId = TenantMicrosoft, EmployeeNumber = "MS-33098",
               ContractType = "Permanent", SalaryBand = "SDE2", Department = "Azure Security", HireDate = new DateTime(2021,11,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonIrina, DepartmentId = DeptMSAzure,
@@ -685,14 +687,14 @@ public static class DemoSeeder
             Nationality = "Vietnamese", Status = "Active" });
         await relService.AddEnrolledInAsync(new EnrolledInRelationship { PersonStrongId = PersonDavid,
             OrgId = OrgMit, TenantId = TenantMit, Program = "BSc Computer Science", StartDate = new DateTime(2022,9,1) });
-        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonDavid, StudentId = "MIT-2022-044", Gpa = 3.4,
+        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonDavid, TenantId = TenantMit, StudentId = "MIT-2022-044", Gpa = 3.4,
               EnrollmentYear = 2022, EnrollmentStatus = "Active", StudyMode = "Full-time" });
         await promotionService.RegisterForCourseAsync(new RegisteredForRelationship
             { StudentStrongId = PersonDavid, CourseId = CourseAlgo,
               TenantId = TenantMit, Status = "Enrolled", AcademicTerm = "Fall 2023" });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonDavid,
             OrgId = OrgStartupX, TenantId = TenantGoogle, JobTitle = "Frontend Intern", StartDate = new DateTime(2024,1,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonDavid, EmployeeNumber = "SX-015",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonDavid, TenantId = TenantGoogle, EmployeeNumber = "SX-015",
               ContractType = "Contract", SalaryBand = "Intern", HireDate = new DateTime(2024,1,1) });
         await relService.AddLivesInAsync(new LivesInRelationship { PersonStrongId = PersonDavid,
             LocationId = LocCambridge, TenantId = TenantMit });
@@ -710,7 +712,7 @@ public static class DemoSeeder
             Nationality = "Australian", Status = "Active" });
         await relService.AddWorksAtAsync(new WorksAtRelationship { PersonStrongId = PersonAmelia,
             OrgId = OrgGoogle, TenantId = TenantGoogle, JobTitle = "Developer Advocate", StartDate = new DateTime(2020,9,1) });
-        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonAmelia, EmployeeNumber = "G-09922",
+        await promotionService.PromoteToEmployeeAsync(new EmployeeProfile { EntityId = PersonAmelia, TenantId = TenantGoogle, EmployeeNumber = "G-09922",
               ContractType = "Permanent", SalaryBand = "L4", Department = "DevRel", HireDate = new DateTime(2020,9,1) });
         await promotionService.AssignToDepartmentAsync(new WorksInRelationship
             { EmployeeStrongId = PersonAmelia, DepartmentId = DeptGoogleCloud,
@@ -733,12 +735,12 @@ public static class DemoSeeder
             Nationality = "Omani", Status = "Active" });
         await relService.AddEnrolledInAsync(new EnrolledInRelationship { PersonStrongId = PersonOmar,
             OrgId = OrgDelft, TenantId = TenantDelft, Program = "MSc Data Science & AI", StartDate = new DateTime(2023,9,1) });
-        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonOmar, StudentId = "DELFT-2023-011", Gpa = 3.2,
+        await promotionService.PromoteToStudentAsync(new StudentProfile { EntityId = PersonOmar, TenantId = TenantDelft, StudentId = "DELFT-2023-011", Gpa = 3.2,
               EnrollmentYear = 2023, EnrollmentStatus = "Active", StudyMode = "Full-time" });
         await promotionService.RegisterForCourseAsync(new RegisteredForRelationship
             { StudentStrongId = PersonOmar, CourseId = CourseDataSciDel,
               TenantId = TenantDelft, Status = "Enrolled", AcademicTerm = "Q1 2023" });
-        await promotionService.PromoteToResidentAsync(new ResidentProfile { EntityId = PersonOmar, ResidentId = "NL-AMS-009900",
+        await promotionService.PromoteToResidentAsync(new ResidentProfile { EntityId = PersonOmar, TenantId = TenantCityNL, ResidentId = "NL-AMS-009900",
               RegistrationDate = new DateTime(2023,8,20), ResidencyType = "Temporary", MaritalStatus = "Single" });
         await promotionService.RegisterAtLocationAsync(new RegisteredAtRelationship
             { ResidentStrongId = PersonOmar, LocationId = LocAmsterdam,

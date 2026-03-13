@@ -87,42 +87,53 @@ export class SchemaRegistrationService implements OnApplicationBootstrap {
    */
   async upsertEntitySchema(entity: EntitySchemaDefinition): Promise<void> {
     try {
-      // First, try to delete existing properties and relationships safely
+      // Save existing security levels before any deletion so they survive re-registration.
+      const existingLevels = await this.neo4j.runQuery(
+        `MATCH (:EntitySchema { key: $key })-[:HAS_PROPERTY]->(p:SchemaProperty)
+         RETURN p.name AS name, coalesce(p.securityLevel, 1) AS level`,
+        { key: entity.key },
+      ).catch(() => []);
+
+      const savedLevels = new Map<string, number>(
+        existingLevels.map(r => {
+          const raw = r.get('level');
+          const level = typeof raw === 'object' && raw !== null ? raw.toNumber() : Number(raw) || 1;
+          return [r.get('name') as string, level];
+        }),
+      );
+
+      // Remove existing property nodes and relationships for this schema.
       await this.neo4j.runQuery(
-        `
-        MATCH (e:EntitySchema { key: $key })
-        OPTIONAL MATCH (e)-[r:HAS_PROPERTY]->(p:SchemaProperty)
-        DELETE r, p
-        `,
-        { key: entity.key }
+        `MATCH (e:EntitySchema { key: $key })
+         OPTIONAL MATCH (e)-[r:HAS_PROPERTY]->(p:SchemaProperty)
+         DELETE r, p`,
+        { key: entity.key },
       ).catch(err => {
-        // If deletion fails due to relationships, just log and continue
         console.warn(`⚠ Could not clean up existing schema for ${entity.key}:`, err.message);
       });
 
       // Create the entity schema node
       await this.neo4j.runQuery(
-        `
-        MERGE (e:EntitySchema { key: $key })
-        SET e.label = $label,
-            e.icon  = $icon
-        `,
-        { key: entity.key, label: entity.label, icon: entity.icon ?? '' }
+        `MERGE (e:EntitySchema { key: $key })
+         SET e.label = $label,
+             e.icon  = $icon`,
+        { key: entity.key, label: entity.label, icon: entity.icon ?? '' },
       );
 
-      // Create property nodes and relationships
+      // Recreate property nodes, restoring any previously set security levels.
       for (const prop of entity.properties) {
+        const securityLevel = savedLevels.get(prop.name) ?? 1;
         await this.neo4j.runQuery(
-          `
-          MATCH (e:EntitySchema { key: $key })
-          MERGE (p:SchemaProperty { name: $propName, type: $propType })
-          MERGE (e)-[:HAS_PROPERTY]->(p)
-          `,
+          `MATCH (e:EntitySchema { key: $key })
+           MERGE (p:SchemaProperty { name: $propName, type: $propType })
+           SET p.securityLevel = $securityLevel
+           MERGE (e)-[:HAS_PROPERTY]->(p)`,
           {
             key: entity.key,
             propName: prop.name,
             propType: this.normalizeType(prop.type),
-          }
+            securityLevel,
+          },
         );
       }
     } catch (err) {

@@ -32,6 +32,8 @@ public class PromotionService
     {
         if (string.IsNullOrWhiteSpace(profile.EntityId))
             throw new ArgumentException("EntityId required for promotion.");
+        if (string.IsNullOrWhiteSpace(profile.TenantId))
+            throw new ArgumentException("TenantId required for promotion.");
         return _repo.PromoteToStudentAsync(profile);
     }
 
@@ -39,6 +41,8 @@ public class PromotionService
     {
         if (string.IsNullOrWhiteSpace(profile.EntityId))
             throw new ArgumentException("EntityId required for promotion.");
+        if (string.IsNullOrWhiteSpace(profile.TenantId))
+            throw new ArgumentException("TenantId required for promotion.");
         return _repo.PromoteToEmployeeAsync(profile);
     }
 
@@ -46,6 +50,8 @@ public class PromotionService
     {
         if (string.IsNullOrWhiteSpace(profile.EntityId))
             throw new ArgumentException("EntityId required for promotion.");
+        if (string.IsNullOrWhiteSpace(profile.TenantId))
+            throw new ArgumentException("TenantId required for promotion.");
         return _repo.PromoteToResidentAsync(profile);
     }
 
@@ -53,16 +59,20 @@ public class PromotionService
     {
         if (string.IsNullOrWhiteSpace(profile.EntityId))
             throw new ArgumentException("EntityId required for promotion.");
+        if (string.IsNullOrWhiteSpace(profile.TenantId))
+            throw new ArgumentException("TenantId required for promotion.");
         return _repo.PromoteToResearcherAsync(profile);
     }
 
-    public Task PromoteToSubtypeAsync(string strongId, string subtype, Dictionary<string, object> properties)
+    public Task PromoteToSubtypeAsync(string strongId, string subtype, string tenantId, Dictionary<string, object> properties)
     {
         if (string.IsNullOrWhiteSpace(strongId))
             throw new ArgumentException("EntityId required for promotion.");
         if (string.IsNullOrWhiteSpace(subtype))
             throw new ArgumentException("Subtype required.");
-        return _repo.PromoteToSubtypeAsync(strongId, subtype, properties);
+        if (string.IsNullOrWhiteSpace(tenantId))
+            throw new ArgumentException("TenantId required for promotion.");
+        return _repo.PromoteToSubtypeAsync(strongId, subtype, tenantId, properties);
     }
 
     /// <summary>Returns the current labels on a person — e.g. ["Person","Student","Researcher"]</summary>

@@ -23,15 +23,19 @@ export class DataService {
   /**
    * Fetch all nodes connected on the same tenant ID.
    * Returns nodes grouped by label with their properties and types.
+   * SubtypeInstance data is filtered to only show instances owned by this tenant.
    */
   async getAllNodesByTenant(tenantId: string, limit = 10000) {
-    // Collect all unique nodes from tenant relationships (same pattern as getRelationshipsByTenant)
+    // Collect all unique nodes from tenant relationships, with their tenant-scoped SubtypeInstances
     const records = await this.neo4j.runQuery(`
       MATCH (a)-[r {tenant_id: $tenantId}]->(b)
+      WHERE NOT a:SubtypeInstance AND NOT b:SubtypeInstance
       WITH collect(DISTINCT a) + collect(DISTINCT b) AS allNodes
       UNWIND allNodes AS n
       WITH DISTINCT n
-      RETURN n, labels(n) AS labels
+      OPTIONAL MATCH (n)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance)
+      RETURN n, labels(n) AS labels,
+             collect(DISTINCT { labels: labels(si), props: properties(si) }) AS subtypeInstances
       LIMIT $limit
     `, { tenantId, limit: neo4j.int(limit) });
 
@@ -45,9 +49,11 @@ export class DataService {
         continue;
       }
 
-      const node = await this.projection.projectTypedNode(
+      const subtypeInstances = record.get('subtypeInstances') as any[];
+      const node = await this.projection.projectTypedNodeWithInstances(
         this.neo4j.toPlainObject(record.get('n').properties),
         nodeLabels,
+        subtypeInstances,
       );
 
       for (const label of nodeLabels) {
@@ -181,10 +187,13 @@ export class DataService {
 
   /**
    * Fetch all relationships for a specific tenant ID.
+   * Excludes HAS_SUBTYPE_INSTANCE relationships (internal subtype structure).
    */
   async getRelationshipsByTenant(tenantId: string, limit = 10000) {
     const records = await this.neo4j.runQuery(`
       MATCH (a)-[r {tenant_id: $tenantId}]->(b)
+      WHERE type(r) <> 'HAS_SUBTYPE_INSTANCE'
+        AND NOT a:SubtypeInstance AND NOT b:SubtypeInstance
       RETURN a, b, r, type(r) AS relType,
              labels(a) AS aLabels, labels(b) AS bLabels
       LIMIT $limit

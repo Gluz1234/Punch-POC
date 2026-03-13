@@ -5,6 +5,9 @@ import { getAllEntities } from '../config/entity-config';
 import { PromotionProjectionService } from '../promotions/promotion-projection.service';
 import { EntityResolutionService } from '../entities/entity-resolution.service';
 
+type Neo4jPrimitive = string | number | boolean;
+type Neo4jPropertyValue = Neo4jPrimitive | Neo4jPrimitive[] | null;
+
 @Injectable()
 export class RelationshipsService {
   constructor(
@@ -23,6 +26,8 @@ export class RelationshipsService {
     const records = await this.neo4j.runQuery(
       `
       MATCH (src)-[r {tenant_id: $tenantId}]->(tgt)
+      WHERE type(r) <> 'HAS_SUBTYPE_INSTANCE'
+        AND NOT src:SubtypeInstance AND NOT tgt:SubtypeInstance
       RETURN src, tgt, r, type(r) AS relType,
              labels(src) AS srcLabels,
              labels(tgt) AS tgtLabels
@@ -81,7 +86,8 @@ export class RelationshipsService {
 
     const records = await this.neo4j.runQuery(`
       MATCH (src:Entity {\`${safeIdField}\`: $entityId})-[r]->(tgt)
-      WHERE true ${tenantFilter}
+      WHERE type(r) <> 'HAS_SUBTYPE_INSTANCE' AND NOT tgt:SubtypeInstance
+      ${tenantFilter}
       RETURN src, tgt, r, type(r) AS relType,
              labels(src) AS srcLabels,
              labels(tgt) AS tgtLabels`,
@@ -154,11 +160,12 @@ export class RelationshipsService {
     const safeRelType = this.neo4j.sanitizeIdentifier(dto.relationshipType.toUpperCase());
     const safeIdField = this.neo4j.sanitizeIdentifier(RelationshipsService.CANONICAL_ID_FIELD);
 
-    // Build dynamic property SET clause from dto.properties
-    const extraProps = dto.properties ?? {};
+    // Neo4j relationship properties only allow primitives or arrays of primitives.
+    // Convert unsupported values (e.g. maps) to JSON strings to keep writes safe.
+    const extraProps = this.sanitizeRelationshipProperties(dto.properties ?? {});
     const propKeys = Object.keys(extraProps);
     const propSetClause = propKeys.length
-      ? ', ' + propKeys.map(k => `r.\`${this.neo4j.sanitizeIdentifier(k)}\` = $prop_${k}`).join(', ')
+      ? ', ' + propKeys.map(k => `r.\`${k}\` = $prop_${k}`).join(', ')
       : '';
     const propParams: Record<string, any> = {};
     for (const k of propKeys) {
@@ -352,5 +359,67 @@ export class RelationshipsService {
       }
     }
     return props.id ?? props.name ?? Object.values(props)[0] ?? 'unknown';
+  }
+
+  private sanitizeRelationshipProperties(props: Record<string, any>): Record<string, Neo4jPropertyValue> {
+    const clean: Record<string, Neo4jPropertyValue> = {};
+
+    for (const [rawKey, rawValue] of Object.entries(props)) {
+      const key = this.neo4j.sanitizeIdentifier(rawKey);
+      clean[key] = this.toNeo4jPropertyValue(rawValue);
+    }
+
+    return clean;
+  }
+
+  private toNeo4jPropertyValue(value: any): Neo4jPropertyValue {
+    const primitive = this.toNeo4jPrimitive(value);
+    if (primitive !== undefined) {
+      return primitive;
+    }
+
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((entry) => {
+        const primitiveEntry = this.toNeo4jPrimitive(entry);
+        if (primitiveEntry === undefined) {
+          throw new BadRequestException(
+            'Relationship property arrays must contain only primitive values.',
+          );
+        }
+        return primitiveEntry;
+      });
+    }
+
+    // Persist nested objects as JSON strings so Cypher never receives MAP values.
+    try {
+      return JSON.stringify(value);
+    } catch {
+      throw new BadRequestException(
+        'Relationship object properties must be JSON-serializable values.',
+      );
+    }
+  }
+
+  private toNeo4jPrimitive(value: any): Neo4jPrimitive | undefined {
+    if (typeof value === 'string' || typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) {
+        throw new BadRequestException('Relationship numeric properties must be finite numbers.');
+      }
+      return value;
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    return undefined;
   }
 }

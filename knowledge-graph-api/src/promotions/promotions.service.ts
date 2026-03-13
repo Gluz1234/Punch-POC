@@ -77,9 +77,10 @@ export class PromotionsService implements OnApplicationBootstrap {
     entityId: string,
     subtype: string,
     properties: Record<string, any>,
+    tenantId?: string,
   ) {
     const requested = this.resolveEntityConfig(entityType);
-    const promoted = await this.promoteToSubtypeById(entityId, subtype, properties);
+    const promoted = await this.promoteToSubtypeById(entityId, subtype, properties, tenantId);
     if (!promoted.labels.some((label: string) => label.toLowerCase() === requested.label.toLowerCase())) {
       throw new BadRequestException(
         `entityType mismatch for ${entityId}: expected ${requested.label}`,
@@ -92,7 +93,12 @@ export class PromotionsService implements OnApplicationBootstrap {
     entityId: string,
     subtype: string,
     properties: Record<string, any>,
+    tenantId?: string,
   ) {
+    if (!tenantId?.trim()) {
+      throw new BadRequestException('tenantId is required for subtype promotion');
+    }
+
     const identityBefore = await this.resolution.buildMutationContextForEntity(entityId, false);
     const canonicalEntityId = identityBefore.canonicalEntityId;
 
@@ -106,7 +112,6 @@ export class PromotionsService implements OnApplicationBootstrap {
 
     // Fetch the subtype's own icon and allowed base labels (stored on the PromotionSubtype node)
     const subtypeDef = await this.promotionSchema.getSubtypeDefinition(safeSubtype.toLowerCase());
-    const subtypeIcon = subtypeDef?.icon ?? '❓';
 
     // Enforce allowed base types: deny promotion if the entity's base type is not in the list
     if (subtypeDef?.allowedBaseLabels?.length) {
@@ -121,6 +126,7 @@ export class PromotionsService implements OnApplicationBootstrap {
     }
 
     // Auto-register user-defined subtype (merging properties, preserving icon)
+    const subtypeIcon = subtypeDef?.icon ?? '❓';
     const propertyKeys = Object.keys(safeProps);
     if (propertyKeys.length > 0) {
       try {
@@ -136,25 +142,25 @@ export class PromotionsService implements OnApplicationBootstrap {
       }
     }
 
-    // Build SET clauses: user-provided properties + namespaced subtype icon
-    // e.g. student_icon = '📝' — never overwrites the base entity's `icon` property
-    const subtypeIconProp = `${safeSubtype.toLowerCase()}_icon`;
-    const setParts = [
-      ...Object.keys(safeProps).map(k => `n.\`${k}\` = $prop_${k}`),
-      `n.\`${subtypeIconProp}\` = $subtypeIcon`,
-    ].join(', ');
-    const setClause = `SET ${setParts}`;
+    // Build SET clauses for SubtypeInstance properties
+    const setParts = Object.keys(safeProps).map(k => `si.\`${k}\` = $prop_${k}`);
+    const setClause = setParts.length ? `SET ${setParts.join(', ')}` : '';
 
-    const params: Record<string, any> = { entityId: canonicalEntityId, subtypeIcon };
+    const params: Record<string, any> = { entityId: canonicalEntityId, tenantId };
     for (const [k, v] of Object.entries(safeProps)) {
       params[`prop_${k}`] = v;
     }
 
+    // Create or update tenant-scoped SubtypeInstance node
     const records = await this.neo4j.runQuery(`
       MATCH (n:Entity {\`${safeIdField}\`: $entityId})
-      SET n:\`${safeSubtype}\`
+      MERGE (n)-[rel:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance:\`${safeSubtype}\` { owner_tenant_id: $tenantId, parent_entity_id: $entityId })
+      ON CREATE SET rel.created_at = datetime(), si.created_at = datetime()
       ${setClause}
-      RETURN n, labels(n) AS labels`,
+      SET si.updated_at = datetime()
+      WITH n, si, labels(n) AS baseLabels
+      OPTIONAL MATCH (n)-[r2:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si2:SubtypeInstance)
+      RETURN n, baseLabels, collect(DISTINCT { labels: labels(si2), props: properties(si2) }) AS subtypeInstances`,
       params,
     );
 
@@ -163,8 +169,9 @@ export class PromotionsService implements OnApplicationBootstrap {
     }
 
     const nodeProperties = this.neo4j.toPlainObject(records[0].get('n').properties);
-    const labels = records[0].get('labels') as string[];
-    const entity = await this.projection.projectTypedNode(nodeProperties, labels, canonicalEntityId);
+    const baseLabels = records[0].get('baseLabels') as string[];
+    const subtypeInstances = records[0].get('subtypeInstances') as any[];
+    const entity = await this.projection.projectTypedNodeWithInstances(nodeProperties, baseLabels, subtypeInstances, canonicalEntityId);
     const identity = await this.resolution.buildMutationContextForEntity(entityId, true);
 
     return {
@@ -173,36 +180,134 @@ export class PromotionsService implements OnApplicationBootstrap {
     };
   }
 
+  // ── Update subtype instance properties (owner tenant only) ────────────
+
+  async updateSubtypeInstance(
+    entityId: string,
+    subtype: string,
+    tenantId: string,
+    properties: Record<string, any>,
+  ) {
+    if (!tenantId?.trim()) {
+      throw new BadRequestException('tenantId is required');
+    }
+
+    const canonicalEntityId = (await this.resolution.buildMutationContextForEntity(entityId, false)).canonicalEntityId;
+    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
+    const safeSubtype = this.neo4j.sanitizeIdentifier(subtype);
+    const safeProps = this.sanitizePropertyKeys(properties);
+
+    const propKeys = Object.keys(safeProps);
+    if (!propKeys.length) {
+      throw new BadRequestException('No properties provided to update');
+    }
+
+    const setParts = propKeys.map(k => `si.\`${k}\` = $prop_${k}`);
+    const params: Record<string, any> = { entityId: canonicalEntityId, tenantId };
+    for (const [k, v] of Object.entries(safeProps)) {
+      params[`prop_${k}`] = v;
+    }
+
+    const records = await this.neo4j.runQuery(`
+      MATCH (n:Entity {\`${safeIdField}\`: $entityId})
+            -[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->
+            (si:SubtypeInstance:\`${safeSubtype}\` { owner_tenant_id: $tenantId })
+      SET ${setParts.join(', ')}, si.updated_at = datetime()
+      RETURN n, labels(n) AS baseLabels, properties(si) AS siProps, labels(si) AS siLabels`,
+      params,
+    );
+
+    if (!records.length) {
+      throw new NotFoundException(
+        `No ${subtype} subtype instance owned by ${tenantId} found for entity ${entityId}`,
+      );
+    }
+
+    const nodeProperties = this.neo4j.toPlainObject(records[0].get('n').properties);
+    const baseLabels = records[0].get('baseLabels') as string[];
+    const siProps = this.neo4j.toPlainObject(records[0].get('siProps'));
+    const siLabels = records[0].get('siLabels') as string[];
+    return this.projection.projectTypedNodeWithInstances(
+      nodeProperties,
+      baseLabels,
+      [{ labels: siLabels, props: siProps }],
+      canonicalEntityId,
+    );
+  }
+
+  // ── Delete a subtype instance (owner tenant only) ─────────────────────
+
+  async deleteSubtypeInstance(entityId: string, subtype: string, tenantId: string) {
+    if (!tenantId?.trim()) {
+      throw new BadRequestException('tenantId is required');
+    }
+
+    const canonicalEntityId = (await this.resolution.buildMutationContextForEntity(entityId, false)).canonicalEntityId;
+    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
+    const safeSubtype = this.neo4j.sanitizeIdentifier(subtype);
+
+    const records = await this.neo4j.runQuery(`
+      MATCH (n:Entity {\`${safeIdField}\`: $entityId})
+            -[rel:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->
+            (si:SubtypeInstance:\`${safeSubtype}\` { owner_tenant_id: $tenantId })
+      DELETE rel, si
+      RETURN n.entity_id AS entityId`,
+      { entityId: canonicalEntityId, tenantId },
+    );
+
+    if (!records.length) {
+      throw new NotFoundException(
+        `No ${subtype} subtype instance owned by ${tenantId} found for entity ${entityId}`,
+      );
+    }
+
+    return { deleted: true, entityId: canonicalEntityId, subtype, tenantId };
+  }
+
   // ── Generic listing: get all nodes with a given subtype label ───────────
 
   async getNodesBySubtype(subtype: string, tenantId?: string) {
     const safeSubtype = this.neo4j.sanitizeIdentifier(subtype);
+    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
 
     let cypher: string;
     let params: Record<string, any>;
 
     if (tenantId) {
-      // Tenant-scoped: find nodes that have any relationship with this tenant
+      // Tenant-scoped: find entities that have a SubtypeInstance of this subtype owned by this tenant
       cypher = `
-        MATCH (n:\`${safeSubtype}\`)
-        WHERE EXISTS((n)-[r]->() WHERE r.tenant_id = $tenantId)
-           OR EXISTS(()-[r]->(n) WHERE r.tenant_id = $tenantId)
-        RETURN DISTINCT n, labels(n) AS labels`;
+        MATCH (n:Entity)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si:SubtypeInstance:\`${safeSubtype}\`)
+        WITH n, labels(n) AS baseLabels
+        OPTIONAL MATCH (n)-[r2:HAS_SUBTYPE_INSTANCE { tenant_id: $tenantId }]->(si2:SubtypeInstance)
+        RETURN n, baseLabels, collect(DISTINCT { labels: labels(si2), props: properties(si2) }) AS subtypeInstances`;
       params = { tenantId };
     } else {
-      // Global: all nodes with this subtype label
+      // Global: return base entity data only (no subtype properties without tenant context)
       cypher = `
-        MATCH (n:\`${safeSubtype}\`)
-        RETURN n, labels(n) AS labels`;
+        MATCH (n:Entity)-[:HAS_SUBTYPE_INSTANCE]->(si:SubtypeInstance:\`${safeSubtype}\`)
+        RETURN DISTINCT n, labels(n) AS baseLabels`;
       params = {};
     }
 
     const records = await this.neo4j.runQuery(cypher, params);
+
+    if (tenantId) {
+      return Promise.all(
+        records.map((r) =>
+          this.projection.projectTypedNodeWithInstances(
+            this.neo4j.toPlainObject(r.get('n').properties),
+            r.get('baseLabels') as string[],
+            r.get('subtypeInstances') as any[],
+          ),
+        ),
+      );
+    }
+
     return Promise.all(
       records.map((r) =>
         this.projection.projectTypedNode(
           this.neo4j.toPlainObject(r.get('n').properties),
-          r.get('labels') as string[],
+          r.get('baseLabels') as string[],
         ),
       ),
     );

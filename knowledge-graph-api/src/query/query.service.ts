@@ -95,7 +95,7 @@ export class QueryService {
     const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
     const records = await this.neo4j.runQuery(`
       MATCH (n:Entity {\`${safeIdField}\`: $entityId})-[r]->()
-      WHERE r.tenant_id IS NOT NULL
+      WHERE r.tenant_id IS NOT NULL AND type(r) <> 'HAS_SUBTYPE_INSTANCE'
       RETURN DISTINCT r.tenant_id AS tenant ORDER BY tenant`,
       { entityId });
     return records.map(r => r.get('tenant'));
@@ -110,13 +110,13 @@ export class QueryService {
     if (tenantId) {
       records = await this.neo4j.runQuery(
         `MATCH (n:\`${safeLabel}\`)-[r]->()
-         WHERE r.tenant_id = $tenantId
+         WHERE r.tenant_id = $tenantId AND NOT n:SubtypeInstance
          RETURN DISTINCT n, labels(n) AS labels`,
         { tenantId },
       );
     } else {
       records = await this.neo4j.runQuery(
-        `MATCH (n:\`${safeLabel}\`) RETURN n, labels(n) AS labels`,
+        `MATCH (n:\`${safeLabel}\`) WHERE NOT n:SubtypeInstance RETURN n, labels(n) AS labels`,
       );
     }
 

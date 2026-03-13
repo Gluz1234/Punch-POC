@@ -1,11 +1,16 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Put, Param, Query, Body, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { SchemaService } from './schema.service';
+import { TenantId } from '../auth/tenant.decorator';
+import { PropertySecurityService } from '../auth/property-security.service';
 
 @ApiTags('Schema')
 @Controller('schema')
 export class SchemaController {
-  constructor(private readonly schemaService: SchemaService) {}
+  constructor(
+    private readonly schemaService: SchemaService,
+    private readonly propertySecurityService: PropertySecurityService,
+  ) {}
 
   @Get()
   @ApiOperation({ 
@@ -87,11 +92,10 @@ export class SchemaController {
     return this.schemaService.getTenants();
   }
 
-  @Get('tenants/:tenantId')
-  @ApiOperation({ summary: 'Get schema for a tenant', description: 'Returns tenant-scoped schema details (node labels and relationship types) based on relationships with the given tenant_id.' })
-  @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'tenant_mit' })
+  @Get('tenant')
+  @ApiOperation({ summary: 'Get schema for a tenant', description: 'Returns tenant-scoped schema details (node labels and relationship types) using the tenant from x-tenant-id header.' })
   @ApiResponse({ status: 200, description: 'Tenant-scoped schema snapshot' })
-  getSchemaForTenant(@Param('tenantId') tenantId: string) {
+  getSchemaForTenant(@TenantId() tenantId: string) {
     return this.schemaService.getSchemaForTenant(tenantId);
   }
 
@@ -107,6 +111,36 @@ export class SchemaController {
   @ApiResponse({ status: 200, description: 'Subtype definitions with total count' })
   getAllSubtypes() {
     return this.schemaService.getAllSubtypes();
+  }
+
+  // ── Property security levels ──────────────────────────────────────────────
+
+  @Get('property-security')
+  @ApiOperation({
+    summary: 'Get all property security levels',
+    description: 'Returns each SchemaProperty with its configured security level (1–6). Level 1 = open, 6 = highest restriction.',
+  })
+  @ApiResponse({ status: 200, description: 'Array of properties with their security levels' })
+  getPropertySecurityLevels() {
+    return this.propertySecurityService.getAllPropertyLevels();
+  }
+
+  @Put('property-security/:property')
+  @ApiOperation({
+    summary: 'Set security level for a property',
+    description: 'Sets the security level (1–6) for a named SchemaProperty. GET requests from callers below this level will receive "[HIDDEN]" for the value. POST/PUT requests that include this property will be rejected with 403.',
+  })
+  @ApiParam({ name: 'property', description: 'Property name', example: 'salary_band' })
+  @ApiBody({ schema: { example: { level: 5 } } })
+  @ApiResponse({ status: 200, description: 'Number of SchemaProperty nodes updated' })
+  setPropertySecurityLevel(
+    @Param('property') property: string,
+    @Body('level') level: number,
+  ) {
+    if (!level || level < 1 || level > 6) {
+      throw new BadRequestException('level must be an integer between 1 and 6');
+    }
+    return this.propertySecurityService.setPropertyLevel(property, level);
   }
 
   private parseBooleanQuery(value?: string): boolean {

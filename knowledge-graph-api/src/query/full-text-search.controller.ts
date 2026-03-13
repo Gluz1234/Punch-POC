@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Param, Query, HttpCode, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AdvancedSearchRequest, FullTextSearchService } from './full-text-search.service';
+import { TenantId } from '../auth/tenant.decorator';
 
 /**
  * Full-Text Search Controller
@@ -26,7 +27,6 @@ export class FullTextSearchController {
   @ApiQuery({ name: 'q', description: 'Autocomplete prefix', example: 'jo', required: true })
   @ApiQuery({ name: 'field', description: 'Optional single field to autocomplete', required: false, example: 'first_name' })
   @ApiQuery({ name: 'fields', description: 'Optional comma-separated fields to autocomplete', required: false, example: 'first_name,last_name' })
-  @ApiQuery({ name: 'tenantId', description: 'Optional tenant ID filter', required: false })
   @ApiQuery({ name: 'limit', description: 'Max suggestions (1-100)', required: false, example: 10 })
   @ApiResponse({
     status: 200,
@@ -49,7 +49,7 @@ export class FullTextSearchController {
     @Query('q') query?: string,
     @Query('field') field?: string,
     @Query('fields') fields?: string,
-    @Query('tenantId') tenantId?: string,
+    @TenantId() tenantId?: string,
     @Query('limit') limit?: string,
   ) {
     if (!query) {
@@ -281,7 +281,6 @@ export class FullTextSearchController {
   @ApiParam({ name: 'entityType', description: 'Entity type key', example: 'person' })
   @ApiQuery({ name: 'q', description: 'Search query with operators (*, ~, AND, OR, "phrase")', example: 'john*', required: true })
   @ApiQuery({ name: 'fields', description: 'Optional comma-separated fields to search within', required: false, example: 'first_name,last_name' })
-  @ApiQuery({ name: 'tenantId', description: 'Optional tenant ID filter', required: false })
   @ApiQuery({ name: 'limit', description: 'Max results (1-1000)', required: false, example: 50 })
   @ApiResponse({
     status: 200,
@@ -303,7 +302,7 @@ export class FullTextSearchController {
     @Param('entityType') entityType: string,
     @Query('q') query?: string,
     @Query('fields') fields?: string,
-    @Query('tenantId') tenantId?: string,
+    @TenantId() tenantId?: string,
     @Query('limit') limit?: string,
   ) {
     if (!query) {

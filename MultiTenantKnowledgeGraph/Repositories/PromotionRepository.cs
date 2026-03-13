@@ -6,19 +6,14 @@ using MultiTenantKnowledgeGraph.Models.Relationships;
 namespace MultiTenantKnowledgeGraph.Repositories;
 
 /// <summary>
-/// Handles the PROMOTION pattern:
-///   - Adding subtype labels to existing Person nodes (SET p:Student etc.)
-///   - Setting subtype-specific fields on those nodes
-///   - Creating subtype-specific relationships
-///   - CRUD for new node types: Course, Department
+/// Handles the PROMOTION pattern using tenant-scoped SubtypeInstance nodes:
+///   - Creates SubtypeInstance nodes linked to Person via HAS_SUBTYPE_INSTANCE
+///   - SubtypeInstance nodes carry subtype-specific fields
+///   - HAS_SUBTYPE_INSTANCE relationships carry tenant_id for scoping
+///   - Only the owning tenant can see/edit a SubtypeInstance
 ///
-/// PROMOTION is additive:
-///   - Never removes the :Person label
-///   - Never removes existing properties
-///   - A node can be promoted to multiple subtypes simultaneously
-///
-/// Example: Sarah Chen starts as Person, gets promoted to Person:Student by MIT,
-///          then to Person:Student:Employee when Google hires her.
+/// Example: MIT enrolls Sarah → creates:
+///   (Sarah:Person)-[:HAS_SUBTYPE_INSTANCE {tenant_id:'tenant_mit'}]-&gt;(:SubtypeInstance:Student {gpa:3.9, ...})
 /// </summary>
 public class PromotionRepository
 {
@@ -26,29 +21,32 @@ public class PromotionRepository
     public PromotionRepository(Neo4jService neo4j) => _neo4j = neo4j;
 
     // ══════════════════════════════════════════════════════════════
-    // SUBTYPE PROMOTION — Label + Fields
+    // SUBTYPE PROMOTION — Creates SubtypeInstance nodes
     // ══════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Promotes a Person to :Student and sets student-specific fields.
-    /// Safe to call multiple times — ON MATCH SET is idempotent.
+    /// Promotes a Person to Student by creating a tenant-scoped SubtypeInstance node.
+    /// Safe to call multiple times — MERGE is idempotent per tenant.
     /// </summary>
     public async Task PromoteToStudentAsync(StudentProfile profile)
     {
         const string cypher = @"
             MATCH (p:Person {entity_id: $strongId})
-            SET p:Student
-            SET p.student_id       = $studentId,
-                p.gpa              = $gpa,
-                p.enrollment_year  = $enrollmentYear,
-                p.enrollment_status= $enrollmentStatus,
-                p.study_mode       = $studyMode
+            MERGE (p)-[rel:HAS_SUBTYPE_INSTANCE {tenant_id: $tenantId}]->(si:SubtypeInstance:Student {owner_tenant_id: $tenantId, parent_entity_id: $strongId})
+            ON CREATE SET rel.created_at = datetime(), si.created_at = datetime()
+            SET si.student_id        = $studentId,
+                si.gpa               = $gpa,
+                si.enrollment_year   = $enrollmentYear,
+                si.enrollment_status = $enrollmentStatus,
+                si.study_mode        = $studyMode,
+                si.updated_at        = datetime()
             RETURN p";
 
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
             strongId         = profile.EntityId,
+            tenantId         = profile.TenantId,
             studentId        = profile.StudentId,
             gpa              = profile.Gpa,
             enrollmentYear   = profile.EnrollmentYear,
@@ -59,24 +57,27 @@ public class PromotionRepository
     }
 
     /// <summary>
-    /// Promotes a Person to :Employee and sets employee-specific fields.
+    /// Promotes a Person to Employee by creating a tenant-scoped SubtypeInstance node.
     /// </summary>
     public async Task PromoteToEmployeeAsync(EmployeeProfile profile)
     {
         const string cypher = @"
             MATCH (p:Person {entity_id: $strongId})
-            SET p:Employee
-            SET p.employee_number = $employeeNumber,
-                p.contract_type   = $contractType,
-                p.salary_band     = $salaryBand,
-                p.department      = $department,
-                p.hire_date       = $hireDate
+            MERGE (p)-[rel:HAS_SUBTYPE_INSTANCE {tenant_id: $tenantId}]->(si:SubtypeInstance:Employee {owner_tenant_id: $tenantId, parent_entity_id: $strongId})
+            ON CREATE SET rel.created_at = datetime(), si.created_at = datetime()
+            SET si.employee_number = $employeeNumber,
+                si.contract_type   = $contractType,
+                si.salary_band     = $salaryBand,
+                si.department      = $department,
+                si.hire_date       = $hireDate,
+                si.updated_at      = datetime()
             RETURN p";
 
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
             strongId       = profile.EntityId,
+            tenantId       = profile.TenantId,
             employeeNumber = profile.EmployeeNumber,
             contractType   = profile.ContractType,
             salaryBand     = profile.SalaryBand,
@@ -87,23 +88,26 @@ public class PromotionRepository
     }
 
     /// <summary>
-    /// Promotes a Person to :Resident and sets resident-specific fields.
+    /// Promotes a Person to Resident by creating a tenant-scoped SubtypeInstance node.
     /// </summary>
     public async Task PromoteToResidentAsync(ResidentProfile profile)
     {
         const string cypher = @"
             MATCH (p:Person {entity_id: $strongId})
-            SET p:Resident
-            SET p.resident_id        = $residentId,
-                p.registration_date  = $registrationDate,
-                p.residency_type     = $residencyType,
-                p.marital_status     = $maritalStatus
+            MERGE (p)-[rel:HAS_SUBTYPE_INSTANCE {tenant_id: $tenantId}]->(si:SubtypeInstance:Resident {owner_tenant_id: $tenantId, parent_entity_id: $strongId})
+            ON CREATE SET rel.created_at = datetime(), si.created_at = datetime()
+            SET si.resident_id        = $residentId,
+                si.registration_date  = $registrationDate,
+                si.residency_type     = $residencyType,
+                si.marital_status     = $maritalStatus,
+                si.updated_at         = datetime()
             RETURN p";
 
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
             strongId         = profile.EntityId,
+            tenantId         = profile.TenantId,
             residentId       = profile.ResidentId,
             registrationDate = profile.RegistrationDate?.ToString("o"),
             residencyType    = profile.ResidencyType,
@@ -113,24 +117,27 @@ public class PromotionRepository
     }
 
     /// <summary>
-    /// Promotes a Person to :Researcher and sets researcher-specific fields.
-    /// Can stack on top of :Student (PhD) or :Employee (research staff).
+    /// Promotes a Person to Researcher by creating a tenant-scoped SubtypeInstance node.
+    /// Can stack on top of Student (PhD) or Employee (research staff) — each is a separate SubtypeInstance.
     /// </summary>
     public async Task PromoteToResearcherAsync(ResearcherProfile profile)
     {
         const string cypher = @"
             MATCH (p:Person {entity_id: $strongId})
-            SET p:Researcher
-            SET p.orcid_id          = $orcidId,
-                p.research_field    = $researchField,
-                p.h_index           = $hIndex,
-                p.researcher_type   = $researcherType
+            MERGE (p)-[rel:HAS_SUBTYPE_INSTANCE {tenant_id: $tenantId}]->(si:SubtypeInstance:Researcher {owner_tenant_id: $tenantId, parent_entity_id: $strongId})
+            ON CREATE SET rel.created_at = datetime(), si.created_at = datetime()
+            SET si.orcid_id          = $orcidId,
+                si.research_field    = $researchField,
+                si.h_index           = $hIndex,
+                si.researcher_type   = $researcherType,
+                si.updated_at        = datetime()
             RETURN p";
 
         await using var session = _neo4j.OpenSession();
         var result = await session.RunAsync(cypher, new
         {
             strongId       = profile.EntityId,
+            tenantId       = profile.TenantId,
             orcidId        = profile.OrcidId,
             researchField  = profile.ResearchField,
             hIndex         = profile.HIndex,
@@ -141,20 +148,27 @@ public class PromotionRepository
 
     /// <summary>
     /// Generic promotion to any subtype with dynamic properties.
+    /// Creates a tenant-scoped SubtypeInstance node.
     /// </summary>
-    public async Task PromoteToSubtypeAsync(string strongId, string subtype, Dictionary<string, object> properties)
+    public async Task PromoteToSubtypeAsync(string strongId, string subtype, string tenantId, Dictionary<string, object> properties)
     {
-        // Build SET clauses dynamically
-        var setParts = properties.Select(kvp => $"p.`{kvp.Key}` = $prop_{kvp.Key}").ToList();
+        // Build SET clauses dynamically for SubtypeInstance properties
+        var setParts = properties.Select(kvp => $"si.`{kvp.Key}` = $prop_{kvp.Key}").ToList();
         var setClause = setParts.Any() ? $"SET {string.Join(", ", setParts)}" : "";
         
         var cypher = $@"
             MATCH (p:Person {{entity_id: $strongId}})
-            SET p:`{subtype}`
+            MERGE (p)-[rel:HAS_SUBTYPE_INSTANCE {{tenant_id: $tenantId}}]->(si:SubtypeInstance:`{subtype}` {{owner_tenant_id: $tenantId, parent_entity_id: $strongId}})
+            ON CREATE SET rel.created_at = datetime(), si.created_at = datetime()
             {setClause}
+            SET si.updated_at = datetime()
             RETURN p";
 
-        var parameters = new Dictionary<string, object> { ["strongId"] = strongId };
+        var parameters = new Dictionary<string, object>
+        {
+            ["strongId"] = strongId,
+            ["tenantId"] = tenantId
+        };
         foreach (var kvp in properties)
         {
             parameters[$"prop_{kvp.Key}"] = kvp.Value;
@@ -185,8 +199,9 @@ public class PromotionRepository
 
     public async Task CreateHasAdvisorAsync(HasAdvisorRelationship rel)
     {
+        // Match the student Person node (subtype label is on SubtypeInstance, not Person)
         const string cypher = @"
-            MATCH (s:Student {entity_id: $studentId})
+            MATCH (s:Person {entity_id: $studentId})
             MATCH (a:Person  {entity_id: $advisorId})
             MERGE (s)-[r:HAS_ADVISOR {tenant_id: $tenantId, advisor_id: $advisorId}]->(a)
             ON CREATE SET
@@ -209,7 +224,7 @@ public class PromotionRepository
     public async Task CreateRegisteredForAsync(RegisteredForRelationship rel)
     {
         const string cypher = @"
-            MATCH (s:Student {entity_id: $studentId})
+            MATCH (s:Person {entity_id: $studentId})
             MATCH (c:Course  {entity_id: $courseId})
             MERGE (s)-[r:REGISTERED_FOR {tenant_id: $tenantId, entity_id: $courseId}]->(c)
             ON CREATE SET
@@ -240,8 +255,8 @@ public class PromotionRepository
     public async Task CreateReportsToAsync(ReportsToRelationship rel)
     {
         const string cypher = @"
-            MATCH (e:Employee {entity_id: $employeeId})
-            MATCH (m:Employee {entity_id: $managerId})
+            MATCH (e:Person {entity_id: $employeeId})
+            MATCH (m:Person {entity_id: $managerId})
             MERGE (e)-[r:REPORTS_TO {tenant_id: $tenantId}]->(m)
             ON CREATE SET
                 r.created_at    = $createdAt,
@@ -263,7 +278,7 @@ public class PromotionRepository
     public async Task CreateWorksInDepartmentAsync(WorksInRelationship rel)
     {
         const string cypher = @"
-            MATCH (e:Employee   {entity_id:    $employeeId})
+            MATCH (e:Person     {entity_id:    $employeeId})
             MATCH (d:Department {entity_id: $deptId})
             MERGE (e)-[r:WORKS_IN {tenant_id: $tenantId, entity_id: $deptId}]->(d)
             ON CREATE SET
@@ -292,7 +307,7 @@ public class PromotionRepository
     public async Task CreateRegisteredAtAsync(RegisteredAtRelationship rel)
     {
         const string cypher = @"
-            MATCH (r:Resident {entity_id:  $residentId})
+            MATCH (r:Person   {entity_id:  $residentId})
             MATCH (l:Location {entity_id: $locationId})
             MERGE (r)-[rel:REGISTERED_AT {tenant_id: $tenantId, entity_id: $locationId}]->(l)
             ON CREATE SET
@@ -321,7 +336,7 @@ public class PromotionRepository
     public async Task CreateAffiliatedWithAsync(AffiliatedWithRelationship rel)
     {
         const string cypher = @"
-            MATCH (r:Researcher  {entity_id: $researcherId})
+            MATCH (r:Person      {entity_id: $researcherId})
             MATCH (o:Organization {entity_id:   $orgId})
             MERGE (r)-[rel:AFFILIATED_WITH {tenant_id: $tenantId, entity_id: $orgId}]->(o)
             ON CREATE SET
@@ -482,18 +497,17 @@ public class PromotionRepository
     // ══════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Returns all Person:Student nodes for a given tenant (enrolled anywhere).
+    /// Returns all Students for a given tenant by joining through SubtypeInstance nodes.
     /// </summary>
     public async Task<List<(string StrongId, string FirstName, string LastName,
                              double? Gpa, string? Status, List<string> Labels)>>
         GetAllStudentsAsync(string tenantId)
     {
-        // We find students by looking for persons who have an ENROLLED_IN
-        // relationship under this tenant — and who carry the :Student label.
         const string cypher = @"
-            MATCH (p:Person:Student)-[r:ENROLLED_IN {tenant_id: $tenantId}]->(o:Organization)
+            MATCH (p:Person)-[:HAS_SUBTYPE_INSTANCE {tenant_id: $tenantId}]->(si:SubtypeInstance:Student)
+            MATCH (p)-[r:ENROLLED_IN {tenant_id: $tenantId}]->(o:Organization)
             RETURN DISTINCT p.entity_id AS id, p.first_name AS fn, p.last_name AS ln,
-                   p.gpa AS gpa, p.enrollment_status AS status, labels(p) AS lbls
+                   si.gpa AS gpa, si.enrollment_status AS status, labels(p) AS lbls
             ORDER BY ln, fn";
 
         await using var session = _neo4j.OpenSession();
@@ -507,16 +521,17 @@ public class PromotionRepository
     }
 
     /// <summary>
-    /// Returns all Person:Employee nodes for a given tenant.
+    /// Returns all Employees for a given tenant by joining through SubtypeInstance nodes.
     /// </summary>
     public async Task<List<(string StrongId, string FirstName, string LastName,
                              string? ContractType, string? SalaryBand, List<string> Labels)>>
         GetAllEmployeesAsync(string tenantId)
     {
         const string cypher = @"
-            MATCH (p:Person:Employee)-[r:WORKS_AT {tenant_id: $tenantId}]->(o:Organization)
+            MATCH (p:Person)-[:HAS_SUBTYPE_INSTANCE {tenant_id: $tenantId}]->(si:SubtypeInstance:Employee)
+            MATCH (p)-[r:WORKS_AT {tenant_id: $tenantId}]->(o:Organization)
             RETURN DISTINCT p.entity_id AS id, p.first_name AS fn, p.last_name AS ln,
-                   p.contract_type AS ct, p.salary_band AS sb, labels(p) AS lbls
+                   si.contract_type AS ct, si.salary_band AS sb, labels(p) AS lbls
             ORDER BY ln, fn";
 
         await using var session = _neo4j.OpenSession();
@@ -530,17 +545,18 @@ public class PromotionRepository
     }
 
     /// <summary>
-    /// Returns all Person:Researcher nodes — cross-tenant global query.
+    /// Returns all Researchers — cross-tenant global query.
+    /// Returns base Person info but reads subtype fields from SubtypeInstance.
     /// </summary>
     public async Task<List<(string StrongId, string FirstName, string LastName,
                              string? OrcidId, string? Field, string? Type, List<string> Labels)>>
         GetAllResearchersAsync()
     {
         const string cypher = @"
-            MATCH (p:Person:Researcher)
+            MATCH (p:Person)-[:HAS_SUBTYPE_INSTANCE]->(si:SubtypeInstance:Researcher)
             RETURN p.entity_id AS id, p.first_name AS fn, p.last_name AS ln,
-                   p.orcid_id AS orcid, p.research_field AS field,
-                   p.researcher_type AS rtype, labels(p) AS lbls
+                   si.orcid_id AS orcid, si.research_field AS field,
+                   si.researcher_type AS rtype, labels(p) AS lbls
             ORDER BY ln, fn";
 
         await using var session = _neo4j.OpenSession();

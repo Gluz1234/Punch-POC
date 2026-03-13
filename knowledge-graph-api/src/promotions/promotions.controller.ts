@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PromotionsService } from './promotions.service';
 import { PromotionProjectionService } from './promotion-projection.service';
@@ -6,6 +6,7 @@ import {
   PromotionSchemaService,
   PromotionSubtypeDefinitionDto,
 } from './promotion-schema.service';
+import { TenantId } from '../auth/tenant.decorator';
 
 @ApiTags('Promotions')
 @Controller('promotions')
@@ -41,29 +42,37 @@ export class PromotionsController {
   }
 
   @Get(':entityId/typed-properties')
-  @ApiOperation({ summary: 'Get typed properties by ID', description: 'Returns properties grouped by base entity and subtype categories using only entity_id.' })
+  @ApiOperation({ summary: 'Get typed properties by ID', description: 'Returns properties grouped by base entity and subtype categories, filtered by the tenant from x-tenant-id header when present.' })
   @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiResponse({ status: 200, description: 'Properties organized by base and subtype categories' })
   getTypedPropertiesById(
     @Param('entityId') entityId: string,
+    @TenantId() tenantId?: string,
   ) {
+    if (tenantId) {
+      return this.promotionProjection.getEntityTypedPropertiesByIdForTenant(entityId, tenantId);
+    }
     return this.promotionProjection.getEntityTypedPropertiesById(entityId);
   }
 
   @Get(':entityType/:entityId/typed-properties')
-  @ApiOperation({ summary: 'Get typed properties (legacy route)', description: 'Backward-compatible route. entityType is validated and lookup is resolved by entity_id.' })
+  @ApiOperation({ summary: 'Get typed properties (legacy route)', description: 'Backward-compatible route. entityType is validated and lookup is resolved by entity_id. Tenant filtering uses x-tenant-id header when present.' })
   @ApiParam({ name: 'entityType', description: 'Legacy entity type key or label', example: 'person' })
   @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiResponse({ status: 200, description: 'Properties organized by base and subtype categories' })
   getTypedPropertiesLegacy(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
+    @TenantId() tenantId?: string,
   ) {
+    if (tenantId) {
+      return this.promotionProjection.getEntityTypedPropertiesByIdForTenant(entityId, tenantId);
+    }
     return this.promotionProjection.getEntityTypedProperties(entityType, entityId);
   }
 
   @Post(':entityId/promote/:subtype')
-  @ApiOperation({ summary: 'Promote entity to subtype by ID', description: 'Add a subtype label and properties to any entity using only entity_id.' })
+  @ApiOperation({ summary: 'Promote entity to subtype by ID', description: 'Add a subtype label and properties to any entity using only entity_id. Tenant is resolved from x-tenant-id header.' })
   @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiParam({ name: 'subtype', description: 'Subtype label to add', example: 'Student' })
   @ApiBody({ schema: { example: { studentId: 'MIT-2019-001', gpa: 3.9, enrollmentYear: 2019 } } })
@@ -71,13 +80,14 @@ export class PromotionsController {
   promoteToSubtypeById(
     @Param('entityId') entityId: string,
     @Param('subtype') subtype: string,
+    @TenantId() tenantId: string,
     @Body() properties: Record<string, any>,
   ) {
-    return this.promotionsService.promoteToSubtypeById(entityId, subtype, properties);
+    return this.promotionsService.promoteToSubtypeById(entityId, subtype, properties, tenantId);
   }
 
   @Post(':entityType/:entityId/promote/:subtype')
-  @ApiOperation({ summary: 'Promote entity to subtype (legacy route)', description: 'Backward-compatible route. entityType is validated and lookup is resolved by entity_id.' })
+  @ApiOperation({ summary: 'Promote entity to subtype (legacy route)', description: 'Backward-compatible route. entityType is validated and lookup is resolved by entity_id. Tenant from x-tenant-id header.' })
   @ApiParam({ name: 'entityType', description: 'Legacy entity type key or label', example: 'person' })
   @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
   @ApiParam({ name: 'subtype', description: 'Subtype label to add', example: 'Student' })
@@ -87,21 +97,52 @@ export class PromotionsController {
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
     @Param('subtype') subtype: string,
+    @TenantId() tenantId: string,
     @Body() properties: Record<string, any>,
   ) {
-    return this.promotionsService.promoteToSubtype(entityType, entityId, subtype, properties);
+    return this.promotionsService.promoteToSubtype(entityType, entityId, subtype, properties, tenantId);
+  }
+
+  // ── Subtype instance update / delete ────────────────────────────────────
+
+  @Put(':entityId/subtype/:subtype')
+  @ApiOperation({ summary: 'Update subtype instance properties', description: 'Update properties on a tenant-scoped SubtypeInstance. Tenant resolved from x-tenant-id header.' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiParam({ name: 'subtype', description: 'Subtype label', example: 'Student' })
+  @ApiBody({ schema: { example: { gpa: 3.95, enrollmentYear: 2020 } } })
+  @ApiResponse({ status: 200, description: 'Subtype instance updated' })
+  updateSubtypeInstance(
+    @Param('entityId') entityId: string,
+    @Param('subtype') subtype: string,
+    @TenantId() tenantId: string,
+    @Body() properties: Record<string, any>,
+  ) {
+    return this.promotionsService.updateSubtypeInstance(entityId, subtype, tenantId, properties);
+  }
+
+  @Delete(':entityId/subtype/:subtype')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Delete subtype instance', description: 'Remove a tenant-scoped SubtypeInstance. Tenant resolved from x-tenant-id header.' })
+  @ApiParam({ name: 'entityId', description: 'Entity UUID (entity_id)', example: '3a8ddf2b-f4be-4f00-a355-4b3f54db58ea' })
+  @ApiParam({ name: 'subtype', description: 'Subtype label', example: 'Student' })
+  @ApiResponse({ status: 200, description: 'Subtype instance deleted' })
+  deleteSubtypeInstance(
+    @Param('entityId') entityId: string,
+    @Param('subtype') subtype: string,
+    @TenantId() tenantId: string,
+  ) {
+    return this.promotionsService.deleteSubtypeInstance(entityId, subtype, tenantId);
   }
 
   // ── Generic listing ─────────────────────────────────────────────────────────
 
   @Get('list/:subtype')
-  @ApiOperation({ summary: 'List nodes by subtype', description: 'Get all nodes with a given subtype label. Optionally filter by tenant ID.' })
+  @ApiOperation({ summary: 'List nodes by subtype', description: 'Get all nodes with a given subtype label. Tenant filtering uses x-tenant-id header when present.' })
   @ApiParam({ name: 'subtype', description: 'Subtype label', example: 'Student' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Optional tenant ID to filter by' })
   @ApiResponse({ status: 200, description: 'Array of nodes with the subtype label' })
   getNodesBySubtype(
     @Param('subtype') subtype: string,
-    @Query('tenantId') tenantId?: string,
+    @TenantId() tenantId?: string,
   ) {
     return this.promotionsService.getNodesBySubtype(subtype, tenantId);
   }
@@ -124,12 +165,11 @@ export class PromotionsController {
     return this.promotionSchema.getSubtypeDefinitionsForBase(baseLabel);
   }
 
-  @Get('schema/tenants/:tenantId/types')
-  @ApiOperation({ summary: 'Get all types for a tenant', description: 'Returns all labels used by entities connected by tenant-scoped relationships and classifies them as base, subtype, or unknown.' })
-  @ApiParam({ name: 'tenantId', description: 'Tenant ID', example: 'tenant_mit' })
+  @Get('schema/tenant/types')
+  @ApiOperation({ summary: 'Get all types for a tenant', description: 'Returns all labels used by entities connected by tenant-scoped relationships (tenant from x-tenant-id header) and classifies them as base, subtype, or unknown.' })
   @ApiResponse({ status: 200, description: 'Tenant type inventory' })
   getTypesByTenant(
-    @Param('tenantId') tenantId: string,
+    @TenantId() tenantId: string,
   ) {
     return this.promotionsService.getTypesByTenant(tenantId);
   }

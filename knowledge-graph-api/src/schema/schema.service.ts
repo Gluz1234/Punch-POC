@@ -10,6 +10,11 @@ const INTERNAL_SCHEMA_LABELS = new Set([
   'SchemaProperty',
   'PromotionSubtype',
   'PromotionField',
+  'SubtypeInstance',
+]);
+
+const INTERNAL_RELATIONSHIP_TYPES = new Set([
+  'HAS_SUBTYPE_INSTANCE',
 ]);
 
 @Injectable()
@@ -33,11 +38,13 @@ export class SchemaService {
     return labels.filter(label => !this.isInternalSchemaLabel(label));
   }
 
-  async getRelationshipTypes(): Promise<string[]> {
+  async getRelationshipTypes(includeInternal = false): Promise<string[]> {
     const records = await this.neo4j.runQuery(
       'CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType ORDER BY relationshipType',
     );
-    return records.map(r => r.get('relationshipType'));
+    const types = records.map(r => r.get('relationshipType') as string);
+    if (includeInternal) return types;
+    return types.filter(t => !INTERNAL_RELATIONSHIP_TYPES.has(t));
   }
 
   async getConstraints() {
@@ -255,7 +262,7 @@ export class SchemaService {
 
     const [labels, relTypes, constraints] = await Promise.all([
       this.getLabels(includeInternal),
-      this.getRelationshipTypes(),
+      this.getRelationshipTypes(includeInternal),
       this.getConstraints(),
     ]);
 
@@ -308,7 +315,11 @@ export class SchemaService {
     );
 
     const relationshipTypes = Array.from(
-      new Set(relTypeRecords.map((record) => String(record.get('relationshipType')))),
+      new Set(
+        relTypeRecords
+          .map((record) => String(record.get('relationshipType')))
+          .filter((t) => !INTERNAL_RELATIONSHIP_TYPES.has(t)),
+      ),
     );
 
     const [nodeLabelDetails, relationshipTypeDetails] = await Promise.all([

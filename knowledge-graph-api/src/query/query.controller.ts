@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { QueryService } from './query.service';
+import { TenantId } from '../auth/tenant.decorator';
 
 @ApiTags('Queries')
 @Controller('query')
@@ -18,14 +19,13 @@ export class QueryController {
   @ApiParam({ name: 'relationshipType', description: 'Relationship type', example: 'WORKS_AT' })
   @ApiParam({ name: 'targetType', description: 'Target entity type', example: 'organization' })
   @ApiParam({ name: 'targetId', description: 'Target entity ID', example: 'org-mit' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Optional tenant ID filter' })
   @ApiResponse({ status: 200, description: 'List of matching entities with relationship properties' })
   entitiesByRelationship(
     @Param('sourceType') sourceType: string,
     @Param('relationshipType') relationshipType: string,
     @Param('targetType') targetType: string,
     @Param('targetId') targetId: string,
-    @Query('tenantId') tenantId?: string,
+    @TenantId() tenantId?: string,
   ) {
     return this.queryService.getEntitiesByRelationship(
       sourceType, targetType, relationshipType, targetId, tenantId,
@@ -94,11 +94,10 @@ export class QueryController {
   @Get('nodes-by-label/:label')
   @ApiOperation({ summary: 'Get nodes by label', description: 'Returns all nodes that carry the given label, optionally filtered by tenant' })
   @ApiParam({ name: 'label', description: 'Node label to search for', example: 'Student' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Optional tenant ID filter' })
   @ApiResponse({ status: 200, description: 'Array of matching nodes' })
   nodesByLabel(
     @Param('label') label: string,
-    @Query('tenantId') tenantId?: string,
+    @TenantId() tenantId?: string,
   ) {
     return this.queryService.getNodesByLabel(label, tenantId);
   }

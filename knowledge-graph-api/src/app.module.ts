@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Neo4jModule } from './infrastructure/neo4j/neo4j.module';
 import { GenericEntityModule } from './entities/generic-entity.module';
 import { GenericQueryModule } from './query/generic-query.module';
@@ -10,6 +11,8 @@ import { SchemaModule } from './schema/schema.module';
 import { QueryModule } from './query/query.module';
 import { DataModule } from './data/data.module';
 import { EntityResolutionModule } from './entities/entity-resolution.module';
+import { AuthzGuard } from './auth/authz.guard';
+import { PropertySecurityInterceptor } from './auth/property-security.interceptor';
 
 @Module({
   imports: [
@@ -29,6 +32,10 @@ import { EntityResolutionModule } from './entities/entity-resolution.module';
     QueryModule,
     DataModule,
     EntityResolutionModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: AuthzGuard },
+    { provide: APP_INTERCEPTOR, useClass: PropertySecurityInterceptor },
   ],
 })
 export class AppModule {}

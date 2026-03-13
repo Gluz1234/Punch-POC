@@ -77,6 +77,8 @@ public class Neo4jService : IDisposable
             "CREATE CONSTRAINT education_entity_id    IF NOT EXISTS FOR (e:Education)    REQUIRE e.entity_id IS UNIQUE",
             "CREATE CONSTRAINT course_entity_id       IF NOT EXISTS FOR (c:Course)       REQUIRE c.entity_id IS UNIQUE",
             "CREATE CONSTRAINT department_entity_id   IF NOT EXISTS FOR (d:Department)   REQUIRE d.entity_id IS UNIQUE",
+            // SubtypeInstance lookup index — MERGE prevents duplicates at app level
+            "CREATE INDEX subtype_instance_lookup IF NOT EXISTS FOR (si:SubtypeInstance) ON (si.owner_tenant_id, si.parent_entity_id)",
         };
 
         foreach (var cypher in constraints)

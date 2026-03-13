@@ -1,23 +1,22 @@
 namespace MultiTenantKnowledgeGraph.Models.Extensions;
 
 /// <summary>
-/// Extra fields added to a Person node when promoted to :Student.
+/// Extra fields for the Student subtype, stored on a tenant-scoped SubtypeInstance node.
 ///
-/// PROMOTION PATTERN:
+/// TENANT-SCOPED SUBTYPE PATTERN:
 ///   When tenant_mit enrolls a person, we:
 ///     1. MERGE the Person node (already exists)
-///     2. SET p:Student             ← adds the Student label
-///     3. SET p.gpa = ...           ← adds student-specific fields
+///     2. CREATE (p)-[:HAS_SUBTYPE_INSTANCE {tenant_id}]-&gt;(si:SubtypeInstance:Student {...})
 ///
-/// The Person label and all base fields are untouched.
-/// A person can hold multiple subtype labels simultaneously:
-///   Person:Student:Employee  ← MIT student who also works at Google
+/// Only the owning tenant can see/edit this SubtypeInstance node.
+/// A person can have multiple SubtypeInstance nodes from different tenants.
 /// </summary>
 public class StudentProfile
 {
     public string EntityId { get; set; } = string.Empty;     // links to Person
+    public string TenantId { get; set; } = string.Empty;     // owning tenant for this subtype instance
 
-    // Student-specific fields (stored directly on the shared node)
+    // Student-specific fields (stored on a SubtypeInstance node)
     public string? StudentId { get; set; }                   // institutional ID
     public double? Gpa { get; set; }
     public int?    EnrollmentYear { get; set; }
@@ -35,6 +34,7 @@ public class StudentProfile
 public class EmployeeProfile
 {
     public string EntityId { get; set; } = string.Empty;
+    public string TenantId { get; set; } = string.Empty;
 
     public string? EmployeeNumber { get; set; }
     public string? ContractType { get; set; }                // Permanent / Contract / Freelance
@@ -53,6 +53,7 @@ public class EmployeeProfile
 public class ResidentProfile
 {
     public string EntityId { get; set; } = string.Empty;
+    public string TenantId { get; set; } = string.Empty;
 
     public string? ResidentId { get; set; }                  // municipal registration number
     public DateTime? RegistrationDate { get; set; }
@@ -70,6 +71,7 @@ public class ResidentProfile
 public class ResearcherProfile
 {
     public string EntityId { get; set; } = string.Empty;
+    public string TenantId { get; set; } = string.Empty;
 
     public string? OrcidId { get; set; }                     // global researcher identifier
     public string? ResearchField { get; set; }

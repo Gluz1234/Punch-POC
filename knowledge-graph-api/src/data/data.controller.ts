@@ -1,38 +1,37 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { DataService } from './data.service';
+import { TenantId } from '../auth/tenant.decorator';
 
 @ApiTags('Data')
 @Controller('data')
 export class DataController {
   constructor(private readonly dataService: DataService) {}
 
-  @Get('tenant/:tenantId')
+  @Get('tenant')
   @ApiOperation({ 
     summary: 'Get all nodes by tenant ID',
-    description: 'Fetch all nodes connected to the same tenant ID with their properties and schema information. Properties are filtered to show only what belongs to each specific label.'
+    description: 'Fetch all nodes connected to the tenant (from x-tenant-id header) with their properties and schema information. Properties are filtered to show only what belongs to each specific label.'
   })
-  @ApiParam({ name: 'tenantId', description: 'Tenant ID to filter nodes', example: 'tenant_mit' })
   @ApiQuery({ name: 'limit', required: false, description: 'Maximum number of records per label', example: 10000 })
   @ApiResponse({ status: 200, description: 'Returns nodes grouped by label with schemas and statistics' })
   getNodesByTenant(
-    @Param('tenantId') tenantId: string,
+    @TenantId() tenantId: string,
     @Query('limit') limit?: string,
   ) {
     const limitNum = limit ? parseInt(limit, 10) : 10000;
     return this.dataService.getAllNodesByTenant(tenantId, limitNum);
   }
 
-  @Get('relationships/tenant/:tenantId')
+  @Get('relationships/tenant')
   @ApiOperation({ 
     summary: 'Get all relationships by tenant ID',
-    description: 'Fetch all relationships for a specific tenant ID, including source and target node data'
+    description: 'Fetch all relationships for the tenant (from x-tenant-id header), including source and target node data'
   })
-  @ApiParam({ name: 'tenantId', description: 'Tenant ID to filter relationships', example: 'tenant_google' })
   @ApiQuery({ name: 'limit', required: false, description: 'Maximum number of relationships', example: 10000 })
   @ApiResponse({ status: 200, description: 'Returns relationships grouped by type with statistics' })
   getRelationshipsByTenant(
-    @Param('tenantId') tenantId: string,
+    @TenantId() tenantId: string,
     @Query('limit') limit?: string,
   ) {
     const limitNum = limit ? parseInt(limit, 10) : 10000;

@@ -1,7 +1,7 @@
 ﻿{
     "info":  {
-                 "name":  "Knowledge Graph - New Generic Features v2 (Entity ID Routes)",
-                 "version":  "2.0.0",
+                 "name":  "Knowledge Graph - Generic Features v3 (Header Auth + Property Security)",
+                 "version":  "3.0.0",
                  "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
              },
     "item":  [
@@ -44,7 +44,7 @@
                                       "name":  "Autocomplete: Tenant Scoped",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base_url}}/search/person/autocomplete?q=jo\u0026field=first_name\u0026tenantId=TENANT_1\u0026limit=10",
+                                                      "url":  "{{base_url}}/search/person/autocomplete?q=jo\u0026field=first_name\u0026limit=10",
                                                       "description":  "Autocomplete limited to tenant-scoped relationships"
                                                   }
                                   },
@@ -268,7 +268,7 @@
                                       "name":  "Relationship: Delete WORKS_AT",
                                       "request":  {
                                                       "method":  "DELETE",
-                                                      "url":  "{{base_url}}/relationships/P_001/WORKS_AT/TENANT_1?targetId=ORG_001",
+                                                      "url":  "{{base_url}}/relationships/P_001/WORKS_AT?targetId=ORG_001",
                                                       "description":  "Delete a specific relationship"
                                                   }
                                   }
@@ -331,7 +331,7 @@
                                       "name":  "Promotions: Types by Tenant",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base_url}}/promotions/schema/tenants/TENANT_1/types",
+                                                      "url":  "{{base_url}}/promotions/schema/tenant/types",
                                                       "description":  "List base/subtype/unknown labels used in a tenant"
                                                   }
                                   },
@@ -339,7 +339,7 @@
                                       "name":  "Schema: Tenant Snapshot",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base_url}}/schema/tenants/TENANT_1/schema",
+                                                      "url":  "{{base_url}}/schema/tenant/schema",
                                                       "description":  "Get tenant-scoped schema labels and relationship types"
                                                   }
                                   }
@@ -351,8 +351,52 @@
                          "key":  "base_url",
                          "value":  "http://localhost:3000/api",
                          "type":  "string"
+                     },
+                     {
+                         "key":  "authz_user_id",
+                         "value":  "014d58c0-e788-4e53-bfa3-7986f242e7e1"
+                     },
+                     {
+                         "key":  "authz_username",
+                         "value":  "testing@example.com"
+                     },
+                     {
+                         "key":  "authz_read",
+                         "value":  "true"
+                     },
+                     {
+                         "key":  "authz_write",
+                         "value":  "true"
+                     },
+                     {
+                         "key":  "authz_is_admin",
+                         "value":  "false"
+                     },
+                     {
+                         "key":  "authz_env_level",
+                         "value":  "6"
+                     },
+                     {
+                         "key":  "x_tenant_id",
+                         "value":  "tenant_mit"
                      }
-                 ]
+                 ],
+    "event":  [
+                  {
+                      "listen":  "prerequest",
+                      "script":  {
+                                     "type":  "text/javascript",
+                                     "exec":  [
+                                                  "var tenant = pm.collectionVariables.get(\u0027x_tenant_id\u0027) || \u0027tenant_mit\u0027;",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-user-id\u0027,    value: pm.collectionVariables.get(\u0027authz_user_id\u0027)    || \u0027014d58c0-e788-4e53-bfa3-7986f242e7e1\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-username\u0027,   value: pm.collectionVariables.get(\u0027authz_username\u0027)   || \u0027testing@example.com\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-read\u0027,       value: pm.collectionVariables.get(\u0027authz_read\u0027)       || \u0027true\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-write\u0027,      value: pm.collectionVariables.get(\u0027authz_write\u0027)      || \u0027true\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-is-admin\u0027,   value: pm.collectionVariables.get(\u0027authz_is_admin\u0027)   || \u0027false\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-env-\u0027 + tenant, value: pm.collectionVariables.get(\u0027authz_env_level\u0027) || \u00276\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-tenant-id\u0027,        value: tenant });"
+                                              ]
+                                 }
+                  }
+              ]
 }
-
-

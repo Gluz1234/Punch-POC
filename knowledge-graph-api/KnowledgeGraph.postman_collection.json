@@ -1,14 +1,42 @@
 ﻿{
     "info":  {
-                 "name":  "Knowledge Graph Admin API v4 (Entity ID Routes)",
+                 "name":  "Knowledge Graph API v5 (Header Auth + Property Security)",
                  "description":  "Multi-Tenant Knowledge Graph API with dynamically generated endpoints. All standard entities (Person, Organization, Location, Skill, Education, Course, Department) are served by a single generic service with configuration-driven routes.",
-                 "version":  "4.1.0",
+                 "version":  "5.0.0",
                  "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
              },
     "variable":  [
                      {
                          "key":  "base",
                          "value":  "http://localhost:3000/api"
+                     },
+                     {
+                         "key":  "authz_user_id",
+                         "value":  "014d58c0-e788-4e53-bfa3-7986f242e7e1"
+                     },
+                     {
+                         "key":  "authz_username",
+                         "value":  "testing@example.com"
+                     },
+                     {
+                         "key":  "authz_read",
+                         "value":  "true"
+                     },
+                     {
+                         "key":  "authz_write",
+                         "value":  "true"
+                     },
+                     {
+                         "key":  "authz_is_admin",
+                         "value":  "false"
+                     },
+                     {
+                         "key":  "authz_env_level",
+                         "value":  "6"
+                     },
+                     {
+                         "key":  "x_tenant_id",
+                         "value":  "tenant_mit"
                      }
                  ],
     "item":  [
@@ -374,7 +402,7 @@
                      "name":  "Relationships",
                      "item":  [
                                   {
-                                      "name":  "Create ENROLLED_IN (Person->Org)",
+                                      "name":  "Create ENROLLED_IN (Person-\u003eOrg)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -391,7 +419,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create WORKS_AT (Person->Org)",
+                                      "name":  "Create WORKS_AT (Person-\u003eOrg)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -408,7 +436,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create LIVES_IN (Person->Location)",
+                                      "name":  "Create LIVES_IN (Person-\u003eLocation)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -425,7 +453,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create HAS_SKILL (Person->Skill)",
+                                      "name":  "Create HAS_SKILL (Person-\u003eSkill)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -442,7 +470,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create COMPLETED (Person->Education)",
+                                      "name":  "Create COMPLETED (Person-\u003eEducation)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -459,7 +487,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create PROVIDED_BY (Education->Org)",
+                                      "name":  "Create PROVIDED_BY (Education-\u003eOrg)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -476,7 +504,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create REQUIRES_SKILL (Org->Skill)",
+                                      "name":  "Create REQUIRES_SKILL (Org-\u003eSkill)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -493,7 +521,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create HAS_ADVISOR (Person->Person)",
+                                      "name":  "Create HAS_ADVISOR (Person-\u003ePerson)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -510,7 +538,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create REGISTERED_FOR (Person->Course)",
+                                      "name":  "Create REGISTERED_FOR (Person-\u003eCourse)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -527,7 +555,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create REPORTS_TO (Person->Person)",
+                                      "name":  "Create REPORTS_TO (Person-\u003ePerson)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -544,7 +572,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create BELONGS_TO (Dept->Org)",
+                                      "name":  "Create BELONGS_TO (Dept-\u003eOrg)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -561,7 +589,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Create OFFERED_BY (Course->Org)",
+                                      "name":  "Create OFFERED_BY (Course-\u003eOrg)",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/relationships",
@@ -588,7 +616,7 @@
                                       "name":  "Get Person Rels (tenant)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/relationships/person-sarah-chen?tenantId=tenant_mit"
+                                                      "url":  "{{base}}/relationships/person-sarah-chen"
                                                   }
                                   },
                                   {
@@ -602,14 +630,14 @@
                                       "name":  "Delete ENROLLED_IN",
                                       "request":  {
                                                       "method":  "DELETE",
-                                                      "url":  "{{base}}/relationships/person-sarah-chen/ENROLLED_IN/tenant_mit?targetId=org-mit"
+                                                      "url":  "{{base}}/relationships/person-sarah-chen/ENROLLED_IN?targetId=org-mit"
                                                   }
                                   },
                                   {
                                       "name":  "Delete WORKS_AT",
                                       "request":  {
                                                       "method":  "DELETE",
-                                                      "url":  "{{base}}/relationships/person-sarah-chen/WORKS_AT/tenant_google?targetId=org-google"
+                                                      "url":  "{{base}}/relationships/person-sarah-chen/WORKS_AT?targetId=org-google"
                                                   }
                                   }
                               ]
@@ -727,14 +755,14 @@
                                       "name":  "List by Subtype (Students)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/promotions/list/Student?tenantId=tenant_mit"
+                                                      "url":  "{{base}}/promotions/list/Student"
                                                   }
                                   },
                                   {
                                       "name":  "List by Subtype (Employees)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/promotions/list/Employee?tenantId=tenant_google"
+                                                      "url":  "{{base}}/promotions/list/Employee"
                                                   }
                                   },
                                   {
@@ -772,7 +800,7 @@
                                       "name":  "List all types for tenant",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/promotions/schema/tenants/tenant_mit/types"
+                                                      "url":  "{{base}}/promotions/schema/tenant/types"
                                                   }
                                   }
                               ]
@@ -793,7 +821,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"label\": \"Volunteer\",\n  \"icon\": \"\ud83d\ude4b\",\n  \"properties\": {\n    \"name\": \"Community Helper\",\n    \"area\": \"Education\",\n    \"hours_committed\": 40,\n    \"tenant_id\": \"tenant_ngo\"\n  }\n}"
+                                                                   "raw":  "{\n  \"label\": \"Volunteer\",\n  \"icon\": \"🙋\",\n  \"properties\": {\n    \"name\": \"Community Helper\",\n    \"area\": \"Education\",\n    \"hours_committed\": 40,\n    \"tenant_id\": \"tenant_ngo\"\n  }\n}"
                                                                }
                                                   }
                                   },
@@ -904,7 +932,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Connect Person->Volunteer",
+                                      "name":  "Connect Person-\u003eVolunteer",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/dynamic/relationships",
@@ -921,7 +949,7 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Connect Person->Project",
+                                      "name":  "Connect Person-\u003eProject",
                                       "request":  {
                                                       "method":  "POST",
                                                       "url":  "{{base}}/dynamic/relationships",
@@ -941,7 +969,7 @@
                                       "name":  "Get node relationships",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/dynamic/relationships/Person/strong_id/person-sarah-chen?direction=out"
+                                                      "url":  "{{base}}/dynamic/relationships/Person/strong_id?direction=out"
                                                   }
                                   },
                                   {
@@ -978,21 +1006,21 @@
                                       "name":  "Persons ENROLLED_IN Org (MIT)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/query/person/by-relationship/ENROLLED_IN/organization/org-mit?tenantId=tenant_mit"
+                                                      "url":  "{{base}}/query/person/by-relationship/ENROLLED_IN/organization/org-mit"
                                                   }
                                   },
                                   {
                                       "name":  "Persons WORKS_AT Org (Google)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/query/person/by-relationship/WORKS_AT/organization/org-google?tenantId=tenant_google"
+                                                      "url":  "{{base}}/query/person/by-relationship/WORKS_AT/organization/org-google"
                                                   }
                                   },
                                   {
                                       "name":  "Persons WORKS_AT Org (Microsoft)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/query/person/by-relationship/WORKS_AT/organization/org-microsoft?tenantId=tenant_microsoft"
+                                                      "url":  "{{base}}/query/person/by-relationship/WORKS_AT/organization/org-microsoft"
                                                   }
                                   },
                                   {
@@ -1013,7 +1041,7 @@
                                       "name":  "Persons REGISTERED_FOR Course",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/query/person/by-relationship/REGISTERED_FOR/course/course-6006?tenantId=tenant_mit"
+                                                      "url":  "{{base}}/query/person/by-relationship/REGISTERED_FOR/course/course-6006"
                                                   }
                                   },
                                   {
@@ -1048,7 +1076,7 @@
                                       "name":  "Nodes by label: Student",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/query/nodes-by-label/Student?tenantId=tenant_mit"
+                                                      "url":  "{{base}}/query/nodes-by-label/Student"
                                                   }
                                   },
                                   {
@@ -1062,7 +1090,7 @@
                                       "name":  "Nodes by label: Employee",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/query/nodes-by-label/Employee?tenantId=tenant_google"
+                                                      "url":  "{{base}}/query/nodes-by-label/Employee"
                                                   }
                                   }
                               ]
@@ -1106,7 +1134,7 @@
                                       "name":  "Autocomplete: Tenant Scoped",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/search/person/autocomplete?q=jo\u0026field=first_name\u0026tenantId=TENANT_1\u0026limit=10",
+                                                      "url":  "{{base}}/search/person/autocomplete?q=jo\u0026field=first_name\u0026limit=10",
                                                       "description":  "Autocomplete limited to tenant-scoped relationships"
                                                   }
                                   },
@@ -1233,7 +1261,7 @@
                                       "name":  "Tenant schema snapshot",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/schema/tenants/tenant_mit"
+                                                      "url":  "{{base}}/schema/tenant"
                                                   }
                                   },
                                   {
@@ -1248,6 +1276,71 @@
                                       "request":  {
                                                       "method":  "GET",
                                                       "url":  "{{base}}/schema/subtypes"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Property Security: Get All Levels",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{base}}/schema/property-security",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "description":  "Returns every SchemaProperty with its security level (1-6). 1=open, 6=highest. Properties above the caller x-authz-env-{tenant} level are hidden on GET and blocked on write."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Property Security: Set salary_band = Level 5",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "url":  "{{base}}/schema/property-security/salary_band",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{ \"level\": 5 }"
+                                                               },
+                                                      "description":  "Callers with env-level \u003c 5 get \"[HIDDEN]\" for salary_band on read and 403 on write."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Property Security: Set gpa = Level 3",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "url":  "{{base}}/schema/property-security/gpa",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{ \"level\": 3 }"
+                                                               },
+                                                      "description":  "Callers with env-level \u003c 3 get \"[HIDDEN]\" for gpa on read and 403 on write."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Property Security: Reset email = Level 1",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "url":  "{{base}}/schema/property-security/email",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{ \"level\": 1 }"
+                                                               },
+                                                      "description":  "Level 1 = no restriction (default for all properties)."
                                                   }
                                   }
                               ]
@@ -1266,20 +1359,35 @@
                                       "name":  "Get All Data by Tenant ID",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/data/tenant/tenant_mit?limit=10000"
+                                                      "url":  "{{base}}/data/tenant?limit=10000"
                                                   }
                                   },
                                   {
                                       "name":  "Get Relationships by Tenant ID",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "url":  "{{base}}/data/relationships/tenant/tenant_google?limit=10000"
+                                                      "url":  "{{base}}/data/relationships/tenant?limit=10000"
                                                   }
                                   }
                               ]
                  }
-             ]
+             ],
+    "event":  [
+                  {
+                      "listen":  "prerequest",
+                      "script":  {
+                                     "type":  "text/javascript",
+                                     "exec":  [
+                                                  "var tenant = pm.collectionVariables.get(\u0027x_tenant_id\u0027) || \u0027tenant_mit\u0027;",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-user-id\u0027,    value: pm.collectionVariables.get(\u0027authz_user_id\u0027)    || \u0027014d58c0-e788-4e53-bfa3-7986f242e7e1\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-username\u0027,   value: pm.collectionVariables.get(\u0027authz_username\u0027)   || \u0027testing@example.com\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-read\u0027,       value: pm.collectionVariables.get(\u0027authz_read\u0027)       || \u0027true\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-write\u0027,      value: pm.collectionVariables.get(\u0027authz_write\u0027)      || \u0027true\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-is-admin\u0027,   value: pm.collectionVariables.get(\u0027authz_is_admin\u0027)   || \u0027false\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-authz-env-\u0027 + tenant, value: pm.collectionVariables.get(\u0027authz_env_level\u0027) || \u00276\u0027 });",
+                                                  "pm.request.headers.upsert({ key: \u0027x-tenant-id\u0027,        value: tenant });"
+                                              ]
+                                 }
+                  }
+              ]
 }
-
-
-

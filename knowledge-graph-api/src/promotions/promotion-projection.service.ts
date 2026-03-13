@@ -193,6 +193,92 @@ export class PromotionProjectionService {
     };
   }
 
+  /**
+   * Project a typed response from pre-fetched SubtypeInstance data.
+   * Used by the new tenant-scoped subtype model where subtype properties
+   * live on separate SubtypeInstance nodes rather than on the entity node.
+   */
+  async projectTypedNodeWithInstances(
+    nodeProperties: Record<string, any>,
+    baseLabels: string[],
+    subtypeInstances: Array<{ labels: string[]; props: Record<string, any> }>,
+    explicitEntityId?: string,
+  ): Promise<TypedPropertiesResponse> {
+    const normalizedLabels = this.normalizeLabels(baseLabels);
+    const rawProps = this.neo4j.toPlainObject(nodeProperties ?? {});
+    const props = Object.fromEntries(Object.entries(rawProps).filter(([k]) => !k.endsWith('_icon')));
+    const entityId = explicitEntityId ?? this.extractEntityId(props);
+    const config = this.tryResolveEntityConfigFromLabels(normalizedLabels);
+
+    const baseLabel = config?.label ?? this.resolveFallbackLabel(normalizedLabels);
+    const icon = config?.icon ?? (await this.schemaRegistration.getEntitySchema(baseLabel))?.icon ?? undefined;
+
+    // All node properties are base properties in the new model
+    const baseProperties = { ...props };
+
+    // Build subtypes array from SubtypeInstance data
+    const defs = await this.schema.getSubtypeDefinitionsForBase(baseLabel);
+    const defMap = new Map(defs.map(d => [d.label.toLowerCase(), d]));
+
+    const subtypes = (subtypeInstances ?? [])
+      .filter(si => si && si.labels)
+      .map(si => {
+        const instanceLabels = (si.labels ?? []).filter(
+          l => l !== 'SubtypeInstance' && l !== 'Entity',
+        );
+        const subtypeLabel = instanceLabels[0] ?? 'Unknown';
+        const def = defMap.get(subtypeLabel.toLowerCase());
+        const instanceProps = this.neo4j.toPlainObject(si.props ?? {});
+        // Remove internal tracking fields from response
+        const { owner_tenant_id, parent_entity_id, created_at, updated_at, ...visibleProps } = instanceProps;
+        return {
+          label: subtypeLabel,
+          icon: def?.icon ?? '❓',
+          baseLabel: def?.baseLabel ?? baseLabel,
+          allowedBaseLabels: def?.allowedBaseLabels ?? [baseLabel],
+          properties: visibleProps,
+        };
+      });
+
+    return {
+      entityType: baseLabel,
+      icon,
+      entityId,
+      labels: normalizedLabels,
+      base: {
+        label: baseLabel,
+        properties: baseProperties,
+      },
+      subtypes,
+      unknownProperties: {},
+    };
+  }
+
+  /**
+   * Get entity typed properties filtered by viewer tenant.
+   * Only returns SubtypeInstance nodes owned by the specified tenant.
+   */
+  async getEntityTypedPropertiesByIdForTenant(entityId: string, viewerTenantId: string): Promise<TypedPropertiesResponse> {
+    const safeIdField = this.neo4j.sanitizeIdentifier('entity_id');
+    const records = await this.neo4j.runQuery(
+      `MATCH (n:Entity {\`${safeIdField}\`: $entityId})
+       WITH n, labels(n) AS baseLabels
+       OPTIONAL MATCH (n)-[:HAS_SUBTYPE_INSTANCE { tenant_id: $viewerTenantId }]->(si:SubtypeInstance)
+       RETURN n, baseLabels, collect(DISTINCT { labels: labels(si), props: properties(si) }) AS subtypeInstances`,
+      { entityId, viewerTenantId },
+    );
+
+    if (!records.length) {
+      throw new NotFoundException(`Entity ${entityId} not found`);
+    }
+
+    const node = records[0].get('n');
+    const baseLabels = records[0].get('baseLabels') as string[];
+    const subtypeInstances = records[0].get('subtypeInstances') as any[];
+    const nodeProps = this.neo4j.toPlainObject(node.properties);
+    return this.projectTypedNodeWithInstances(nodeProps, baseLabels, subtypeInstances, entityId);
+  }
+
   async getPersonTypedProperties(strongId: string): Promise<TypedPropertiesResponse> {
     return this.getEntityTypedProperties('person', strongId);
   }
